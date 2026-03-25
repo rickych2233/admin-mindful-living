@@ -8,8 +8,10 @@ function Icon({ type }) {
     clipboard: "M9 4h6a2 2 0 0 1 2 2v14H7V6a2 2 0 0 1 2-2Zm-1 6h8m-8 4h6M10 2h4",
     user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 9a7 7 0 0 1 14 0",
     users: "M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8-1a2.5 2.5 0 1 0 0-5M3 20a6 6 0 0 1 12 0m2 0a5 5 0 0 1 4-4.9",
+    note: "M7 4.5h8a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2Zm3.5 0V3h3v1.5M8.5 9h5M8.5 12h7M8.5 15h4.5",
     folder: "M3.5 7.5h5l1.5 2h9v9a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2Z",
     shield: "M12 3.5 18 6v5.5c0 4-2.7 7-6 9-3.3-2-6-5-6-9V6l6-2.5Zm-2 8.5 1.7 1.7L14.8 10.6",
+    layers: "M12 4 4 8l8 4 8-4-8-4Zm-8 8 8 4 8-4M4 16l8 4 8-4",
     logout: "M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4m3-5 4-4-4-4m-6 4h10",
   };
 
@@ -20,16 +22,30 @@ function Icon({ type }) {
   );
 }
 
-function SidebarNav({ activeItem = "dashboard", onSelectItem = () => {}, onLogout = () => {} }) {
+function SidebarNav({
+  activeItem = "dashboard",
+  isOpen = false,
+  onClose = () => {},
+  onSelectItem = () => {},
+  onLogout = () => {},
+}) {
   return (
-    <aside className="sidebar-nav">
+    <aside className={`sidebar-nav${isOpen ? " is-open" : ""}`}>
       <div>
-        <div className="brand-row">
-          <span className="brand-mark" aria-hidden="true">
-            <span className="brand-dot brand-dot-left" />
-            <span className="brand-dot brand-dot-right" />
-          </span>
-          <strong>Mindful Living</strong>
+        <div className="sidebar-brand-row">
+          <div className="brand-row">
+            <span className="brand-mark" aria-hidden="true">
+              <span className="brand-dot brand-dot-left" />
+              <span className="brand-dot brand-dot-right" />
+            </span>
+            <strong>Mindful Living</strong>
+          </div>
+
+          <button type="button" className="sidebar-close" aria-label="Close navigation" onClick={onClose}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
+          </button>
         </div>
 
         <div className="profile-row">
