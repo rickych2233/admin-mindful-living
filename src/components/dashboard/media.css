@@ -1,0 +1,281 @@
+.media-page {
+  position: relative;
+}
+
+.media-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.media-filters {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.media-search {
+  width: min(100%, 246px);
+  height: 44px;
+  border-color: #e3e7ed;
+  background: #ffffff;
+}
+
+.media-select {
+  min-width: 98px;
+  background: #ffffff;
+}
+
+.media-table-card {
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.media-table-head,
+.media-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) 96px 140px 150px 90px;
+  align-items: center;
+  column-gap: 16px;
+}
+
+.media-table-head {
+  padding: 14px 16px;
+  color: #80899a;
+  font-size: 13px;
+  background: #ffffff;
+}
+
+.media-row {
+  min-height: 66px;
+  padding: 10px 16px;
+  border-top: 1px solid #edf1f5;
+  cursor: pointer;
+}
+
+.media-file-cell {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.media-thumb {
+  width: 50px;
+  height: 50px;
+  border: 1px solid #edf1f5;
+  border-radius: 12px;
+  background: #f4f6f9;
+  color: #929bac;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.media-thumb svg,
+.media-preview-box svg,
+.media-uploader-avatar svg,
+.media-row .chapter-icon-btn svg,
+.media-download-btn svg {
+  width: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.media-row .chapter-icon-btn svg {
+  width: 16px;
+}
+
+.media-file-copy {
+  min-width: 0;
+}
+
+.media-file-copy h3,
+.media-cell-text {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #151c29;
+}
+
+.media-actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.media-footer {
+  margin-top: 12px;
+}
+
+.media-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 82;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(25, 31, 42, 0.28);
+}
+
+.media-drawer {
+  width: min(100%, 470px);
+  height: calc(100vh - 32px);
+  margin: 16px;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: -18px 0 40px rgba(17, 23, 34, 0.16);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.media-drawer-header {
+  padding: 18px 16px 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.media-drawer-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #161d29;
+}
+
+.media-drawer-body {
+  padding: 10px 16px 18px;
+  overflow-y: auto;
+}
+
+.media-preview-box {
+  height: 242px;
+  border-radius: 14px;
+  background: #f4f6f9;
+  color: #9aa3b2;
+  display: grid;
+  place-items: center;
+  margin-bottom: 22px;
+}
+
+.media-preview-box svg {
+  width: 52px;
+}
+
+.media-detail-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.media-detail-item {
+  display: grid;
+  gap: 6px;
+}
+
+.media-detail-item span {
+  font-size: 12px;
+  color: #8d95a4;
+}
+
+.media-detail-item strong {
+  font-size: 15px;
+  font-weight: 500;
+  color: #151c29;
+}
+
+.media-uploader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.media-uploader-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #f4f6f9;
+  color: #9aa2b1;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.media-uploader-avatar svg {
+  width: 18px;
+}
+
+.media-drawer-footer {
+  padding: 16px;
+  border-top: 1px solid #edf1f5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.media-download-btn {
+  min-width: 126px;
+}
+
+@media (max-width: 980px) {
+  .media-table-head,
+  .media-row {
+    grid-template-columns: minmax(0, 1.6fr) 88px 116px 132px 86px;
+    column-gap: 12px;
+  }
+}
+
+@media (max-width: 860px) {
+  .media-table-head {
+    display: none;
+  }
+
+  .media-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .media-cell-text {
+    margin-left: 64px;
+  }
+
+  .media-actions {
+    justify-self: start;
+    margin-left: 64px;
+  }
+}
+
+@media (max-width: 640px) {
+  .media-search,
+  .media-select {
+    width: 100%;
+  }
+
+  .media-drawer {
+    width: 100%;
+    height: 100vh;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .media-drawer-header,
+  .media-drawer-body,
+  .media-drawer-footer {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .media-drawer-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .media-drawer-footer .chapter-secondary-btn,
+  .media-download-btn {
+    width: 100%;
+  }
+}

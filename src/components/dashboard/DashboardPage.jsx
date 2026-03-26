@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import MediaLibraryPage from "./MediaLibraryPage";
+import RolesPermissionsPageView from "./RolesPermissionsPage";
+import ResourcesPage from "./ResourcesPage";
 import SidebarNav from "./SidebarNav";
 import { sidebarMainItems } from "./sidebarItems";
 
@@ -3801,16 +3804,18 @@ function DashboardPage({ onLogout = () => {} }) {
         {activeItem === "user" && <UserManagementPage />}
         {activeItem === "community" && <CommunityManagementPage />}
         {activeItem === "notes" && <NotesBookmarksPage />}
-        {activeItem === "roles" && <RolesPermissionsPage />}
+        {activeItem === "resources" && <ResourcesPage />}
+        {activeItem === "roles" && <RolesPermissionsPageView />}
+        {activeItem === "media" && <MediaLibraryPage />}
         {activeItem !== "dashboard" &&
           activeItem !== "chapter" &&
           activeItem !== "practice" &&
           activeItem !== "user" &&
           activeItem !== "community" &&
           activeItem !== "notes" &&
-          activeItem !== "roles" && (
-          <PlaceholderPage title={activeTitle} />
-        )}
+          activeItem !== "resources" &&
+          activeItem !== "roles" &&
+          activeItem !== "media" && <PlaceholderPage title={activeTitle} />}
       </div>
     </section>
   );
