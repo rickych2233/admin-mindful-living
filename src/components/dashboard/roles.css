@@ -550,6 +550,11 @@
     align-items: stretch;
   }
 
+  .roles-add-role-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
   .roles-modal {
     width: 100%;
     height: 100vh;

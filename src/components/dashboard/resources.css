@@ -580,8 +580,16 @@
 }
 
 @media (max-width: 640px) {
+  .resources-filters > * {
+    width: 100%;
+  }
+
   .resources-search,
   .resources-filter-select {
+    width: 100%;
+  }
+
+  .resources-add-btn {
     width: 100%;
   }
 
@@ -625,6 +633,11 @@
   .resources-modal-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .resources-modal-actions {
+    width: 100%;
+    margin-left: 0;
   }
 
   .resources-draft-btn,

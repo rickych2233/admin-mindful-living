@@ -23,6 +23,13 @@ body {
   color: var(--text-main);
   background: radial-gradient(circle at 10% 15%, #f8f9fb, transparent 35%),
     radial-gradient(circle at 90% 80%, #dce1e8, transparent 30%), var(--bg);
+  overflow-x: hidden;
+}
+
+html,
+body,
+#root {
+  width: 100%;
 }
 
 .page {
@@ -4166,5 +4173,42 @@ body {
 
   .notes-category-modal-footer {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .chapter-select,
+  .chapter-order-btn,
+  .chapter-add-btn,
+  .roles-add-btn,
+  .user-export-btn,
+  .community-add-btn,
+  .notes-add-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .chapter-filters,
+  .notes-toolbar-filters,
+  .community-filters {
+    width: 100%;
+  }
+
+  .chapter-filters > *,
+  .notes-toolbar-filters > *,
+  .community-filters > * {
+    width: 100%;
+  }
+
+  .chapter-actions,
+  .community-actions,
+  .notes-action-cell {
+    width: 100%;
+  }
+
+  .chapter-view-btn,
+  .community-action-btn,
+  .notes-action-btn {
+    justify-content: center;
   }
 }

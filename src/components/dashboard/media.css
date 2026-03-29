@@ -230,6 +230,20 @@
 }
 
 @media (max-width: 860px) {
+  .media-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .media-filters {
+    width: 100%;
+  }
+
+  .media-search,
+  .media-select {
+    width: 100%;
+  }
+
   .media-table-head {
     display: none;
   }
