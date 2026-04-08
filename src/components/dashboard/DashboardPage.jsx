@@ -7,7 +7,15 @@ import SidebarNav from "./SidebarNav";
 import { sidebarMainItems } from "./sidebarItems";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
-const USERS_API_URL = import.meta.env.VITE_USERS_API_URL || `${API_BASE_URL}/users`;
+const USERS_API_URL = import.meta.env.VITE_USERS_API_URL || "http://72.61.143.83/api/users";
+const USERS_API_FALLBACKS = Array.from(
+  new Set([
+    USERS_API_URL,
+    `${API_BASE_URL}/users`,
+    "http://72.61.143.83/api/users",
+    "http://72.61.143.83:3002/users",
+  ])
+);
 const EURO = "\u20AC";
 
 const fallbackChapterRows = [
@@ -280,149 +288,6 @@ const userManagementMetrics = [
   },
 ];
 
-const initialUserManagementRows = [
-  {
-    id: 1,
-    name: "Adam Coles",
-    email: "adam.coles@email.com",
-    language: "EN",
-    languageDetail: "English",
-    biometric: "On",
-    donationAmount: "$998.20",
-    lastActive: "2h ago",
-    lastActiveDetail: "2 hours ago",
-    status: "Active",
-    registered: "Oct 14, 2025",
-    chaptersCompleted: "5 of 7",
-  },
-  {
-    id: 2,
-    name: "Ashley Williams",
-    email: "ashley.williams@email.com",
-    language: "EN",
-    languageDetail: "English",
-    biometric: "On",
-    donationAmount: "$825.40",
-    lastActive: "2h ago",
-    lastActiveDetail: "2 hours ago",
-    status: "Active",
-    registered: "Oct 20, 2025",
-    chaptersCompleted: "4 of 7",
-  },
-  {
-    id: 3,
-    name: "Barry Allen",
-    email: "barryallen@email.com",
-    language: "EN",
-    languageDetail: "English",
-    biometric: "On",
-    donationAmount: "-",
-    lastActive: "3h ago",
-    lastActiveDetail: "3 hours ago",
-    status: "Inactive",
-    registered: "Nov 03, 2025",
-    chaptersCompleted: "3 of 7",
-  },
-  {
-    id: 4,
-    name: "Bella Thorne",
-    email: "thornebella@email.com",
-    language: "EN",
-    languageDetail: "English",
-    biometric: "Off",
-    donationAmount: "$624.10",
-    lastActive: "20h ago",
-    lastActiveDetail: "20 hours ago",
-    status: "Active",
-    registered: "Nov 16, 2025",
-    chaptersCompleted: "5 of 7",
-  },
-  {
-    id: 5,
-    name: "Camila Cabello",
-    email: "camilacc@email.com",
-    language: "EN",
-    languageDetail: "English",
-    biometric: "On",
-    donationAmount: "$535.87",
-    lastActive: "23h ago",
-    lastActiveDetail: "23 hours ago",
-    status: "Active",
-    registered: "Dec 02, 2025",
-    chaptersCompleted: "4 of 7",
-  },
-  {
-    id: 6,
-    name: "Drake Graham",
-    email: "drake_graham@email.com",
-    language: "EN",
-    languageDetail: "English",
-    biometric: "On",
-    donationAmount: "-",
-    lastActive: "1d ago",
-    lastActiveDetail: "1 day ago",
-    status: "Inactive",
-    registered: "Dec 18, 2025",
-    chaptersCompleted: "2 of 7",
-  },
-  {
-    id: 7,
-    name: "Elijah Wood",
-    email: "elijah.wood@email.com",
-    language: "EN",
-    languageDetail: "English",
-    biometric: "Off",
-    donationAmount: "$353.86",
-    lastActive: "4d ago",
-    lastActiveDetail: "4 days ago",
-    status: "Active",
-    registered: "Jan 04, 2026",
-    chaptersCompleted: "6 of 7",
-  },
-  {
-    id: 8,
-    name: "Finn Wolfhard",
-    email: "finnwolfhard@email.com",
-    language: "EN",
-    languageDetail: "English",
-    biometric: "Off",
-    donationAmount: "$252.87",
-    lastActive: "18 Feb 2026",
-    lastActiveDetail: "18 Feb 2026",
-    status: "Active",
-    registered: "Jan 12, 2026",
-    chaptersCompleted: "4 of 7",
-  },
-  {
-    id: 9,
-    name: "Gigi Hadid",
-    email: "gigi_hadid@email.com",
-    language: "EN",
-    languageDetail: "English",
-    biometric: "On",
-    donationAmount: "-",
-    lastActive: "18 Feb 2026",
-    lastActiveDetail: "18 Feb 2026",
-    status: "Inactive",
-    registered: "Jan 19, 2026",
-    chaptersCompleted: "3 of 7",
-  },
-  {
-    id: 10,
-    name: "Halsey Frangipane",
-    email: "halsey.frangipane@email.com",
-    language: "EN",
-    languageDetail: "English",
-    biometric: "On",
-    donationAmount: "$98.45",
-    lastActive: "18 Feb 2026",
-    lastActiveDetail: "18 Feb 2026",
-    status: "Active",
-    registered: "Jan 28, 2026",
-    chaptersCompleted: "2 of 7",
-  },
-];
-
 const communityMetricCards = [
   { label: "Pending Reports", value: "7 pending", chip: "+ 2 reports", note: "vs last week" },
   { label: "Total Discussions", value: "1204", chip: "+ 34 discussion", note: "vs last week" },
@@ -683,6 +548,13 @@ const initialNotesCategories = [
 const notesCategoryToneCycle = ["yellow", "purple", "green", "violet", "gold"];
 
 function normalizeUser(item) {
+  const idRaw = item.id ?? item.userId ?? item.user_id ?? item.uuid;
+  const id = idRaw ?? `${item.email || item.name || "user"}-${Math.random().toString(36).slice(2, 8)}`;
+  const languageDetail = String(item.languageDetail || item.language_detail || item.language || "English");
+  const languageCode = languageDetail.slice(0, 2).toUpperCase() || "EN";
+  const biometricRaw = item.biometric ?? item.biometricEnabled ?? item.biometric_enabled;
+  const biometric = biometricRaw === true || biometricRaw === "On" ? "On" : "Off";
+
   const donationRaw = item.donation ?? item.donationAmount ?? item.donation_amount ?? item.amount;
   const donation =
     donationRaw === null || donationRaw === undefined || donationRaw === ""
@@ -691,11 +563,39 @@ function normalizeUser(item) {
       ? `$${donationRaw.toFixed(2)}`
       : String(donationRaw);
 
+  const statusRaw = item.status ?? item.accountStatus ?? item.account_status;
+  const status = String(statusRaw || "Active").toLowerCase() === "inactive" ? "Inactive" : "Active";
+  const registeredRaw = item.registered ?? item.createdAt ?? item.created_at;
+  const registeredDate = registeredRaw ? new Date(registeredRaw) : null;
+  const registered =
+    registeredDate && !Number.isNaN(registeredDate.getTime())
+      ? registeredDate.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
+      : "-";
+
+  const lastLoginRaw = item.lastLogin || item.last_login || item.lastActive || item.last_active || item.updated_at || item.created_at;
+  const lastLoginDate = lastLoginRaw ? new Date(lastLoginRaw) : null;
+  const lastActiveDetail =
+    lastLoginDate && !Number.isNaN(lastLoginDate.getTime())
+      ? lastLoginDate.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
+      : String(lastLoginRaw || "-");
+
+  const chaptersCompletedRaw =
+    item.chaptersCompleted ?? item.chapters_completed ?? item.completedChapters ?? item.completed_chapters;
+  const chaptersCompleted = chaptersCompletedRaw ? String(chaptersCompletedRaw) : "-";
+
   return {
+    id,
     name: item.name || item.fullName || "-",
     email: item.email || "-",
-    donation,
-    lastLogin: item.lastLogin || item.last_login || item.created_at || "-",
+    language: languageCode,
+    languageDetail,
+    biometric,
+    donationAmount: donation,
+    lastActive: lastActiveDetail,
+    lastActiveDetail,
+    status,
+    registered,
+    chaptersCompleted,
   };
 }
 
@@ -711,13 +611,32 @@ function useUsersCollection() {
       setIsLoading(true);
       setError("");
 
+      let lastError = "";
       try {
-        const response = await fetch(USERS_API_URL, { signal: controller.signal });
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+        let payload = null;
+        for (const endpoint of USERS_API_FALLBACKS) {
+          try {
+            console.debug("[users] fetching endpoint:", endpoint);
+            const response = await fetch(endpoint, { signal: controller.signal });
+            console.debug("[users] response status:", response.status, "ok:", response.ok, "url:", response.url);
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            payload = await response.json();
+            break;
+          } catch (endpointError) {
+            if (endpointError.name === "AbortError") {
+              throw endpointError;
+            }
+            console.error("[users] endpoint failed:", endpoint, endpointError);
+            lastError = endpointError.message || "Unknown error";
+          }
         }
 
-        const payload = await response.json();
+        if (!payload) {
+          throw new Error(lastError || "All endpoints failed");
+        }
+
         const rawRows = Array.isArray(payload)
           ? payload
           : Array.isArray(payload?.data)
@@ -730,7 +649,7 @@ function useUsersCollection() {
       } catch (err) {
         if (err.name !== "AbortError") {
           setRows([]);
-          setError("Gagal ambil data users dari API.");
+          setError(`Gagal ambil data users dari API. Detail: ${err.message || "Unknown error"}`);
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -2086,8 +2005,13 @@ function PracticeManagementPage() {
 
 function UserManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [userRows, setUserRows] = useState(initialUserManagementRows);
+  const { rows: apiUserRows, isLoading, error } = useUsersCollection();
+  const [userRows, setUserRows] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
+
+  useEffect(() => {
+    setUserRows(apiUserRows);
+  }, [apiUserRows]);
 
   useEffect(() => {
     if (!selectedUserId) {
@@ -2327,7 +2251,19 @@ function UserManagementPage() {
             </article>
           ))}
 
-          {filteredUserRows.length === 0 && (
+          {isLoading && (
+            <div className="chapter-empty-state">
+              <p>Loading users...</p>
+            </div>
+          )}
+
+          {!isLoading && error && (
+            <div className="chapter-empty-state">
+              <p>{error}</p>
+            </div>
+          )}
+
+          {!isLoading && !error && filteredUserRows.length === 0 && (
             <div className="chapter-empty-state">
               <p>No users match the current search.</p>
             </div>
