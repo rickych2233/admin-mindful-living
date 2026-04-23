@@ -12,6 +12,11 @@ const USE_LOCAL_API = import.meta.env.VITE_USE_LOCAL_API
   : Boolean(import.meta.env.DEV && IS_LOCAL_HOST);
 
 const API_BASE_URL = USE_LOCAL_API ? LOCAL_API_BASE_URL : SERVER_API_BASE_URL;
+
+// Debug logging
+console.log('[API Config] VITE_USE_LOCAL_API:', import.meta.env.VITE_USE_LOCAL_API);
+console.log('[API Config] USE_LOCAL_API:', USE_LOCAL_API);
+console.log('[API Config] API_BASE_URL:', API_BASE_URL);
 const API_URL = import.meta.env.VITE_API_URL || `${API_BASE_URL}/api`;
 const USERS_API_URL = `${API_BASE_URL}${USERS_API_PATH}`;
 
