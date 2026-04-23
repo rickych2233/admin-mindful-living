@@ -19,8 +19,8 @@ const USERS_API_URL = `${API_BASE_URL}${USERS_API_PATH}`;
 const USERS_API_FALLBACKS = [
   USERS_API_URL,
   `${API_BASE_URL}/api/users`,
-  // Only add server fallbacks if not already using server
-  ...(USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/users`] : []),
+  // Only add server fallbacks if NOT using local API
+  ...(!USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/users`] : []),
 ];
 
 export {
