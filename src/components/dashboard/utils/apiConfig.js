@@ -15,13 +15,12 @@ const API_BASE_URL = USE_LOCAL_API ? LOCAL_API_BASE_URL : SERVER_API_BASE_URL;
 const API_URL = import.meta.env.VITE_API_URL || `${API_BASE_URL}/api`;
 const USERS_API_URL = `${API_BASE_URL}${USERS_API_PATH}`;
 
-// Simplified fallback list - only try the most likely endpoints
+// Simplified fallback list - only use endpoints with /api prefix
 const USERS_API_FALLBACKS = [
   USERS_API_URL,
   `${API_BASE_URL}/api/users`,
-  `${API_BASE_URL}/users`,
   // Only add server fallbacks if not already using server
-  ...(USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/users`, `${SERVER_API_BASE_URL}/users`] : []),
+  ...(USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/users`] : []),
 ];
 
 export {
