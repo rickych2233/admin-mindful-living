@@ -78,10 +78,15 @@ export async function updateUser(id, userData) {
 
 export async function toggleUserActive(id) {
   const encodedId = encodeURIComponent(String(id));
+  const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
   const usersBases = USERS_API_FALLBACKS.filter((endpoint) => /\/users\/?$/i.test(String(endpoint)));
+  const relativeToggleEndpoint = `/api/users/${encodedId}/toggle-active`;
+  const currentOriginToggleEndpoint = currentOrigin ? `${currentOrigin}${relativeToggleEndpoint}` : relativeToggleEndpoint;
   const endpoints = Array.from(
     new Set([
       `${API_URL}/users/${encodedId}/toggle-active`,
+      currentOriginToggleEndpoint,
+      relativeToggleEndpoint,
       ...usersBases.map((usersEndpoint) => `${String(usersEndpoint).replace(/\/+$/, "")}/${encodedId}/toggle-active`),
     ])
   );

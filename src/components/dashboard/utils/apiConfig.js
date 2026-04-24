@@ -17,13 +17,18 @@ const API_BASE_URL = USE_LOCAL_API ? LOCAL_API_BASE_URL : SERVER_API_BASE_URL;
 console.log('[API Config] VITE_USE_LOCAL_API:', import.meta.env.VITE_USE_LOCAL_API);
 console.log('[API Config] USE_LOCAL_API:', USE_LOCAL_API);
 console.log('[API Config] API_BASE_URL:', API_BASE_URL);
+const CURRENT_ORIGIN = typeof window !== "undefined" ? window.location.origin : "";
 const API_URL = import.meta.env.VITE_API_URL || `${API_BASE_URL}/api`;
 const USERS_API_URL = `${API_BASE_URL}${USERS_API_PATH}`;
+const RELATIVE_USERS_API_PATH = "/api/users";
+const CURRENT_ORIGIN_USERS_API_URL = CURRENT_ORIGIN ? `${CURRENT_ORIGIN}${RELATIVE_USERS_API_PATH}` : RELATIVE_USERS_API_PATH;
 
 // Simplified fallback list - only use endpoints with /api prefix
 const USERS_API_FALLBACKS = [
   USERS_API_URL,
   `${API_BASE_URL}/api/users`,
+  CURRENT_ORIGIN_USERS_API_URL,
+  RELATIVE_USERS_API_PATH,
   // Only add server fallbacks if NOT using local API
   ...(!USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/users`] : []),
 ];
