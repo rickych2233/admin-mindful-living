@@ -25,10 +25,10 @@ const CURRENT_ORIGIN_USERS_API_URL = CURRENT_ORIGIN ? `${CURRENT_ORIGIN}${RELATI
 
 // Simplified fallback list - only use endpoints with /api prefix
 const USERS_API_FALLBACKS = [
+  RELATIVE_USERS_API_PATH,
+  CURRENT_ORIGIN_USERS_API_URL,
   USERS_API_URL,
   `${API_BASE_URL}/api/users`,
-  CURRENT_ORIGIN_USERS_API_URL,
-  RELATIVE_USERS_API_PATH,
   // Only add server fallbacks if NOT using local API
   ...(!USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/users`] : []),
 ];
