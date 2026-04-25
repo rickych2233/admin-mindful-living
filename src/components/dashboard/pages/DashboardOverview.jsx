@@ -132,13 +132,15 @@ const contentModes = [
 ];
 
 export function DashboardOverview() {
+  const currentDate = new Date();
+  const monthName = currentDate.toLocaleString('en-US', { month: 'long' });
+  const year = currentDate.getFullYear();
+
   return (
     <>
       <header className="dashboard-header">
         <h1>Dashboard</h1>
-        <p>
-          Welcome back, Adrian! {"\u2022"} Tue, 14 Jan 2026
-        </p>
+        <p>Overview {"\u2022"} {monthName} {year}</p>
       </header>
 
       <div className="overview-content">
