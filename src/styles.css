@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
 :root {
   --bg: #edeff2;
@@ -19,7 +19,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: "Plus Jakarta Sans", sans-serif;
+  font-family: "Inter", sans-serif;
   color: var(--text-main);
   background: radial-gradient(circle at 10% 15%, #f8f9fb, transparent 35%),
     radial-gradient(circle at 90% 80%, #dce1e8, transparent 30%), var(--bg);
