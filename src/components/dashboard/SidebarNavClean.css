@@ -1,0 +1,312 @@
+/**
+ * Clean Sidebar Navigation Styles
+ * Uses global theme variables from theme.css
+ */
+
+/* ========== BACKDROP ========== */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(25, 31, 42, 0.36);
+  z-index: var(--z-modal-backdrop);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--transition-normal);
+}
+
+.sidebar-backdrop.is-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ========== SIDEBAR CONTAINER ========== */
+.sidebar-nav {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  z-index: var(--z-modal);
+  transform: translateX(-100%);
+  transition: transform var(--transition-slow), box-shadow var(--transition-normal);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar-nav.is-open {
+  transform: translateX(0);
+  box-shadow: var(--shadow-xl);
+}
+
+/* Desktop: always visible */
+@media (min-width: 1041px) {
+  .sidebar-nav {
+    position: sticky;
+    top: 0;
+    transform: translateX(0);
+    height: 100vh;
+  }
+
+  .sidebar-backdrop {
+    display: none;
+  }
+}
+
+/* ========== SIDEBAR CONTENT ========== */
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg) var(--spacing-md) var(--spacing-xl);
+  flex: 1;
+}
+
+/* ========== HEADER ========== */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-primary);
+}
+
+.brand-mark {
+  width: 24px;
+  height: 24px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.brand-dot {
+  position: absolute;
+  width: 10px;
+  height: 16px;
+  background: var(--color-text-muted);
+  top: 4px;
+}
+
+.brand-dot-left {
+  left: 2px;
+  transform: rotate(28deg);
+  border-radius: 9px 0 0 9px;
+}
+
+.brand-dot-right {
+  right: 2px;
+  transform: rotate(-28deg);
+  border-radius: 0 9px 9px 0;
+}
+
+.brand-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.sidebar-close {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  display: none;
+  place-items: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sidebar-close:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.sidebar-close svg {
+  width: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (max-width: 1040px) {
+  .sidebar-close {
+    display: grid;
+  }
+}
+
+/* ========== PROFILE SECTION ========== */
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-xs);
+}
+
+.profile-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--avatar-border);
+  background: var(--avatar-bg);
+  color: var(--avatar-text);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar svg {
+  width: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.profile-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-email {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ========== MENU ========== */
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.menu-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--menu-item-text);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-md);
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  font-family: inherit;
+}
+
+.menu-item:hover {
+  background: var(--menu-item-bg-hover);
+  color: var(--menu-item-text-active);
+}
+
+.menu-item.is-active {
+  background: var(--menu-item-bg-active);
+  color: var(--menu-item-text-active);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+}
+
+.sidebar-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.menu-item-label {
+  min-width: 0;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ========== FOOTER ========== */
+.sidebar-footer {
+  padding: 0 var(--spacing-md) var(--spacing-lg);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.menu-item-logout {
+  margin-top: var(--spacing-md);
+  color: var(--color-text-tertiary);
+}
+
+.menu-item-logout:hover {
+  background: var(--menu-item-bg-hover);
+  color: var(--color-text-secondary);
+}
+
+/* ========== SCROLLBAR STYLING ========== */
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: var(--color-border-subtle);
+  border-radius: var(--radius-full);
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-medium);
+}
+
+/* ========== ANIMATIONS ========== */
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.sidebar-nav.is-open {
+  animation: slideIn var(--transition-slow) ease;
+}

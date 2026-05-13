@@ -1,56 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-
-const fallbackChapterRows = [
-  {
-    id: 1,
-    title: "Chapter 1 - The Present Moment",
-    summary: "Introduction to presence and awareness",
-    sections: 5,
-    status: "Published",
-  },
-  {
-    id: 2,
-    title: "Chapter 2 - The Ego and Identity",
-    summary: "Understanding the thinking mind",
-    sections: 6,
-    status: "Published",
-  },
-  {
-    id: 3,
-    title: "Chapter 3 - The Awakened Mind",
-    summary: "Moving beyond conditioned thought",
-    sections: 7,
-    status: "Published",
-  },
-  {
-    id: 4,
-    title: "Chapter 4 - Inner Body Awareness",
-    summary: "Connecting with the energetic body",
-    sections: 5,
-    status: "Published",
-  },
-  {
-    id: 5,
-    title: "Chapter 5 - The Unmanifested",
-    summary: "Exploring pure consciousness",
-    sections: 4,
-    status: "Published",
-  },
-  {
-    id: 6,
-    title: "Chapter 6 - Enlightened Relationships",
-    summary: "Consciousness in connection",
-    sections: 6,
-    status: "Drafted",
-  },
-  {
-    id: 7,
-    title: "Chapter 7 - Beyond Time",
-    summary: "Integration and transcendence",
-    sections: 3,
-    status: "Drafted",
-  },
-];
+import { useChaptersCollection, createChapter, deleteChapter, toggleChapterStatus } from "../utils/chapterUtils";
 
 const chapterStepItems = [
   { id: 1, label: "Chapter Info" },
@@ -70,10 +19,17 @@ const initialChapterForm = {
 export function ChapterManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Status");
-  const [chapterRows, setChapterRows] = useState(fallbackChapterRows);
+  const { rows: apiChapterRows, isLoading, error, refetch } = useChaptersCollection();
+  const [chapterRows, setChapterRows] = useState([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [chapterStep, setChapterStep] = useState(1);
   const [chapterForm, setChapterForm] = useState(initialChapterForm);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  useEffect(() => {
+    setChapterRows(apiChapterRows);
+  }, [apiChapterRows]);
 
   useEffect(() => {
     if (!isDrawerOpen) {
@@ -131,7 +87,7 @@ export function ChapterManagementPage() {
       ? chapterForm.sectionTitle.trim() !== "" && chapterForm.sectionDescription.trim() !== ""
       : true;
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!canContinue) {
       return;
     }
@@ -141,24 +97,107 @@ export function ChapterManagementPage() {
       return;
     }
 
-    setChapterRows((current) => {
-      const nextChapterNumber = current.length + 1;
+    setIsSubmitting(true);
+    setSubmitError("");
+
+    try {
       const normalizedTitle = chapterForm.title.trim();
-      const hasChapterPrefix = /^chapter\s+\d+/i.test(normalizedTitle);
+      const chapterData = {
+        title: normalizedTitle,
+        description: chapterForm.description.trim(),
+        status: "Drafted",
+        sections: [
+          {
+            title: chapterForm.sectionTitle.trim(),
+            description: chapterForm.sectionDescription.trim(),
+            type: chapterForm.sectionType,
+          },
+        ],
+      };
 
-      return [
-        ...current,
-        {
-          id: nextChapterNumber,
-          title: hasChapterPrefix ? normalizedTitle : `Chapter ${nextChapterNumber} - ${normalizedTitle}`,
-          summary: chapterForm.description.trim(),
-          sections: 1,
-          status: "Drafted",
-        },
-      ];
-    });
+      const result = await createChapter(chapterData);
 
-    closeChapterDrawer();
+      const newChapter = {
+        id: result.chapter?.id || result.id || Date.now(),
+        apiId: result.chapter?.id || result.id || null,
+        title: result.chapter?.title || result.title || normalizedTitle,
+        summary: result.chapter?.description || result.description || chapterForm.description.trim(),
+        sections: result.chapter?.sections?.length || result.sections?.length || 1,
+        status: "Drafted",
+      };
+
+      setChapterRows((current) => [...current, newChapter]);
+      closeChapterDrawer();
+    } catch (err) {
+      setSubmitError(err.message || "Gagal membuat chapter. Silakan coba lagi.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteChapter = async (chapterId) => {
+    if (!confirm("Are you sure you want to delete this chapter?")) {
+      return;
+    }
+
+    const chapter = chapterRows.find((c) => c.id === chapterId);
+    const apiId = chapter?.apiId ?? chapterId;
+
+    try {
+      await deleteChapter(apiId);
+      setChapterRows((current) => current.filter((c) => c.id !== chapterId));
+    } catch (err) {
+      alert(`Gagal menghapus chapter: ${err.message}`);
+    }
+  };
+
+  const handleToggleStatus = async (chapterId) => {
+    const chapter = chapterRows.find((c) => c.id === chapterId);
+    if (!chapter) return;
+
+    const apiId = chapter?.apiId ?? chapterId;
+    const previousStatus = chapter.status;
+    const nextStatus = previousStatus === "Published" ? "Drafted" : "Published";
+
+    setChapterRows((current) =>
+      current.map((c) =>
+        c.id === chapterId
+          ? {
+              ...c,
+              status: nextStatus,
+            }
+          : c
+      )
+    );
+
+    try {
+      const result = await toggleChapterStatus(apiId);
+      const statusFromApi = result?.chapter?.status || result?.status;
+      if (statusFromApi) {
+        setChapterRows((current) =>
+          current.map((c) =>
+            c.id === chapterId
+              ? {
+                  ...c,
+                  status: statusFromApi === "Published" ? "Published" : "Drafted",
+                }
+              : c
+          )
+        );
+      }
+    } catch (err) {
+      setChapterRows((current) =>
+        current.map((c) =>
+          c.id === chapterId
+            ? {
+                ...c,
+                status: previousStatus,
+              }
+            : c
+        )
+      );
+      alert(`Gagal mengubah status chapter: ${err.message}`);
+    }
   };
 
   const footerButtonLabel = chapterStep === 3 ? "Publish" : "Continue";
@@ -206,7 +245,20 @@ export function ChapterManagementPage() {
           </button>
         </div>
 
-        <div className="chapter-table-card">
+        {isLoading && (
+          <div className="chapter-empty-state">
+            <p>Loading chapters...</p>
+          </div>
+        )}
+
+        {!isLoading && error && (
+          <div className="chapter-empty-state">
+            <p style={{ color: "#b42318" }}>{error}</p>
+          </div>
+        )}
+
+        {!isLoading && !error && (
+          <div className="chapter-table-card">
           <div className="chapter-table-head chapter-table-head-redesign">
             <span>No</span>
             <span className="sortable-head">
@@ -257,7 +309,12 @@ export function ChapterManagementPage() {
                 </div>
               </div>
 
-              <div className={`chapter-status chapter-status-pill chapter-status-${chapter.status.toLowerCase()}`}>
+              <div
+                className={`chapter-status chapter-status-pill chapter-status-${chapter.status.toLowerCase()}`}
+                onClick={() => handleToggleStatus(chapter.id)}
+                style={{ cursor: "pointer" }}
+                title="Click to toggle status"
+              >
                 <i aria-hidden="true" />
                 <span>{chapter.status}</span>
               </div>
@@ -277,7 +334,12 @@ export function ChapterManagementPage() {
                   </svg>
                 </button>
 
-                <button type="button" className="chapter-icon-btn" aria-label={`Delete ${chapter.title}`}>
+                <button
+                  type="button"
+                  className="chapter-icon-btn"
+                  aria-label={`Delete ${chapter.title}`}
+                  onClick={() => handleDeleteChapter(chapter.id)}
+                >
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M5 7h14M10 4h4m-7 3 1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9L17 7M10 11v5M14 11v5" />
                   </svg>
@@ -292,6 +354,7 @@ export function ChapterManagementPage() {
             </div>
           )}
         </div>
+        )}
       </section>
 
       {isDrawerOpen && (
@@ -446,13 +509,19 @@ export function ChapterManagementPage() {
                 {chapterStep === 1 ? "Cancel" : "Back"}
               </button>
 
-              <button type="button" className="chapter-primary-btn" onClick={handleContinue} disabled={!canContinue}>
-                {footerButtonLabel}
+              <button type="button" className="chapter-primary-btn" onClick={handleContinue} disabled={!canContinue || isSubmitting}>
+                {isSubmitting ? "Publishing..." : footerButtonLabel}
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M5 12h14m-5-5 5 5-5 5" />
                 </svg>
               </button>
             </div>
+
+            {submitError && (
+              <p style={{ margin: "10px 20px", color: "#b42318", fontSize: "0.875rem" }}>
+                {submitError}
+              </p>
+            )}
           </aside>
         </div>
       )}

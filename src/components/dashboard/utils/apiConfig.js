@@ -1,6 +1,7 @@
 const LOCAL_API_BASE_URL = import.meta.env.VITE_LOCAL_API_BASE_URL || "http://localhost:3001";
 const SERVER_API_BASE_URL = import.meta.env.VITE_SERVER_API_BASE_URL || "http://72.61.143.83";
 const USERS_API_PATH = import.meta.env.VITE_USERS_API_PATH || "/api/users";
+const CHAPTERS_API_PATH = import.meta.env.VITE_CHAPTERS_API_PATH || "/api/chapters";
 
 // Detect if we're running in local development
 const IS_LOCAL_HOST =
@@ -33,14 +34,29 @@ const USERS_API_FALLBACKS = [
   ...(!USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/users`] : []),
 ];
 
+const CHAPTERS_API_URL = `${API_BASE_URL}${CHAPTERS_API_PATH}`;
+const RELATIVE_CHAPTERS_API_PATH = "/api/chapters";
+const CURRENT_ORIGIN_CHAPTERS_API_URL = CURRENT_ORIGIN ? `${CURRENT_ORIGIN}${RELATIVE_CHAPTERS_API_PATH}` : RELATIVE_CHAPTERS_API_PATH;
+
+const CHAPTERS_API_FALLBACKS = [
+  RELATIVE_CHAPTERS_API_PATH,
+  CURRENT_ORIGIN_CHAPTERS_API_URL,
+  CHAPTERS_API_URL,
+  `${API_BASE_URL}/api/chapters`,
+  ...(!USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/chapters`] : []),
+];
+
 export {
   LOCAL_API_BASE_URL,
   SERVER_API_BASE_URL,
   USERS_API_PATH,
+  CHAPTERS_API_PATH,
   IS_LOCAL_HOST,
   USE_LOCAL_API,
   API_BASE_URL,
   API_URL,
   USERS_API_URL,
   USERS_API_FALLBACKS,
+  CHAPTERS_API_URL,
+  CHAPTERS_API_FALLBACKS,
 };

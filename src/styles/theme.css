@@ -1,0 +1,183 @@
+/**
+ * Global Theme Configuration
+ * All colors are centralized here for easy theme customization
+ * Change these values to update the entire application color scheme
+ */
+
+:root {
+  /* ========== PRIMARY COLOR PALETTE ========== */
+  /* Main brand color - change this to shift the entire theme */
+  --color-primary: #6b7280;
+  --color-primary-hover: #4b5563;
+  --color-primary-light: #f3f4f6;
+
+  /* ========== NEUTRAL GRAYS ========== */
+  /* Background colors */
+  --color-bg-root: #f5f5f4;
+  --color-bg-surface: #fafaf9;
+  --color-bg-card: #ffffff;
+  --color-bg-secondary: #f5f5f4;
+  --color-bg-tertiary: #f5f5f4;
+  --color-bg-hover: #f5f5f4;
+  --color-bg-active: #e7e5e4;
+
+  /* Border colors */   
+  --color-border-subtle: #e7e5e4;
+  --color-border-default: #e7e5e4;
+  --color-border-medium: #d6d3d1;
+  --color-border-strong: #a8a29e;
+
+  /* Text colors */
+  --color-text-primary: #1c1917;
+  --color-text-secondary: #57534e;
+  --color-text-tertiary: #78716c;
+  --color-text-muted: #a8a29e;
+  --color-text-subtle: #a8a29e;
+  --color-text-placeholder: #d6d3d1;
+
+  /* ========== SEMANTIC COLORS ========== */
+  /* Success */
+  --color-success: #3cb982;
+  --color-success-bg: #e8f5f0;
+
+  /* Warning */
+  --color-warning: #ddb021;
+  --color-warning-bg: #fef9e7;
+
+  /* Error */
+  --color-error: #e74c3c;
+  --color-error-bg: #fdeaea;
+
+  /* Info */
+  --color-info: #3498db;
+  --color-info-bg: #eaf4fb;
+
+  /* ========== ACCENT COLORS ========== */
+  --color-accent-teal: #14b8a6;
+  --color-accent-green: #22c55e;
+  --color-accent-emerald: #10b981;
+  --color-accent-purple: #a855f7;
+  --color-accent-pink: #ec4899;
+  --color-accent-orange: #f97316;
+  --color-accent-blue: #3b82f6;
+  --color-accent-yellow: #eab308;
+
+  /* ========== COMPONENT SPECIFIC ========== */
+  /* Sidebar */
+  --sidebar-bg: #fafaf9;
+  --sidebar-border: #e7e5e4;
+  --sidebar-width: 214px;
+
+  /* Menu items */
+  --menu-item-bg-hover: #f5f5f4;
+  --menu-item-bg-active: #e7e5e4;
+  --menu-item-text: #78716c;
+  --menu-item-text-active: #1c1917;
+
+  /* Cards */
+  --card-bg: #ffffff;
+  --card-border: #e2e6ec;
+  --card-shadow: 0 12px 30px rgba(25, 31, 42, 0.04);
+  --card-radius: 16px;
+
+  /* Buttons */
+  --button-bg-primary: #78716c;
+  --button-text-primary: #fafaf9;
+  --button-bg-secondary: #ffffff;
+  --button-text-secondary: #57534e;
+  --button-border-secondary: #e7e5e4;
+  --button-bg-ghost: #f5f5f4;
+  --button-text-ghost: #78716c;
+
+  /* Inputs */
+  --input-bg: #ffffff;
+  --input-border: #e2e7ee;
+  --input-text: #303949;
+  --input-placeholder: #a0a8b6;
+  --input-focus-border: #717b8d;
+
+  /* Tables */
+  --table-header-bg: #ffffff;
+  --table-header-text: #80899a;
+  --table-row-border: #edf1f5;
+  --table-row-hover: #fbfcfd;
+
+  /* Pills & Badges */
+  --pill-bg: #f4f6f9;
+  --pill-text: #7c8596;
+  --pill-border: #eceff4;
+
+  /* Status indicators */
+  --status-active-bg: #f7f9fb;
+  --status-active-text: #7a8495;
+  --status-inactive-bg: #fafbfc;
+  --status-inactive-text: #8b93a3;
+
+  /* Charts */
+  --chart-line-primary: #6e7688;
+  --chart-line-secondary: #b8c0cd;
+  --chart-area: rgba(187, 193, 204, 0.18);
+  --chart-grid: #e7ebf1;
+
+  /* Progress bars */
+  --progress-track: #edf1f5;
+  --progress-fill: linear-gradient(90deg, #c8ced8 0%, #d9dee6 100%);
+
+  /* Avatars */
+  --avatar-bg: #f7f8fa;
+  --avatar-border: #d9dde5;
+  --avatar-text: #9098a7;
+
+  /* Links */
+  --link-color: #7a8394;
+  --link-hover: #636c7d;
+
+  /* ========== SPACING ========== */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+
+  /* ========== BORDER RADIUS ========== */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+  --radius-full: 999px;
+
+  /* ========== SHADOWS ========== */
+  --shadow-sm: 0 2px 8px rgba(25, 31, 42, 0.04);
+  --shadow-md: 0 12px 30px rgba(25, 31, 42, 0.04);
+  --shadow-lg: 0 18px 40px rgba(17, 23, 34, 0.16);
+  --shadow-xl: 0 24px 40px rgba(17, 24, 36, 0.14);
+
+  /* ========== TRANSITIONS ========== */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+  --transition-slow: 0.24s ease;
+
+  /* ========== Z-INDEX ========== */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal-backdrop: 70;
+  --z-modal: 72;
+  --z-popover: 80;
+  --z-tooltip: 90;
+}
+
+/* ========== DARK THEME SUPPORT (Optional) ========== */
+/*
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg-root: #1a1a1a;
+    --color-bg-surface: #2d2d2d;
+    --color-bg-card: #363636;
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #b0b0b0;
+    --color-border-subtle: #404040;
+    --color-border-default: #454545;
+  }
+}
+*/
