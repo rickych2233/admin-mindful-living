@@ -5,8 +5,9 @@
 ### Local Development (`.env`)
 ```env
 VITE_LOCAL_API_BASE_URL=http://localhost:3001
-VITE_SERVER_API_BASE_URL=http://72.61.143.83
+VITE_SERVER_API_BASE_URL=http://187.124.129.55
 VITE_USERS_API_PATH=/api/users
+VITE_CHAPTERS_API_PATH=/api/chapters
 VITE_PROXY_TARGET=http://localhost:3001
 VITE_USE_LOCAL_API=true
 ```
@@ -14,9 +15,10 @@ VITE_USE_LOCAL_API=true
 ### Production Deployment (`.env.production`)
 ```env
 VITE_LOCAL_API_BASE_URL=http://localhost:3001
-VITE_SERVER_API_BASE_URL=http://72.61.143.83
+VITE_SERVER_API_BASE_URL=http://187.124.129.55
 VITE_USERS_API_PATH=/api/users
-VITE_PROXY_TARGET=http://72.61.143.83
+VITE_CHAPTERS_API_PATH=/api/chapters
+VITE_PROXY_TARGET=http://187.124.129.55
 VITE_USE_LOCAL_API=false
 ```
 
@@ -29,7 +31,7 @@ VITE_USE_LOCAL_API=false
 
 ### Production Build (`npm run build`)
 - Creates optimized build in `dist/` folder
-- Uses server API URL (`http://72.61.143.83`) directly
+- Uses server API URL (`http://187.124.129.55`) directly
 - No proxy - direct API calls to server
 
 ## Deployment Steps
@@ -55,14 +57,14 @@ VITE_USE_LOCAL_API=false
 
 The frontend automatically detects environment:
 - **Development + Localhost**: Uses local API (`localhost:3001`)
-- **Production**: Uses server API (`72.61.143.83`)
+- **Production**: Uses server API (`187.124.129.55`)
 - **Manual Override**: Set `VITE_USE_LOCAL_API` to force specific API
 
 ## Troubleshooting
 
 ### API Not Working in Production
 1. Check `VITE_USE_LOCAL_API=false` is set
-2. Verify server API is accessible: `curl http://72.61.143.83/api/users`
+2. Verify server API is accessible: `curl http://187.124.129.55/api/users`
 3. Check browser console for network errors
 
 ### CORS Issues

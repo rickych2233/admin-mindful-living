@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useChaptersCollection, createChapter, deleteChapter, toggleChapterStatus } from "../utils/chapterUtils";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { useChaptersCollection, createChapter, updateChapter, deleteChapter, toggleChapterStatus } from "../utils/chapterUtils";
+import { fetchSectionsByChapter, createSection, deleteSection, toggleSectionStatus, normalizeSection } from "../utils/sectionUtils";
 
 const chapterStepItems = [
   { id: 1, label: "Chapter Info" },
@@ -26,6 +27,83 @@ export function ChapterManagementPage() {
   const [chapterForm, setChapterForm] = useState(initialChapterForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [editingChapter, setEditingChapter] = useState(null);
+  const [expandedChapterId, setExpandedChapterId] = useState(null);
+  const [sectionsMap, setSectionsMap] = useState({});
+  const [sectionsLoading, setSectionsLoading] = useState({});
+  const [addSectionFor, setAddSectionFor] = useState(null);
+  const [sectionForm, setSectionForm] = useState({ title: "", description: "", type: "Text" });
+  const [sectionSubmitting, setSectionSubmitting] = useState(false);
+
+  const handleToggleExpand = useCallback(async (chapter) => {
+    const cId = chapter.apiId ?? chapter.id;
+    if (expandedChapterId === chapter.id) {
+      setExpandedChapterId(null);
+      return;
+    }
+    setExpandedChapterId(chapter.id);
+    if (sectionsMap[cId]) return;
+    setSectionsLoading((p) => ({ ...p, [cId]: true }));
+    try {
+      const sections = await fetchSectionsByChapter(cId);
+      setSectionsMap((p) => ({ ...p, [cId]: sections }));
+    } catch (err) {
+      console.error("Failed to fetch sections:", err);
+      setSectionsMap((p) => ({ ...p, [cId]: [] }));
+    } finally {
+      setSectionsLoading((p) => ({ ...p, [cId]: false }));
+    }
+  }, [expandedChapterId, sectionsMap]);
+
+  const handleDeleteSection = async (chapter, sectionId) => {
+    const cId = chapter.apiId ?? chapter.id;
+    if (!confirm("Are you sure you want to delete this section?")) return;
+    try {
+      await deleteSection(cId, sectionId);
+      setSectionsMap((p) => ({ ...p, [cId]: (p[cId] || []).filter((s) => s.id !== sectionId) }));
+      refetch();
+    } catch (err) {
+      alert(`Gagal menghapus section: ${err.message}`);
+    }
+  };
+
+  const handleToggleSectionStatus = async (chapter, sectionId) => {
+    const cId = chapter.apiId ?? chapter.id;
+    const sections = sectionsMap[cId] || [];
+    const sec = sections.find((s) => s.id === sectionId);
+    if (!sec) return;
+    const prev = sec.status;
+    const next = prev === "Published" ? "Drafted" : "Published";
+    setSectionsMap((p) => ({ ...p, [cId]: p[cId].map((s) => s.id === sectionId ? { ...s, status: next } : s) }));
+    try {
+      const result = await toggleSectionStatus(cId, sectionId);
+      const apiStatus = result?.section?.status || result?.status;
+      if (apiStatus) {
+        setSectionsMap((p) => ({ ...p, [cId]: p[cId].map((s) => s.id === sectionId ? { ...s, status: apiStatus } : s) }));
+      }
+    } catch (err) {
+      setSectionsMap((p) => ({ ...p, [cId]: p[cId].map((s) => s.id === sectionId ? { ...s, status: prev } : s) }));
+      alert(`Gagal mengubah status: ${err.message}`);
+    }
+  };
+
+  const handleAddSection = async (chapter) => {
+    const cId = chapter.apiId ?? chapter.id;
+    if (!sectionForm.title.trim()) return;
+    setSectionSubmitting(true);
+    try {
+      const result = await createSection(cId, { title: sectionForm.title.trim(), description: sectionForm.description.trim(), type: sectionForm.type });
+      const newSec = normalizeSection(result.section || result);
+      setSectionsMap((p) => ({ ...p, [cId]: [...(p[cId] || []), newSec] }));
+      setAddSectionFor(null);
+      setSectionForm({ title: "", description: "", type: "Text" });
+      refetch();
+    } catch (err) {
+      alert(`Gagal membuat section: ${err.message}`);
+    } finally {
+      setSectionSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     setChapterRows(apiChapterRows);
@@ -62,6 +140,21 @@ export function ChapterManagementPage() {
     setIsDrawerOpen(false);
     setChapterStep(1);
     setChapterForm(initialChapterForm);
+    setEditingChapter(null);
+  };
+
+  const handleEditChapter = (chapter) => {
+    setEditingChapter(chapter);
+    setChapterForm({
+      title: chapter.title || "",
+      description: chapter.summary || "",
+      thumbnailName: "",
+      sectionTitle: "",
+      sectionDescription: "",
+      sectionType: "Text",
+    });
+    setChapterStep(1);
+    setIsDrawerOpen(true);
   };
 
   const handleChapterFieldChange = (field) => (event) => {
@@ -80,6 +173,8 @@ export function ChapterManagementPage() {
     }));
   };
 
+  const isEditMode = editingChapter !== null;
+
   const canContinue =
     chapterStep === 1
       ? chapterForm.title.trim() !== "" && chapterForm.description.trim() !== ""
@@ -89,6 +184,42 @@ export function ChapterManagementPage() {
 
   const handleContinue = async () => {
     if (!canContinue) {
+      return;
+    }
+
+    if (isEditMode) {
+      // Edit mode: update chapter immediately from step 1
+      setIsSubmitting(true);
+      setSubmitError("");
+
+      try {
+        const apiId = editingChapter.apiId ?? editingChapter.id;
+        const chapterData = {
+          title: chapterForm.title.trim(),
+          description: chapterForm.description.trim(),
+          status: editingChapter.status || "Drafted",
+        };
+
+        const result = await updateChapter(apiId, chapterData);
+
+        setChapterRows((current) =>
+          current.map((c) =>
+            c.id === editingChapter.id
+              ? {
+                  ...c,
+                  title: result.chapter?.title || result.title || chapterData.title,
+                  summary: result.chapter?.description || result.description || chapterData.description,
+                }
+              : c
+          )
+        );
+        closeChapterDrawer();
+        refetch();
+      } catch (err) {
+        setSubmitError(err.message || "Gagal mengupdate chapter. Silakan coba lagi.");
+      } finally {
+        setIsSubmitting(false);
+      }
       return;
     }
 
@@ -128,6 +259,7 @@ export function ChapterManagementPage() {
 
       setChapterRows((current) => [...current, newChapter]);
       closeChapterDrawer();
+      refetch();
     } catch (err) {
       setSubmitError(err.message || "Gagal membuat chapter. Silakan coba lagi.");
     } finally {
@@ -146,6 +278,7 @@ export function ChapterManagementPage() {
     try {
       await deleteChapter(apiId);
       setChapterRows((current) => current.filter((c) => c.id !== chapterId));
+      refetch();
     } catch (err) {
       alert(`Gagal menghapus chapter: ${err.message}`);
     }
@@ -200,7 +333,7 @@ export function ChapterManagementPage() {
     }
   };
 
-  const footerButtonLabel = chapterStep === 3 ? "Publish" : "Continue";
+  const footerButtonLabel = isEditMode ? "Save Changes" : chapterStep === 3 ? "Publish" : "Continue";
 
   return (
     <>
@@ -237,7 +370,7 @@ export function ChapterManagementPage() {
             </label>
           </div>
 
-          <button type="button" className="chapter-add-btn" onClick={() => setIsDrawerOpen(true)}>
+          <button type="button" className="chapter-add-btn" onClick={() => { setEditingChapter(null); setIsDrawerOpen(true); }}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 5v14M5 12h14" />
             </svg>
@@ -279,7 +412,8 @@ export function ChapterManagementPage() {
           </div>
 
           {filteredChapterRows.map((chapter) => (
-            <article key={chapter.id} className="chapter-row chapter-row-redesign">
+            <React.Fragment key={chapter.id}>
+            <article className="chapter-row chapter-row-redesign">
               <div className="chapter-order-cell">
                 <button type="button" className="chapter-drag-btn" aria-label={`Move ${chapter.title}`}>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -320,7 +454,7 @@ export function ChapterManagementPage() {
               </div>
 
               <div className="chapter-actions">
-                <button type="button" className="chapter-view-btn">
+                <button type="button" className={`chapter-view-btn${expandedChapterId === chapter.id ? " is-expanded" : ""}`} onClick={() => handleToggleExpand(chapter)}>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M2.5 12s3.4-5.5 9.5-5.5S21.5 12 21.5 12 18.1 17.5 12 17.5 2.5 12 2.5 12Z" />
                     <circle cx="12" cy="12" r="2.5" />
@@ -328,7 +462,7 @@ export function ChapterManagementPage() {
                   View Sections
                 </button>
 
-                <button type="button" className="chapter-icon-btn" aria-label={`Edit ${chapter.title}`}>
+                <button type="button" className="chapter-icon-btn" aria-label={`Edit ${chapter.title}`} onClick={() => handleEditChapter(chapter)}>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M13.8 5.7 18.3 10.2M6 18h4l8.6-8.6a1.7 1.7 0 0 0 0-2.4l-1.6-1.6a1.7 1.7 0 0 0-2.4 0L6 14v4Z" />
                   </svg>
@@ -346,6 +480,73 @@ export function ChapterManagementPage() {
                 </button>
               </div>
             </article>
+
+            {expandedChapterId === chapter.id && (() => {
+              const cId = chapter.apiId ?? chapter.id;
+              const sections = sectionsMap[cId] || [];
+              const loading = sectionsLoading[cId];
+              return (
+                <div className="section-panel">
+                  <div className="section-panel-header">
+                    <span>Sections in {chapter.title}</span>
+                    <button type="button" className="section-add-btn" onClick={() => { setAddSectionFor(cId); setSectionForm({ title: "", description: "", type: "Text" }); }}>
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                      Add Section
+                    </button>
+                  </div>
+
+                  {loading && <div className="section-loading">Loading sections...</div>}
+
+                  {!loading && sections.map((sec) => (
+                    <div key={sec.id} className="section-row">
+                      <div className="section-drag">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="7" r="1.5" /><circle cx="16" cy="7" r="1.5" /><circle cx="8" cy="12" r="1.5" /><circle cx="16" cy="12" r="1.5" /><circle cx="8" cy="17" r="1.5" /><circle cx="16" cy="17" r="1.5" /></svg>
+                      </div>
+                      <span className="section-title">{sec.title}</span>
+                      <span className={`section-type-pill section-type-${sec.type.toLowerCase()}`}>
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          {sec.type === "Video" ? <path d="M15 10l5-3v10l-5-3M4 6h11a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z" /> : <path d="M4 4h16v16H4ZM8 8h8M8 12h6M8 16h4" />}
+                        </svg>
+                        {sec.type}
+                      </span>
+                      <span className={`section-status-pill section-status-${sec.status.toLowerCase()}`} onClick={() => handleToggleSectionStatus(chapter, sec.id)} style={{ cursor: "pointer" }} title="Click to toggle status">
+                        <i aria-hidden="true" />
+                        {sec.status}
+                      </span>
+                      <div className="section-actions">
+                        <button type="button" className="chapter-icon-btn" aria-label="Edit section">
+                          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.8 5.7 18.3 10.2M6 18h4l8.6-8.6a1.7 1.7 0 0 0 0-2.4l-1.6-1.6a1.7 1.7 0 0 0-2.4 0L6 14v4Z" /></svg>
+                        </button>
+                        <button type="button" className="chapter-icon-btn" aria-label="Delete section" onClick={() => handleDeleteSection(chapter, sec.id)}>
+                          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 4h4m-7 3 1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9L17 7M10 11v5M14 11v5" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {!loading && sections.length === 0 && <div className="section-loading">No sections yet.</div>}
+
+                  {addSectionFor === cId && (
+                    <div className="section-add-form">
+                      <div className="section-add-form-row">
+                        <input type="text" placeholder="Section title *" value={sectionForm.title} onChange={(e) => setSectionForm((f) => ({ ...f, title: e.target.value }))} />
+                        <select value={sectionForm.type} onChange={(e) => setSectionForm((f) => ({ ...f, type: e.target.value }))}>
+                          <option>Text</option><option>Video</option><option>Audio</option>
+                        </select>
+                      </div>
+                      <input type="text" placeholder="Description (optional)" value={sectionForm.description} onChange={(e) => setSectionForm((f) => ({ ...f, description: e.target.value }))} />
+                      <div className="section-add-form-actions">
+                        <button type="button" className="chapter-secondary-btn" onClick={() => setAddSectionFor(null)}>Cancel</button>
+                        <button type="button" className="section-add-btn" onClick={() => handleAddSection(chapter)} disabled={!sectionForm.title.trim() || sectionSubmitting}>
+                          {sectionSubmitting ? "Creating..." : "Create Section"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </React.Fragment>
           ))}
 
           {filteredChapterRows.length === 0 && (
@@ -362,8 +563,8 @@ export function ChapterManagementPage() {
           <aside className="chapter-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
             <div className="chapter-drawer-header">
               <div>
-                <h2>Add Chapter</h2>
-                <p>Step through to set up chapter and first section</p>
+                <h2>{isEditMode ? "Edit Chapter" : "Add Chapter"}</h2>
+                <p>{isEditMode ? "Update chapter title and description" : "Step through to set up chapter and first section"}</p>
               </div>
 
               <button type="button" className="chapter-drawer-close" aria-label="Close add chapter form" onClick={closeChapterDrawer}>
@@ -373,22 +574,24 @@ export function ChapterManagementPage() {
               </button>
             </div>
 
-            <div className="chapter-stepper">
-              {chapterStepItems.map((step) => {
-                const isActive = chapterStep === step.id;
-                const isComplete = chapterStep > step.id;
+            {!isEditMode && (
+              <div className="chapter-stepper">
+                {chapterStepItems.map((step) => {
+                  const isActive = chapterStep === step.id;
+                  const isComplete = chapterStep > step.id;
 
-                return (
-                  <div
-                    key={step.id}
-                    className={`chapter-step${isActive ? " is-active" : ""}${isComplete ? " is-complete" : ""}`}
-                  >
-                    <div className="chapter-step-circle">{step.id}</div>
-                    <span>{step.label}</span>
-                  </div>
-                );
-              })}
-            </div>
+                  return (
+                    <div
+                      key={step.id}
+                      className={`chapter-step${isActive ? " is-active" : ""}${isComplete ? " is-complete" : ""}`}
+                    >
+                      <div className="chapter-step-circle">{step.id}</div>
+                      <span>{step.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="chapter-drawer-body">
               {chapterStep === 1 && (
@@ -498,7 +701,7 @@ export function ChapterManagementPage() {
                 type="button"
                 className="chapter-secondary-btn"
                 onClick={() => {
-                  if (chapterStep === 1) {
+                  if (isEditMode || chapterStep === 1) {
                     closeChapterDrawer();
                     return;
                   }
@@ -506,7 +709,7 @@ export function ChapterManagementPage() {
                   setChapterStep((current) => current - 1);
                 }}
               >
-                {chapterStep === 1 ? "Cancel" : "Back"}
+                {isEditMode || chapterStep === 1 ? "Cancel" : "Back"}
               </button>
 
               <button type="button" className="chapter-primary-btn" onClick={handleContinue} disabled={!canContinue || isSubmitting}>

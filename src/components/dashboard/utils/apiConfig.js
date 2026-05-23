@@ -1,5 +1,5 @@
 const LOCAL_API_BASE_URL = import.meta.env.VITE_LOCAL_API_BASE_URL || "http://localhost:3001";
-const SERVER_API_BASE_URL = import.meta.env.VITE_SERVER_API_BASE_URL || "http://72.61.143.83";
+const SERVER_API_BASE_URL = import.meta.env.VITE_SERVER_API_BASE_URL || "http://187.124.129.55";
 const USERS_API_PATH = import.meta.env.VITE_USERS_API_PATH || "/api/users";
 const CHAPTERS_API_PATH = import.meta.env.VITE_CHAPTERS_API_PATH || "/api/chapters";
 
@@ -46,6 +46,13 @@ const CHAPTERS_API_FALLBACKS = [
   ...(!USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/chapters`] : []),
 ];
 
+function getSectionsApiFallbacks(chapterId) {
+  const encodedId = encodeURIComponent(String(chapterId));
+  return CHAPTERS_API_FALLBACKS.map(
+    (ep) => `${String(ep).replace(/\/+$/, "")}/${encodedId}/sections`
+  );
+}
+
 export {
   LOCAL_API_BASE_URL,
   SERVER_API_BASE_URL,
@@ -59,4 +66,6 @@ export {
   USERS_API_FALLBACKS,
   CHAPTERS_API_URL,
   CHAPTERS_API_FALLBACKS,
+  getSectionsApiFallbacks,
 };
+

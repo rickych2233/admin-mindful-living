@@ -284,24 +284,36 @@ export function UserManagementPage() {
               </div>
 
               <span className="user-email">{user.email}</span>
-              <span className="user-language-pill">{user.language}</span>
 
-              <span className={`user-biometric-pill ${user.biometric === "On" ? "is-on" : "is-off"}`}>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  {user.biometric === "On" ? (
-                    <path d="m7 12 3 3 7-7" />
-                  ) : (
-                    <path d="m8 8 8 8M16 8l-8 8" />
-                  )}
-                </svg>
-                {user.biometric}
-              </span>
+              <div className="user-row-mobile-pills">
+                <span className="user-language-pill">{user.language}</span>
 
-              <span className="user-donation">{user.donationAmount}</span>
-              <span className="user-last-login">{user.lastActive}</span>
-              <span className={`user-status-pill ${user.status === "Active" ? "is-active" : "is-inactive"}`}>
-                {user.status}
-              </span>
+                <span className={`user-biometric-pill ${user.biometric === "On" ? "is-on" : "is-off"}`}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    {user.biometric === "On" ? (
+                      <path d="m7 12 3 3 7-7" />
+                    ) : (
+                      <path d="m8 8 8 8M16 8l-8 8" />
+                    )}
+                  </svg>
+                  {user.biometric}
+                </span>
+
+                <span className={`user-status-pill ${user.status === "Active" ? "is-active" : "is-inactive"}`}>
+                  {user.status}
+                </span>
+              </div>
+
+              <div className="user-row-mobile-info">
+                <div className="user-row-mobile-info-item">
+                  <span className="user-mobile-label">Donation</span>
+                  <span className="user-donation">{user.donationAmount}</span>
+                </div>
+                <div className="user-row-mobile-info-item">
+                  <span className="user-mobile-label">Last Active</span>
+                  <span className="user-last-login">{user.lastActive}</span>
+                </div>
+              </div>
 
               <button
                 type="button"

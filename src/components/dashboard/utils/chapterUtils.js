@@ -187,7 +187,7 @@ export function normalizeChapter(item) {
   const idRaw = item.id ?? item._id ?? item.chapterId ?? item.chapter_id ?? item.uuid;
   const id = idRaw ?? `${item.title || "chapter"}-${Math.random().toString(36).slice(2, 8)}`;
 
-  const sectionsRaw = item.sections ?? item.sectionCount ?? item.section_count ?? item.sectionsCount ?? 0;
+  const sectionsRaw = item.section_count ?? item.sections ?? item.sectionCount ?? item.section_count ?? item.sectionsCount ?? 0;
   const sections = typeof sectionsRaw === "number" ? sectionsRaw : parseInt(String(sectionsRaw), 10) || 0;
 
   const status = resolveChapterStatus(item);
@@ -209,6 +209,9 @@ export function useChaptersCollection() {
   const [rows, setRows] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [fetchKey, setFetchKey] = useState(0);
+
+  const refetch = () => setFetchKey((k) => k + 1);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -269,7 +272,7 @@ export function useChaptersCollection() {
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [fetchKey]);
 
-  return { rows, isLoading, error };
+  return { rows, isLoading, error, refetch };
 }
