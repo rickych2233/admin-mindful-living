@@ -2803,8 +2803,8 @@ body,
   overflow: hidden;
   background: #ffffff;
   box-shadow: -18px 0 40px rgba(17, 23, 34, 0.16);
-  display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .chapter-drawer-header {
@@ -2889,6 +2889,8 @@ body,
 .chapter-drawer-body {
   padding: 22px 18px 18px;
   overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .chapter-form-grid {
