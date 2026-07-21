@@ -28,6 +28,19 @@ const initialPracticeRows = [
     category: "Sleep",
     status: "Drafted",
   },
+  {
+    id: 4,
+    title: "Mindful Moments",
+    goal: "Mindfulness",
+    duration: "5-10 mins",
+    sessions: 1,
+    category: "Mindfulness",
+    status: "Drafted",
+  },
+];
+
+const initialCategories = [
+  "Breathwork", "Cardiac Coherence", "Mindfulness", "Focus", "Grounding", "Sleep", "Nervous System Reset", "Energy / Vitality"
 ];
 
 const practiceStepItems = [
@@ -54,8 +67,13 @@ export function PracticeManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All Category");
   const [statusFilter, setStatusFilter] = useState("All Status");
-  const [practiceRows, setPracticeRows] = useState(initialPracticeRows);
+  const [practiceRows, setPracticeRows] = useState([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [showCategorySuccessToast, setShowCategorySuccessToast] = useState(false);
+  const [addedCategories, setAddedCategories] = useState(initialCategories);
+  const [expandedPracticeId, setExpandedPracticeId] = useState(null);
   const [practiceStep, setPracticeStep] = useState(1);
   const [practiceForm, setPracticeForm] = useState(initialPracticeForm);
 
@@ -71,6 +89,23 @@ export function PracticeManagementPage() {
       document.body.style.overflow = previousOverflow;
     };
   }, [isDrawerOpen]);
+
+  useEffect(() => {
+    fetchPractices();
+  }, []);
+
+  const fetchPractices = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/api/practices");
+      if (response.ok) {
+        const data = await response.json();
+        setPracticeRows(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch practices:", error);
+    }
+  };
+
 
   const categoryOptions = useMemo(
     () => ["All Category", ...new Set(practiceRows.map((practice) => practice.category))],
@@ -111,8 +146,19 @@ export function PracticeManagementPage() {
       buckets.set(practice.category, current);
     });
 
+    addedCategories.forEach((cat) => {
+      if (!buckets.has(cat)) {
+        buckets.set(cat, {
+          id: cat,
+          name: cat,
+          totalPractices: 0,
+          status: "Drafted",
+        });
+      }
+    });
+
     return [...buckets.values()];
-  }, [practiceRows]);
+  }, [practiceRows, addedCategories]);
 
   const filteredCategoryRows = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -150,13 +196,13 @@ export function PracticeManagementPage() {
   const canContinue =
     practiceStep === 1
       ? ["name", "caption", "category", "durationRange", "goalType"].every(
-          (field) => practiceForm[field].trim() !== ""
-        )
+        (field) => practiceForm[field].trim() !== ""
+      )
       : practiceStep === 2
-      ? ["sessionTitle", "sessionType", "sessionDuration", "sessionDescription"].every(
+        ? ["sessionTitle", "sessionType", "sessionDuration", "sessionDescription"].every(
           (field) => practiceForm[field].trim() !== ""
         )
-      : true;
+        : true;
 
   const handlePracticeContinue = () => {
     if (!canContinue) {
@@ -184,6 +230,15 @@ export function PracticeManagementPage() {
     closePracticeDrawer();
   };
 
+  const handleSaveCategory = () => {
+    if (!newCategoryName.trim()) return;
+    setAddedCategories((prev) => [...prev, newCategoryName.trim()]);
+    setIsAddCategoryModalOpen(false);
+    setNewCategoryName("");
+    setShowCategorySuccessToast(true);
+    setTimeout(() => setShowCategorySuccessToast(false), 5000);
+  };
+
   const footerLabel =
     activeTab === "practice"
       ? `from ${filteredPracticeRows.length} results`
@@ -196,7 +251,7 @@ export function PracticeManagementPage() {
         <p>Organize the practices and categories in one place</p>
       </header>
 
-      <section className="chapter-page practice-management-page">
+      <section className="chapter-page practice-management-page mt-5">
         <div className="practice-tabs">
           <button
             type="button"
@@ -214,16 +269,16 @@ export function PracticeManagementPage() {
           </button>
         </div>
 
-        <div className="chapter-toolbar practice-toolbar">
-          <div className="chapter-filters practice-filters">
-            <label className="chapter-search practice-search" aria-label="Search practice name">
+        <div className="chapter-toolbar practice-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div className="chapter-filters practice-filters" style={{ display: 'flex', gap: '12px', flexWrap: 'nowrap', flex: 1 }}>
+            <label className="chapter-search practice-search" aria-label={activeTab === "practice" ? "Search practice name" : "Search category name"} style={{ width: 'min(100%, 246px)' }}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="11" cy="11" r="7" />
                 <path d="m20 20-3.5-3.5" />
               </svg>
               <input
                 type="search"
-                placeholder="Search practice name..."
+                placeholder={activeTab === "practice" ? "Search practice name..." : "Search category name..."}
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
               />
@@ -242,24 +297,33 @@ export function PracticeManagementPage() {
               </label>
             )}
 
-            <label className="chapter-select chapter-select-shell practice-select">
-              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                <option>All Status</option>
-                <option>Published</option>
-                <option>Drafted</option>
-              </select>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m7 10 5 5 5-5" />
-              </svg>
-            </label>
+            {activeTab === "practice" && (
+              <label className="chapter-select chapter-select-shell practice-select">
+                <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                  <option>All Status</option>
+                  <option>Published</option>
+                  <option>Drafted</option>
+                </select>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m7 10 5 5 5-5" />
+                </svg>
+              </label>
+            )}
           </div>
 
-          {activeTab === "practice" && (
-            <button type="button" className="chapter-add-btn practice-add-btn" onClick={() => setIsDrawerOpen(true)}>
+          {activeTab === "practice" ? (
+            <button type="button" className="chapter-primary-btn practice-add-btn" onClick={() => setIsDrawerOpen(true)}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 5v14M5 12h14" />
               </svg>
               Add Practice
+            </button>
+          ) : (
+            <button type="button" className="chapter-primary-btn practice-add-btn" onClick={() => setIsAddCategoryModalOpen(true)}>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Add Category
             </button>
           )}
         </div>
@@ -267,91 +331,141 @@ export function PracticeManagementPage() {
         {activeTab === "practice" ? (
           <div className="chapter-table-card practice-table-card">
             <div className="practice-table-head">
-              <span>No</span>
-              <span className="sortable-head">
-                Practice Name
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m8 10 4-4 4 4" />
-                  <path d="m16 14-4 4-4-4" />
-                </svg>
-              </span>
-              <span className="sortable-head">
-                Category
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m8 10 4-4 4 4" />
-                  <path d="m16 14-4 4-4-4" />
-                </svg>
-              </span>
-              <span className="sortable-head">
-                Status
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m8 10 4-4 4 4" />
-                  <path d="m16 14-4 4-4-4" />
-                </svg>
-              </span>
-              <span>Action</span>
+              <span>No.</span>
+              <span className="chapter-sortable">Practice Name <i aria-hidden="true"></i></span>
+              <span className="chapter-sortable">Category <i aria-hidden="true"></i></span>
+              <span className="chapter-sortable">Status <i aria-hidden="true"></i></span>
+              <span style={{ textAlign: "right", paddingRight: "8px" }}>Action</span>
             </div>
 
             {filteredPracticeRows.map((practice) => (
-              <article key={practice.id} className="practice-row">
-                <div className="chapter-order-cell">
-                  <button type="button" className="chapter-drag-btn" aria-label={`Move ${practice.title}`}>
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <circle cx="8" cy="7" r="1.5" />
-                      <circle cx="16" cy="7" r="1.5" />
-                      <circle cx="8" cy="12" r="1.5" />
-                      <circle cx="16" cy="12" r="1.5" />
-                      <circle cx="8" cy="17" r="1.5" />
-                      <circle cx="16" cy="17" r="1.5" />
-                    </svg>
-                  </button>
-                  <span className="chapter-order-number">{practice.id}</span>
-                </div>
-
-                <div className="chapter-main-cell chapter-main-cell-redesign practice-main-cell">
-                  <div className="chapter-thumb" aria-hidden="true">
-                    <svg viewBox="0 0 24 24">
-                      <circle cx="8" cy="8" r="2" />
-                      <path d="m5 18 4.2-5.2a2 2 0 0 1 3 .1L14 15l1.3-1.5a2 2 0 0 1 3 .1L20 16v2H5Z" />
-                    </svg>
+              <React.Fragment key={practice.id}>
+                <article className="practice-row">
+                  <div className="chapter-order-cell">
+                    <button type="button" className="chapter-drag-btn" aria-label={`Move ${practice.title}`}>
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="8" cy="7" r="1.5" />
+                        <circle cx="16" cy="7" r="1.5" />
+                        <circle cx="8" cy="12" r="1.5" />
+                        <circle cx="16" cy="12" r="1.5" />
+                        <circle cx="8" cy="17" r="1.5" />
+                        <circle cx="16" cy="17" r="1.5" />
+                      </svg>
+                    </button>
+                    <span className="chapter-order-number">{practice.id}</span>
                   </div>
-                  <div className="chapter-copy">
-                    <h3>{practice.title}</h3>
-                    <p>
-                      Goal: {practice.goal} {"\u2022"} {practice.duration} {"\u2022"} {practice.sessions} sessions
-                    </p>
+
+                  <div className="practice-main-cell" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                    <img
+                      src="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=120&q=80"
+                      alt={practice.title}
+                      className="chapter-thumb"
+                      style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
+                    />
+                    <div className="chapter-copy">
+                      <h3>{practice.title}</h3>
+                      <p>
+                        {practice.duration} {"\u2022"} {practice.sessions} {practice.sessions === 1 ? 'session' : 'sessions'}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <span className="practice-category-text">{practice.category}</span>
+                  <span className="practice-category-text">{practice.category}</span>
 
-                <div className={`chapter-status chapter-status-pill chapter-status-${practice.status.toLowerCase()}`}>
-                  <i aria-hidden="true" />
-                  <span>{practice.status}</span>
-                </div>
+                  <div className={`chapter-status-pill chapter-status-${practice.status.toLowerCase()}`}>
+                    <i aria-hidden="true" />
+                    <span>{practice.status}</span>
+                  </div>
 
-                <div className="chapter-actions">
-                  <button type="button" className="chapter-view-btn">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M2.5 12s3.4-5.5 9.5-5.5S21.5 12 21.5 12 18.1 17.5 12 17.5 2.5 12 2.5 12Z" />
-                      <circle cx="12" cy="12" r="2.5" />
-                    </svg>
-                    View Sessions
-                  </button>
+                  <div className="chapter-actions">
+                    <button
+                      type="button"
+                      className={`chapter-view-btn${expandedPracticeId === practice.id ? " is-expanded" : ""}`}
+                      onClick={() => setExpandedPracticeId(expandedPracticeId === practice.id ? null : practice.id)}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M2.5 12s3.4-5.5 9.5-5.5S21.5 12 21.5 12 18.1 17.5 12 17.5 2.5 12 2.5 12Z" />
+                        <circle cx="12" cy="12" r="2.5" />
+                      </svg>
+                      View Sessions
+                    </button>
 
-                  <button type="button" className="chapter-icon-btn" aria-label={`Edit ${practice.title}`}>
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M13.8 5.7 18.3 10.2M6 18h4l8.6-8.6a1.7 1.7 0 0 0 0-2.4l-1.6-1.6a1.7 1.7 0 0 0-2.4 0L6 14v4Z" />
-                    </svg>
-                  </button>
+                    <button type="button" className="chapter-icon-btn" aria-label={`Edit ${practice.title}`}>
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M13.8 5.7 18.3 10.2M6 18h4l8.6-8.6a1.7 1.7 0 0 0 0-2.4l-1.6-1.6a1.7 1.7 0 0 0-2.4 0L6 14v4Z" />
+                      </svg>
+                    </button>
 
-                  <button type="button" className="chapter-icon-btn" aria-label={`Delete ${practice.title}`}>
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M5 7h14M10 4h4m-7 3 1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9L17 7M10 11v5M14 11v5" />
-                    </svg>
-                  </button>
-                </div>
-              </article>
+                    <button type="button" className="chapter-icon-btn" aria-label={`Delete ${practice.title}`}>
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5 7h14M10 4h4m-7 3 1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9L17 7M10 11v5M14 11v5" />
+                      </svg>
+                    </button>
+                  </div>
+                </article>
+
+                {expandedPracticeId === practice.id && (
+                  <div className="section-panel">
+                    <div className="section-panel-header">
+                      <span>Sessions in {practice.title} Practice</span>
+                      <button type="button" className="section-add-btn">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M12 5v14M5 12h14" />
+                        </svg>
+                        Add Session
+                      </button>
+                    </div>
+
+                    {Array.from({ length: practice.sessions }).map((_, idx) => (
+                      <div key={idx} className="section-container">
+                        <div className="section-row">
+                          <div className="section-drag">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <circle cx="8" cy="7" r="1.5" />
+                              <circle cx="16" cy="7" r="1.5" />
+                              <circle cx="8" cy="12" r="1.5" />
+                              <circle cx="16" cy="12" r="1.5" />
+                              <circle cx="8" cy="17" r="1.5" />
+                              <circle cx="16" cy="17" r="1.5" />
+                            </svg>
+                          </div>
+                          <span className="section-title">Session {idx + 1} - {idx === 0 ? 'Introduction' : 'Deep Dive'}</span>
+
+                          <span className="section-type-pill section-type-video">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <rect x="2" y="6" width="20" height="12" rx="2" ry="2" />
+                              <polygon points="10 9 15 12 10 15 10 9" />
+                            </svg>
+                            Video
+                          </span>
+
+                          <span className={`section-status-pill section-status-${idx === 0 ? 'published' : 'drafted'}`}>
+                            <i aria-hidden="true" />
+                            {idx === 0 ? 'Published' : 'Drafted'}
+                          </span>
+
+                          <div className="section-actions">
+                            <button type="button" className="chapter-icon-btn" aria-label="Edit session">
+                              <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                              </svg>
+                            </button>
+                            <button type="button" className="chapter-icon-btn" aria-label="Delete session">
+                              <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                <line x1="10" y1="11" x2="10" y2="17" />
+                                <line x1="14" y1="11" x2="14" y2="17" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </React.Fragment>
             ))}
 
             {filteredPracticeRows.length === 0 && (
@@ -363,18 +477,42 @@ export function PracticeManagementPage() {
         ) : (
           <div className="chapter-table-card practice-table-card">
             <div className="practice-category-head">
-              <span>Category Name</span>
-              <span>Total Practice</span>
-              <span>Status</span>
+              <span>No.</span>
+              <span className="chapter-sortable">Category Name <i aria-hidden="true"></i></span>
+              <span className="chapter-sortable">Amount of tagged <i aria-hidden="true"></i></span>
+              <span style={{ textAlign: "right", paddingRight: "8px" }}>Action</span>
             </div>
 
-            {filteredCategoryRows.map((category) => (
+            {filteredCategoryRows.map((category, index) => (
               <article key={category.id} className="practice-category-row">
+                <div className="chapter-order-cell">
+                  <button type="button" className="chapter-drag-btn" aria-label={`Move ${category.name}`}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="8" cy="7" r="1.5" />
+                      <circle cx="16" cy="7" r="1.5" />
+                      <circle cx="8" cy="12" r="1.5" />
+                      <circle cx="16" cy="12" r="1.5" />
+                      <circle cx="8" cy="17" r="1.5" />
+                      <circle cx="16" cy="17" r="1.5" />
+                    </svg>
+                  </button>
+                  <span className="chapter-order-number">{index + 1}</span>
+                </div>
+
                 <span className="practice-category-name">{category.name}</span>
-                <span className="practice-category-total">{category.totalPractices}</span>
-                <div className={`chapter-status chapter-status-pill chapter-status-${category.status.toLowerCase()}`}>
-                  <i aria-hidden="true" />
-                  <span>{category.status}</span>
+                <span className="practice-category-total">{category.totalPractices} Practice</span>
+
+                <div className="chapter-actions">
+                  <button type="button" className="chapter-icon-btn" aria-label={`Edit ${category.name}`}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M13.8 5.7 18.3 10.2M6 18h4l8.6-8.6a1.7 1.7 0 0 0 0-2.4l-1.6-1.6a1.7 1.7 0 0 0-2.4 0L6 14v4Z" />
+                    </svg>
+                  </button>
+                  <button type="button" className="chapter-icon-btn" aria-label={`Delete ${category.name}`}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M5 7h14M10 4h4m-7 3 1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9L17 7M10 11v5M14 11v5" />
+                    </svg>
+                  </button>
                 </div>
               </article>
             ))}
@@ -640,6 +778,93 @@ export function PracticeManagementPage() {
           </aside>
         </div>
       )}
+
+      {isAddCategoryModalOpen && (
+        <div className="chapter-drawer-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setIsAddCategoryModalOpen(false)}>
+          <div style={{ background: '#FFF', borderRadius: '12px', padding: '24px', width: '400px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#1A202C' }}>Add Category</h3>
+              <button type="button" onClick={() => setIsAddCategoryModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#A0AEC0', padding: 0 }}>
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px', color: '#4A5568', fontWeight: '500' }}>Category Name <span style={{ color: '#E53E3E' }}>*</span></label>
+              <input
+                type="text"
+                placeholder="Enter category name"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid #E2E8F0', borderRadius: '8px', outline: 'none', fontSize: '14px', color: '#1A202C' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setIsAddCategoryModalOpen(false)}
+                style={{ flex: 1, padding: '10px 0', border: '1px solid #E2E8F0', background: '#FFF', borderRadius: '100px', color: '#4A5568', fontWeight: '500', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveCategory}
+                disabled={!newCategoryName.trim()}
+                style={{ flex: 1, padding: '10px 0', border: 'none', background: newCategoryName.trim() ? '#795289' : '#E2E8F0', borderRadius: '100px', color: newCategoryName.trim() ? '#FFF' : '#A0AEC0', fontWeight: '500', cursor: newCategoryName.trim() ? 'pointer' : 'not-allowed' }}
+              >
+                Save Category
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCategorySuccessToast && (
+        <div style={{
+          position: 'fixed',
+          top: '32px',
+          right: '32px',
+          width: '340px',
+          background: '#161d29',
+          borderRadius: '12px',
+          padding: '20px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          zIndex: 9999,
+          display: 'flex',
+          gap: '12px',
+          border: '1px solid #222a40',
+          animation: 'slideInDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        }}>
+          <div style={{ flexShrink: 0, marginTop: '2px' }}>
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="#10B981">
+              <circle cx="12" cy="12" r="12" />
+              <path d="M17 8l-7 8-3-3" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </svg>
+          </div>
+          <div style={{ flexGrow: 1 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+              <strong style={{ color: '#ffffff', fontSize: '15px', fontWeight: '600' }}>New Category Added</strong>
+              <button type="button" onClick={() => setShowCategorySuccessToast(false)} style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 0 }} aria-label="Close">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <p style={{ color: '#94A3B8', fontSize: '13px', margin: '0', lineHeight: '1.4' }}>You have successfully added a new Category</p>
+          </div>
+          <style>{`
+            @keyframes slideInDown {
+              from { transform: translateY(-100px); opacity: 0; }
+              to { transform: translateY(0); opacity: 1; }
+            }
+          `}</style>
+        </div>
+      )}
     </>
   );
 }
+
+export default PracticeManagementPage;

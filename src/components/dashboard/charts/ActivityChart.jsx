@@ -21,12 +21,33 @@ export function ActivityChart({ labels, primaryValues, secondaryValues }) {
         <path d={pointsToArea(primaryPoints, height, padding)} className="chart-area" />
         <path d={pointsToPath(primaryPoints)} className="chart-line chart-line-primary" />
         <path d={pointsToPath(secondaryPoints)} className="chart-line chart-line-secondary" />
+
+        {primaryPoints.map((point, index) => (
+          <circle key={`p-${index}`} cx={point.x} cy={point.y} r={4} className="chart-dot chart-dot-primary" />
+        ))}
+        {secondaryPoints.map((point, index) => (
+          <circle key={`s-${index}`} cx={point.x} cy={point.y} r={4} className="chart-dot chart-dot-secondary" />
+        ))}
       </svg>
 
-      <div className="chart-labels">
-        {labels.map((label) => (
-          <span key={label}>{label}</span>
-        ))}
+      <div className="chart-labels" style={{ position: 'relative', height: '20px', width: '100%' }}>
+        {labels.map((label, index) => {
+          const x = labels.length === 1 ? width / 2 : padding + (innerWidth / (labels.length - 1)) * index;
+          const xPercent = (x / width) * 100;
+          return (
+            <span 
+              key={label} 
+              style={{ 
+                position: 'absolute', 
+                left: `${xPercent}%`, 
+                transform: 'translateX(-50%)',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {label}
+            </span>
+          );
+        })}
       </div>
 
       <div className="chart-legend">

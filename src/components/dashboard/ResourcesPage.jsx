@@ -12,6 +12,8 @@ const RESOURCE_CONTENT_TYPES = [
   { value: "Text", icon: "text" },
   { value: "Video", icon: "video" },
   { value: "Image", icon: "image" },
+  { value: "Document", icon: "document" },
+  { value: "Audio", icon: "audio" },
 ];
 
 const RESOURCE_LANGUAGE_OPTIONS = [
@@ -36,6 +38,8 @@ function createEmptyContentFiles() {
   return {
     Video: null,
     Image: null,
+    Document: null,
+    Audio: null,
   };
 }
 
@@ -210,6 +214,25 @@ function ResourceVisualIcon({ type = "image" }) {
     );
   }
 
+  if (type === "document") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+      </svg>
+    );
+  }
+
+  if (type === "audio") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 18V5l12-2v13" />
+        <circle cx="6" cy="18" r="3" />
+        <circle cx="18" cy="16" r="3" />
+      </svg>
+    );
+  }
+
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="8" cy="8" r="2" />
@@ -329,7 +352,8 @@ function UploadBox({ accept, helperText, label, onChange, type }) {
 }
 
 function ResourcesPage() {
-  const [resources, setResources] = useState(initialResources);
+  const [activeTab, setActiveTab] = useState("Resource List");
+  const [resources, setResources] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All Category");
   const [statusFilter, setStatusFilter] = useState("Status");
@@ -339,6 +363,14 @@ function ResourcesPage() {
   const [activeLanguage, setActiveLanguage] = useState("en");
   const [editingResourceId, setEditingResourceId] = useState(null);
   const [toast, setToast] = useState(null);
+
+  const mockSuggestions = [
+    { id: 1, name: "Marie Laura", title: "Stillness Speaks — E. Tolle", date: "11 Nov 2025", category: "Book" },
+    { id: 2, name: "Kenny Roberts", title: "Inner Worlds, Outer Worlds", date: "12 Nov 2025", category: "Movie" },
+    { id: 3, name: "Sophia Turner", title: "The Art of Happiness — D. Lama", date: "13 Nov 2025", category: "Book" },
+    { id: 4, name: "Liam Johnson", title: "Planet Earth II", date: "14 Nov 2025", category: "Audio" },
+    { id: 5, name: "Ava Martinez", title: "Inception", date: "15 Nov 2025", category: "Movie" },
+  ];
 
   useEffect(() => {
     if (!isModalOpen) {
@@ -366,6 +398,22 @@ function ResourcesPage() {
       window.clearTimeout(timeoutId);
     };
   }, [toast]);
+
+  useEffect(() => {
+    fetchResources();
+  }, []);
+
+  const fetchResources = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/api/resources");
+      if (response.ok) {
+        const data = await response.json();
+        setResources(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch resources:", error);
+    }
+  };
 
   const categoryFilterOptions = useMemo(
     () => ["All Category", ...new Set(resources.map((resource) => resource.category))],
@@ -573,9 +621,28 @@ function ResourcesPage() {
       </header>
 
       <section className="chapter-page resources-page">
-        <div className="resources-toolbar">
-          <div className="chapter-filters resources-filters">
-            <label className="chapter-search resources-search" aria-label="Search resources">
+        <div className="resources-tabs">
+          <button 
+            type="button" 
+            className={`resources-tab${activeTab === "Resource List" ? " is-active" : ""}`}
+            onClick={() => setActiveTab("Resource List")}
+          >
+            Resource List
+          </button>
+          <button 
+            type="button" 
+            className={`resources-tab${activeTab === "User Suggestion List" ? " is-active" : ""}`}
+            onClick={() => setActiveTab("User Suggestion List")}
+          >
+            User Suggestion List
+          </button>
+        </div>
+
+        {activeTab === "Resource List" ? (
+          <>
+            <div className="resources-toolbar">
+              <div className="chapter-filters resources-filters">
+                <label className="chapter-search resources-search" aria-label="Search resources">
               <SearchIcon />
               <input
                 type="search"
@@ -622,14 +689,14 @@ function ResourcesPage() {
               </svg>
             </span>
             <span className="sortable-head">
-              Date Added
+              Content Type
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="m8 10 4-4 4 4" />
                 <path d="m16 14-4 4-4-4" />
               </svg>
             </span>
             <span className="sortable-head">
-              Category
+              Date Added
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="m8 10 4-4 4 4" />
                 <path d="m16 14-4 4-4-4" />
@@ -658,8 +725,8 @@ function ResourcesPage() {
                 </div>
               </div>
 
-              <span className="resources-date">{resource.dateAdded}</span>
               <span className="resources-category-pill">{resource.category}</span>
+              <span className="resources-date">{resource.dateAdded}</span>
 
               <span
                 className={`resources-status-pill${
@@ -724,6 +791,49 @@ function ResourcesPage() {
             </button>
           </div>
         </div>
+        </>
+        ) : (
+          <div className="resources-suggestion-view">
+            <div className="chapter-table-card resources-table-card">
+              <div className="resources-table-head suggestion-table-head">
+                <span className="sortable-head">Suggested by</span>
+                <span className="sortable-head">Title</span>
+                <span className="sortable-head">Date</span>
+                <span className="sortable-head">Category</span>
+                <span>Action</span>
+              </div>
+              
+              {mockSuggestions.map((suggestion) => (
+                <article key={suggestion.id} className="resources-row suggestion-row">
+                  <div className="suggestion-user-cell">
+                    <div className="suggestion-avatar"></div>
+                    <span>{suggestion.name}</span>
+                  </div>
+                  <div className="resources-title-cell">
+                    <span className="resources-suggestion-title">{suggestion.title}</span>
+                  </div>
+                  <span className="resources-date">{suggestion.date}</span>
+                  <span className="resources-category-pill">{suggestion.category}</span>
+                  <div className="suggestion-actions">
+                    <button type="button" className="suggestion-approve-btn" onClick={() => showToast("Suggestion Approved", "You have approve a resource suggestion")}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      Approve
+                    </button>
+                    <button type="button" className="suggestion-reject-btn" onClick={() => showToast("Suggestion Rejected", "You have reject a resource suggestion")}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                      Reject
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        )}
 
         {toast && (
           <div className="resources-toast" role="status" aria-live="polite">
@@ -732,7 +842,7 @@ function ResourcesPage() {
                 <div className="resources-toast-icon" aria-hidden="true">
                   <StatusIcon />
                 </div>
-                <div>
+                <div className="resources-toast-copy-text">
                   <strong>{toast.title}</strong>
                   <p>{toast.message}</p>
                 </div>
@@ -742,10 +852,6 @@ function ResourcesPage() {
                 <CloseIcon />
               </button>
             </div>
-
-            <button type="button" className="resources-toast-dismiss" onClick={() => setToast(null)}>
-              Dismiss
-            </button>
           </div>
         )}
       </section>
@@ -925,9 +1031,24 @@ function ResourcesPage() {
                         />
                       ) : (
                         <UploadBox
-                          accept={resourceForm.contentType === "Video" ? ".mp4,.mov" : ".png,.jpg,.jpeg"}
-                          label={resourceForm.contentType === "Video" ? "MP4, MOV" : "PNG, JPG"}
-                          helperText={resourceForm.contentType === "Video" ? "500 MB" : "2 MB"}
+                          accept={
+                            resourceForm.contentType === "Video" ? ".mp4" :
+                            resourceForm.contentType === "Document" ? ".pdf" :
+                            resourceForm.contentType === "Audio" ? ".mp3" :
+                            ".png,.jpg,.jpeg"
+                          }
+                          label={
+                            resourceForm.contentType === "Video" ? "MP4" :
+                            resourceForm.contentType === "Document" ? "PDF" :
+                            resourceForm.contentType === "Audio" ? "MP3" :
+                            "PNG, JPG"
+                          }
+                          helperText={
+                            resourceForm.contentType === "Video" ? "50 MB" :
+                            resourceForm.contentType === "Document" ? "10 MB" :
+                            resourceForm.contentType === "Audio" ? "10 MB" :
+                            "2 MB"
+                          }
                           onChange={handleContentFileChange}
                           type={resourceForm.contentType.toLowerCase()}
                         />

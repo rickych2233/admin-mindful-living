@@ -13,11 +13,13 @@ import { UserManagementPage } from "./pages/UserManagementPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 
 import { dashboardSegmentByItemId } from "./data/constants";
+import { LogoutModal } from "./LogoutModal";
 
 function DashboardPage({ onLogout = () => {} }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const pathAfterDashboard = location.pathname.replace(/^\/dashboard\/?/, "");
   const activeSegment = pathAfterDashboard.split("/")[0];
   const activeItem = sidebarMainItems.find((item) => dashboardSegmentByItemId[item.id] === activeSegment)?.id ?? "dashboard";
@@ -52,7 +54,13 @@ function DashboardPage({ onLogout = () => {} }) {
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         onSelectItem={handleSelectItem}
-        onLogout={onLogout}
+        onLogout={() => setIsLogoutModalOpen(true)}
+      />
+
+      <LogoutModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={onLogout}
       />
 
       <div className="dashboard-main">

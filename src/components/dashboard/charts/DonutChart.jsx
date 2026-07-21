@@ -10,17 +10,20 @@ export function DonutChart({ items }) {
   return (
     <div className="donut-chart-shell">
       <svg className="donut-chart" viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Content mode preference chart">
-        <circle
-          className="donut-track"
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          strokeWidth={strokeWidth}
-        />
-
         <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
           {items.map((item) => {
+            // stroke-linecap="round" adds strokeWidth (28px) to the visible length (14px on each end).
+            // To create a true 6px gap, we must subtract strokeWidth + 6 from the dashLength.
+            const trueGap = 6;
+            const gap = strokeWidth + trueGap; 
             const dashLength = (item.value / 100) * circumference;
+            const visibleLength = Math.max(0, dashLength - gap);
+
+            // We also need to offset the start so the rounded cap doesn't bleed backwards into the previous segment's space.
+            // The segment starts at `offset`, but the round cap extends backward by strokeWidth/2.
+            // If we add strokeWidth/2 + trueGap/2 to the offset, we center the gap!
+            const segmentOffset = offset + (strokeWidth / 2) + (trueGap / 2);
+
             const segment = (
               <circle
                 key={item.label}
@@ -29,8 +32,8 @@ export function DonutChart({ items }) {
                 cy={size / 2}
                 r={radius}
                 strokeWidth={strokeWidth}
-                strokeDasharray={`${dashLength} ${circumference - dashLength}`}
-                strokeDashoffset={-offset}
+                strokeDasharray={`${visibleLength} ${circumference - visibleLength}`}
+                strokeDashoffset={-segmentOffset}
               />
             );
 

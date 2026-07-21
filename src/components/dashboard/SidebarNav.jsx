@@ -1,5 +1,6 @@
 import React from "react";
 import { sidebarFooterItem, sidebarMainItems } from "./sidebarItems";
+import logoSidebar from "../../assets/SATYATECH-LOGO-SIDE_BAR.svg";
 
 function Icon({ type }) {
   const paths = {
@@ -25,60 +26,63 @@ function Icon({ type }) {
 function SidebarNav({
   activeItem = "dashboard",
   isOpen = false,
-  onClose = () => {},
-  onSelectItem = () => {},
-  onLogout = () => {},
+  onClose = () => { },
+  onSelectItem = () => { },
+  onLogout = () => { },
 }) {
   return (
-    <aside className={`sidebar-nav${isOpen ? " is-open" : ""}`}>
-      <div>
-        <div className="sidebar-brand-row">
-          <div className="brand-row">
-            <span className="brand-mark" aria-hidden="true">
-              <span className="brand-dot brand-dot-left" />
-              <span className="brand-dot brand-dot-right" />
-            </span>
-            <strong>Mindful Living</strong>
-          </div>
-
-          <button type="button" className="sidebar-close" aria-label="Close navigation" onClick={onClose}>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m6 6 12 12M18 6 6 18" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="profile-row">
-          <div className="avatar-icon" aria-hidden="true">
-            <Icon type="user" />
-          </div>
-          <div>
-            <p className="profile-name">Adrian Halim</p>
-            <p className="profile-mail">adrianhalim@email.com</p>
-          </div>
-        </div>
-
-        <nav className="menu-list" aria-label="Sidebar menu">
-          {sidebarMainItems.map((item) => (
-            <button
-              type="button"
-              key={item.id}
-              className={`menu-item${activeItem === item.id ? " is-active" : ""}`}
-              aria-current={activeItem === item.id ? "page" : undefined}
-              onClick={() => onSelectItem(item.id)}
-            >
-              <Icon type={item.icon} />
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      <button type="button" className="menu-item menu-item-logout" onClick={onLogout}>
-        <Icon type={sidebarFooterItem.icon} />
-        <span>{sidebarFooterItem.label}</span>
+    <div className={`sidebar-wrapper${isOpen ? " is-open" : ""}`}>
+      <button type="button" className="sidebar-collapse-btn" aria-label="Collapse sidebar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
       </button>
-    </aside>
+      <aside className="sidebar-nav">
+        <div>
+          <div className="sidebar-brand-row" style={{ marginBottom: '8px' }}>
+            <div className="brand-row">
+              <img src={logoSidebar} alt="Satyatech Logo" style={{ width: '205px', height: 'auto', display: 'block' }} />
+            </div>
+
+            <button type="button" className="sidebar-close" aria-label="Close navigation" onClick={onClose}>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m6 6 12 12M18 6 6 18" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="profile-row">
+            <div className="avatar-icon-img" aria-hidden="true" style={{ padding: 0, overflow: 'hidden', background: '#9C62FF' }}>
+              <img src="https://i.pravatar.cc/150?img=11" alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+            <div>
+              <p className="profile-name">Adrian Halim</p>
+              <p className="profile-mail">adrianhalim@email.com</p>
+            </div>
+          </div>
+
+          <nav className="menu-list" aria-label="Sidebar menu">
+            {sidebarMainItems.map((item) => (
+              <button
+                type="button"
+                key={item.id}
+                className={`menu-item${activeItem === item.id ? " is-active" : ""}`}
+                aria-current={activeItem === item.id ? "page" : undefined}
+                onClick={() => onSelectItem(item.id)}
+              >
+                <Icon type={item.icon} />
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        <button type="button" className="menu-item menu-item-logout" onClick={onLogout}>
+          <Icon type={sidebarFooterItem.icon} />
+          <span>{sidebarFooterItem.label}</span>
+        </button>
+      </aside>
+    </div>
   );
 }
 

@@ -58,16 +58,11 @@ function App() {
           isAuthenticated ? (
             <Navigate to="/dashboard" replace />
           ) : (
-            <main className="page">
-              <div className="bg-shape bg-shape-top" />
-              <div className="bg-shape bg-shape-bottom" />
-              <LoginCard
-                onSubmit={handleLoginSubmit}
-                onForgotPassword={() => console.log("Forgot password clicked")}
-                errorMessage={errorMessage}
-                isSubmitting={isSigningIn}
-              />
-            </main>
+            <LoginCard
+              onSubmit={handleLoginSubmit}
+              errorMessage={errorMessage}
+              isSubmitting={isSigningIn}
+            />
           )
         }
       />
