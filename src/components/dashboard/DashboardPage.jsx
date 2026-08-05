@@ -10,6 +10,7 @@ import { DashboardOverview } from "./pages/DashboardOverview";
 import { ChapterManagementPage } from "./pages/ChapterManagementPage";
 import { PracticeManagementPage } from "./pages/PracticeManagementPage";
 import { UserManagementPage } from "./pages/UserManagementPage";
+import { CommunityPage } from "./pages/CommunityPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 
 import { dashboardSegmentByItemId } from "./data/constants";
@@ -89,7 +90,7 @@ function DashboardPage({ onLogout = () => {} }) {
         {activeItem === "chapter" && <ChapterManagementPage />}
         {activeItem === "practice" && <PracticeManagementPage />}
         {activeItem === "user" && <UserManagementPage />}
-        {activeItem === "community" && <PlaceholderPage title="Community" />}
+        {activeItem === "community" && <CommunityPage />}
         {activeItem === "notes" && <PlaceholderPage title="Notes & Bookmarks" />}
         {activeItem === "resources" && <ResourcesPage />}
         {activeItem === "roles" && <RolesPermissionsPageView />}

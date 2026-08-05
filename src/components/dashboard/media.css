@@ -35,7 +35,7 @@
 .media-table-head,
 .media-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.9fr) 96px 140px 150px 90px;
+  grid-template-columns: minmax(0, 2.2fr) 90px 120px 130px 140px 90px;
   align-items: center;
   column-gap: 16px;
 }
@@ -107,6 +107,37 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.media-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.media-status-pill svg {
+  width: 14px;
+  height: 14px;
+}
+
+.media-status-pill.published {
+  background: #E6F9F0;
+  color: #2B9367;
+}
+
+.media-status-pill.drafted {
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+.media-status-pill.internal-only {
+  background: #EFF6FF;
+  color: #3B82F6;
 }
 
 .media-footer {

@@ -9,19 +9,62 @@ const permissionSections = [
   },
   {
     id: "chapter",
-    label: "CHAPTER MANAGER",
+    label: "CHAPTER MANAGEMENT",
     items: [
       { id: "view-chapter", title: "View Chapter" },
-      { id: "edit-chapters", title: "Create / Edit Chapters & Sections" },
+      { id: "edit-chapters", title: "Add / Edit Chapters & Sections" },
       { id: "delete-chapters", title: "Delete Chapters & Sections" },
-      { id: "publish-chapters", title: "Publish / Unpublish" },
+    ],
+  },
+  {
+    id: "practice",
+    label: "PRACTICE MANAGEMENT",
+    items: [
+      { id: "view-practice", title: "View Practice Management" },
+      { id: "edit-practice", title: "Add / Edit Practice, Sessions & Categories" },
+      { id: "delete-practice", title: "Delete Practice, Sessions & Categories" },
+    ],
+  },
+  {
+    id: "resources",
+    label: "RESOURCES",
+    items: [
+      { id: "edit-resources", title: "Add / Edit Resources" },
+      { id: "delete-resources", title: "Delete Resources" },
+      { id: "approve-suggestions", title: "Approve/Reject User Suggestions" },
+    ],
+  },
+  {
+    id: "media-library",
+    label: "MEDIA LIBRARY",
+    items: [
+      { id: "download-media", title: "Download Media" },
+      { id: "delete-media", title: "Delete Media" },
+    ],
+  },
+  {
+    id: "community",
+    label: "COMMUNITY",
+    items: [
+      { id: "view-community", title: "View Discussion, Reported & Categories" },
+      { id: "edit-community", title: "Add / Edit Categories" },
+      { id: "delete-community", title: "Delete Categories" },
+    ],
+  },
+  {
+    id: "notes",
+    label: "NOTES & BOOKMARKS",
+    items: [
+      { id: "view-notes", title: "View Notes, Bookmarks & Categories" },
+      { id: "edit-notes", title: "Add / Edit Categories" },
+      { id: "delete-notes", title: "Delete Categories" },
     ],
   },
   {
     id: "user",
     label: "USER MANAGEMENT",
     items: [
-      { id: "view-users", title: "View Users" },
+      { id: "view-users", title: "View User Details" },
       {
         id: "mark-user-inactive",
         title: "Mark User as Inactive",
@@ -30,27 +73,12 @@ const permissionSections = [
     ],
   },
   {
-    id: "practice",
-    label: "PRACTICE MANAGEMENT",
+    id: "roles",
+    label: "ROLES & PERMISSIONS",
     items: [
-      { id: "manage-categories", title: "Manage Categories" },
-      { id: "manage-practices", title: "Manage Practices & Sessions" },
-    ],
-  },
-  {
-    id: "community",
-    label: "COMMUNITY",
-    items: [
-      { id: "view-discussion", title: "View Discussion" },
-      { id: "moderate-reports", title: "Moderate Reports" },
-    ],
-  },
-  {
-    id: "resources",
-    label: "RESOURCES",
-    items: [
-      { id: "manage-resources", title: "Manage Resources" },
-      { id: "approve-suggestions", title: "Approve User Suggestions" },
+      { id: "view-roles", title: "View Roles" },
+      { id: "edit-roles", title: "Create / Edit Roles" },
+      { id: "delete-roles", title: "Delete Roles" },
     ],
   },
 ];
@@ -69,8 +97,8 @@ const initialRoles = [
     id: "super-admin",
     name: "Super Admin",
     assignedUsers: [
-      { id: "adam-coles", name: "Adam Coles", email: "adam.coles@email.com" },
-      { id: "ashley-williams", name: "Ashley Williams", email: "ashley.williams@email.com" },
+      { id: "adrian-halim", name: "Adrian Halim", email: "adrianhalim@email.com", avatar: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=100&q=80" },
+      { id: "david-kim", name: "David Kim", email: "davidkim@email.com", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80" },
     ],
     permissions: createPermissions(allPermissionIds),
     canDelete: false,
@@ -80,41 +108,13 @@ const initialRoles = [
     name: "Content Editor",
     assignedUsers: [
       { id: "marie-laura", name: "Marie Laura", email: "marie.laura@email.com" },
-      { id: "marcus-chen", name: "Marcus Chen", email: "marcus.chen@email.com" },
-      { id: "elena-rodriguez", name: "Elena Rodriguez", email: "elena.rodriguez@email.com" },
-      { id: "david-kim", name: "David Kim", email: "david.kim@email.com" },
-      { id: "david-miller", name: "David Miller", email: "david.miller@email.com" },
     ],
     permissions: createPermissions([
       "view-dashboard",
       "view-chapter",
       "edit-chapters",
-      "publish-chapters",
-      "manage-categories",
-      "manage-practices",
-      "view-discussion",
-      "manage-resources",
-      "approve-suggestions",
-    ]),
-    canDelete: true,
-  },
-  {
-    id: "moderator",
-    name: "Moderator",
-    assignedUsers: [
-      { id: "finn-wolfhard", name: "Finn Wolfhard", email: "finnwolfhard@email.com" },
-      { id: "gigi-hadid", name: "Gigi Hadid", email: "gigi_hadid@email.com" },
-      { id: "halsey-frangipane", name: "Halsey Frangipane", email: "halsey.frangipane@email.com" },
-    ],
-    permissions: createPermissions([
-      "view-dashboard",
-      "view-chapter",
-      "view-users",
-      "mark-user-inactive",
-      "view-discussion",
-      "moderate-reports",
-      "manage-resources",
-      "approve-suggestions",
+      "view-practice",
+      "edit-practice",
     ]),
     canDelete: true,
   },
@@ -123,15 +123,8 @@ const initialRoles = [
     name: "Viewer",
     assignedUsers: [
       { id: "camila-cabello", name: "Camila Cabello", email: "camilacc@email.com" },
-      { id: "drake-graham", name: "Drake Graham", email: "drake_graham@email.com" },
-      { id: "elijah-wood", name: "Elijah Wood", email: "elijah.wood@email.com" },
-      { id: "bella-thorne", name: "Bella Thorne", email: "thornebella@email.com" },
-      { id: "sofia-bauer", name: "Sofia Bauer", email: "sofia.bauer@email.com" },
-      { id: "andi-kurniawan", name: "Andi Kurniawan", email: "andi.kurniawan@email.com" },
-      { id: "marcus-lee", name: "Marcus Lee", email: "marcus.lee@email.com" },
-      { id: "nina-ramos", name: "Nina Ramos", email: "nina.ramos@email.com" },
     ],
-    permissions: createPermissions(["view-dashboard", "view-chapter", "view-users", "view-discussion"]),
+    permissions: createPermissions(["view-dashboard", "view-chapter", "view-users", "view-roles"]),
     canDelete: true,
   },
 ];
@@ -207,15 +200,15 @@ function AlertIcon() {
 }
 
 function formatAssignedUsers(amount) {
-  return `${amount} user assigned`;
+  return `${amount} user listed`;
 }
 
 function RolesPermissionsPage() {
   const [roles, setRoles] = useState(initialRoles);
   const [selectedRoleId, setSelectedRoleId] = useState(initialRoles[0]?.id ?? null);
-  const [editingRoleId, setEditingRoleId] = useState(null);
-  const [roleForm, setRoleForm] = useState({ name: "", assignedUsers: [] });
-  const [deleteRoleId, setDeleteRoleId] = useState(null);
+  const [activeTab, setActiveTab] = useState("role-info");
+  const [isAddRoleModalOpen, setIsAddRoleModalOpen] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
@@ -281,9 +274,7 @@ function RolesPermissionsPage() {
   };
 
   const togglePermission = (permissionId) => {
-    if (!selectedRole) {
-      return;
-    }
+    if (!selectedRole) return;
 
     setRoles((current) =>
       current.map((role) =>
@@ -301,45 +292,31 @@ function RolesPermissionsPage() {
   };
 
   const handleRoleNameChange = (event) => {
+    if (!selectedRole) return;
     const nextValue = event.target.value;
-    setRoleForm((current) => ({
-      ...current,
-      name: nextValue,
-    }));
+    setRoles((current) =>
+      current.map((role) =>
+        role.id === selectedRole.id
+          ? { ...role, name: nextValue }
+          : role
+      )
+    );
   };
 
   const removeAssignedUser = (userId) => {
-    setRoleForm((current) => ({
-      ...current,
-      assignedUsers: current.assignedUsers.filter((user) => user.id !== userId),
-    }));
+    if (!selectedRole) return;
+    setRoles((current) =>
+      current.map((role) =>
+        role.id === selectedRole.id
+          ? { ...role, assignedUsers: role.assignedUsers.filter((u) => u.id !== userId) }
+          : role
+      )
+    );
   };
 
-  const saveRole = () => {
-    const normalizedName = roleForm.name.trim();
-    if (normalizedName === "") {
-      return;
-    }
-
-    if (isEditMode) {
-      setRoles((current) =>
-        current.map((role) =>
-          role.id === editingRoleId
-            ? {
-                ...role,
-                name: normalizedName,
-                assignedUsers: roleForm.assignedUsers.map((user) => ({ ...user })),
-              }
-            : role
-        )
-      );
-      if (selectedRoleId === editingRoleId) {
-        setSelectedRoleId(editingRoleId);
-      }
-      closeEditModal();
-      showToast("Change Saved", "You have successfully saved a changes");
-      return;
-    }
+  const saveNewRole = () => {
+    const normalizedName = newRoleName.trim();
+    if (normalizedName === "") return;
 
     const nextRoleId = `role-${Date.now()}`;
     const nextRole = {
@@ -352,22 +329,9 @@ function RolesPermissionsPage() {
 
     setRoles((current) => [...current, nextRole]);
     setSelectedRoleId(nextRoleId);
-    closeEditModal();
-    showToast("Role Added", "A new role has been added successfully");
-  };
-
-  const confirmDeleteRole = () => {
-    if (!deleteRole) {
-      return;
-    }
-
-    setRoles((current) => current.filter((role) => role.id !== deleteRole.id));
-    setDeleteRoleId(null);
-    if (selectedRoleId === deleteRole.id) {
-      const nextRole = roles.find((role) => role.id !== deleteRole.id);
-      setSelectedRoleId(nextRole?.id ?? null);
-    }
-    showToast("Role Deleted", "You have successfully deleted a role");
+    setIsAddRoleModalOpen(false);
+    setNewRoleName("");
+    showToast("New Role Added", "You have successfully added a new role.");
   };
 
   return (
@@ -386,13 +350,12 @@ function RolesPermissionsPage() {
                 <p>Total {roles.length} roles defined</p>
               </div>
 
-              <button type="button" className="chapter-add-btn roles-add-role-btn" onClick={openAddRoleModal}>
-                <span>+</span>
-                Add Role
+              <button type="button" className="roles-add-role-btn" onClick={() => setIsAddRoleModalOpen(true)} style={{ background: "transparent", color: "#795289", border: "none", display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "14px", fontWeight: "500", cursor: "pointer", padding: 0 }}>
+                <span style={{ fontSize: "16px" }}>+</span> Add Role
               </button>
             </div>
 
-            <div className="roles-list-body">
+            <div className="roles-list-body" style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "16px" }}>
               {roles.map((role) => {
                 const isActive = role.id === selectedRoleId;
 
@@ -401,38 +364,17 @@ function RolesPermissionsPage() {
                     key={role.id}
                     className={`roles-list-item${isActive ? " is-active" : ""}`}
                     onClick={() => setSelectedRoleId(role.id)}
+                    style={{
+                      padding: "12px 16px",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      background: isActive ? "#FBF8FE" : "transparent",
+                      color: isActive ? "#795289" : "#4A5568",
+                      display: "flex",
+                      alignItems: "center"
+                    }}
                   >
-                    <div className="roles-list-copy">
-                      <h3>{role.name}</h3>
-                      <p>{formatAssignedUsers(role.assignedUsers.length)}</p>
-                    </div>
-
-                    <div className="roles-list-actions">
-                      <button
-                        type="button"
-                        className="chapter-icon-btn"
-                        aria-label={`Edit ${role.name}`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openEditRoleModal(role);
-                        }}
-                      >
-                        <EditIcon />
-                      </button>
-                      {role.canDelete && (
-                        <button
-                          type="button"
-                          className="chapter-icon-btn"
-                          aria-label={`Delete ${role.name}`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setDeleteRoleId(role.id);
-                          }}
-                        >
-                          <TrashIcon />
-                        </button>
-                      )}
-                    </div>
+                    <span style={{ fontSize: "14px", fontWeight: isActive ? "600" : "500" }}>{role.name}</span>
                   </article>
                 );
               })}
@@ -445,42 +387,144 @@ function RolesPermissionsPage() {
             </div>
           </aside>
 
-          <section className="roles-detail-card">
+          <section className="roles-detail-card" style={{ flex: 1, position: "relative" }}>
             {selectedRole ? (
-              <>
-                <div className="roles-detail-header">
-                  <h2>{selectedRole.name}</h2>
+              <div style={{ padding: "32px", height: "100%", display: "flex", flexDirection: "column" }}>
+                <div className="roles-detail-header" style={{ marginBottom: "24px" }}>
+                  <h2 style={{ fontSize: "20px", fontWeight: "600", color: "#171e2b", margin: 0 }}>{selectedRole.name}</h2>
                 </div>
 
-                <div className="roles-permission-groups">
-                  {permissionSections.map((section) => (
-                    <div key={section.id} className="roles-permission-group">
-                      <h3>{section.label}</h3>
+                <div className="roles-tabs" style={{ display: "flex", gap: "24px", borderBottom: "1px solid #E3E7ED", marginBottom: "24px" }}>
+                  <button 
+                    type="button" 
+                    onClick={() => setActiveTab("role-info")}
+                    style={{ 
+                      background: "none", border: "none", padding: "0 0 12px 0", cursor: "pointer", 
+                      fontSize: "14px", fontWeight: "500", 
+                      color: activeTab === "role-info" ? "#171e2b" : "#A0AEC0",
+                      borderBottom: activeTab === "role-info" ? "2px solid #795289" : "2px solid transparent",
+                      position: "relative", top: "1px"
+                    }}
+                  >
+                    Role Info
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setActiveTab("role-permissions")}
+                    style={{ 
+                      background: "none", border: "none", padding: "0 0 12px 0", cursor: "pointer", 
+                      fontSize: "14px", fontWeight: "500", 
+                      color: activeTab === "role-permissions" ? "#171e2b" : "#A0AEC0",
+                      borderBottom: activeTab === "role-permissions" ? "2px solid #795289" : "2px solid transparent",
+                      position: "relative", top: "1px"
+                    }}
+                  >
+                    Role Permissions
+                  </button>
+                </div>
 
-                      <div className="roles-permission-list">
-                        {section.items.map((item) => (
-                          <div key={item.id} className="roles-permission-row">
-                            <div className="roles-permission-copy">
-                              <strong>{item.title}</strong>
-                              {item.description && <p>{item.description}</p>}
+                {activeTab === "role-permissions" && (
+                  <div className="roles-permission-groups" style={{ flex: 1, overflowY: "auto" }}>
+                    {permissionSections.map((section) => (
+                      <div key={section.id} className="roles-permission-group" style={{ marginBottom: "32px" }}>
+                        <h3 style={{ fontSize: "11px", fontWeight: "600", color: "#795289", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "16px" }}>{section.label}</h3>
+
+                        <div className="roles-permission-list" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                          {section.items.map((item) => (
+                            <div key={item.id} className="roles-permission-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "16px", borderBottom: "1px solid #F1F4F9" }}>
+                              <div className="roles-permission-copy">
+                                <strong style={{ fontSize: "14px", fontWeight: "500", color: "#171e2b", display: "block" }}>{item.title}</strong>
+                                {item.description && <p style={{ fontSize: "12px", color: "#A0AEC0", margin: "4px 0 0 0" }}>{item.description}</p>}
+                              </div>
+
+                              <button
+                                type="button"
+                                className={`roles-switch${selectedRole.permissions[item.id] ? " is-on" : ""}`}
+                                aria-pressed={selectedRole.permissions[item.id]}
+                                aria-label={`${selectedRole.permissions[item.id] ? "Disable" : "Enable"} ${item.title}`}
+                                onClick={() => togglePermission(item.id)}
+                              >
+                                <span />
+                              </button>
                             </div>
-
-                            <button
-                              type="button"
-                              className={`roles-switch${selectedRole.permissions[item.id] ? " is-on" : ""}`}
-                              aria-pressed={selectedRole.permissions[item.id]}
-                              aria-label={`${selectedRole.permissions[item.id] ? "Disable" : "Enable"} ${item.title}`}
-                              onClick={() => togglePermission(item.id)}
-                            >
-                              <span />
-                            </button>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                )}
+
+                {activeTab === "role-info" && (
+                  <div style={{ flex: 1, overflowY: "auto" }}>
+                    <div style={{ marginBottom: "32px" }}>
+                      <label style={{ display: "block", fontSize: "14px", fontWeight: "500", color: "#171e2b", marginBottom: "8px" }}>Roles Name <span style={{color: "#E53E3E"}}>*</span></label>
+                      <input 
+                        type="text" 
+                        value={selectedRole.name} 
+                        onChange={handleRoleNameChange} 
+                        placeholder="Enter role name" 
+                        style={{ width: "100%", padding: "12px 16px", border: "1px solid #E3E7ED", borderRadius: "8px", fontSize: "14px", outline: "none", color: "#171e2b" }}
+                      />
                     </div>
-                  ))}
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                      <span style={{ fontSize: "13px", color: "#A0AEC0" }}>{formatAssignedUsers(selectedRole.assignedUsers.length)}</span>
+                      <button type="button" style={{ background: "#795289", color: "#FFF", border: "none", padding: "8px 16px", borderRadius: "999px", fontSize: "13px", fontWeight: "500", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <span>+</span> Assign User
+                      </button>
+                    </div>
+
+                    <div style={{ border: "1px solid #E3E7ED", borderRadius: "12px", overflow: "hidden" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1.5fr 2fr 100px", padding: "12px 16px", background: "#F9FAFC", borderBottom: "1px solid #E3E7ED", fontSize: "13px", fontWeight: "500", color: "#80899a" }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>Name <SortIcon /></span>
+                        <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>Email <SortIcon /></span>
+                        <span>Action</span>
+                      </div>
+
+                      {selectedRole.assignedUsers.map((user) => (
+                        <div key={user.id} style={{ display: "grid", gridTemplateColumns: "1.5fr 2fr 100px", padding: "12px 16px", alignItems: "center", borderBottom: "1px solid #F1F4F9" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                            {user.avatar ? (
+                              <img src={user.avatar} alt={user.name} style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover" }} />
+                            ) : (
+                              <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#F4F6F9", color: "#929bac", display: "grid", placeItems: "center" }}>
+                                <UserIcon />
+                              </div>
+                            )}
+                            <span style={{ fontSize: "14px", fontWeight: "500", color: "#171e2b" }}>{user.name}</span>
+                          </div>
+                          <span style={{ fontSize: "14px", color: "#171e2b" }}>{user.email}</span>
+                          <button 
+                            type="button" 
+                            onClick={() => removeAssignedUser(user.id)}
+                            style={{ 
+                              background: "transparent", border: "1px solid #E3E7ED", color: "#A0AEC0", 
+                              borderRadius: "999px", padding: "4px 12px", fontSize: "12px", fontWeight: "500", 
+                              display: "inline-flex", alignItems: "center", gap: "4px", cursor: "pointer",
+                              justifyContent: "center"
+                            }}
+                          >
+                            <RemoveIcon style={{ width: "12px", height: "12px" }} />
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+
+                      {selectedRole.assignedUsers.length === 0 && (
+                        <div style={{ padding: "32px", textAlign: "center", color: "#A0AEC0", fontSize: "14px" }}>
+                          No users assigned to this role.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                <div style={{ position: "absolute", bottom: "32px", right: "32px" }}>
+                  <button type="button" disabled style={{ background: "#F4F6F9", color: "#A0AEC0", border: "none", padding: "10px 20px", borderRadius: "999px", fontSize: "14px", fontWeight: "500", display: "inline-flex", alignItems: "center", gap: "8px", opacity: "0.8" }}>
+                    <CheckIcon /> Save Changes
+                  </button>
                 </div>
-              </>
+              </div>
             ) : (
               <div className="chapter-empty-state roles-empty-detail">
                 <p>Select a role to view permissions.</p>
@@ -490,116 +534,52 @@ function RolesPermissionsPage() {
         </div>
 
         {toast && (
-          <div className="roles-toast" role="status" aria-live="polite">
-            <div className="roles-toast-header">
-              <div className="roles-toast-copy">
-                <div className="roles-toast-icon" aria-hidden="true">
-                  <CheckIcon />
-                </div>
-                <div>
-                  <strong>{toast.title}</strong>
-                  <p>{toast.message}</p>
-                </div>
-              </div>
-
-              <button type="button" aria-label="Dismiss notification" onClick={() => setToast(null)}>
-                <CloseIcon />
-              </button>
+          <div className="roles-toast" role="status" aria-live="polite" style={{ background: "#171e2b", color: "#FFF", borderRadius: "12px", padding: "16px", display: "flex", alignItems: "flex-start", gap: "12px", border: "none" }}>
+            <div style={{ color: "#2ECC71", marginTop: "2px", flexShrink: 0 }}>
+              <CheckIcon />
             </div>
-
-            <button type="button" className="roles-toast-dismiss" onClick={() => setToast(null)}>
-              Dismiss
-            </button>
+            
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <strong style={{ fontSize: "14px", fontWeight: "600", color: "#FFF", margin: 0, lineHeight: 1.2 }}>{toast.title}</strong>
+                <button type="button" aria-label="Dismiss notification" onClick={() => setToast(null)} style={{ background: "transparent", border: "none", color: "#A0AEC0", cursor: "pointer", padding: 0 }}>
+                  <CloseIcon style={{ width: "16px", height: "16px" }} />
+                </button>
+              </div>
+              <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#A0AEC0", lineHeight: 1.4 }}>{toast.message}</p>
+            </div>
           </div>
         )}
       </section>
 
-      {editingRoleId && (
-        <div className="roles-modal-overlay" onClick={closeEditModal}>
-          <aside className="roles-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <div className="roles-modal-header">
-              <h2>{isEditMode ? "Edit Roles" : "Add Role"}</h2>
-              <button type="button" className="chapter-drawer-close" aria-label="Close roles modal" onClick={closeEditModal}>
+      {isAddRoleModalOpen && (
+        <div className="roles-modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, background: 'rgba(25, 31, 42, 0.28)' }} onClick={() => setIsAddRoleModalOpen(false)}>
+          <div style={{ background: '#FFF', borderRadius: '16px', padding: '0', width: '380px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px 16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#171e2b' }}>Add Role</h3>
+              <button type="button" onClick={() => setIsAddRoleModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#A0AEC0', padding: 0 }}>
                 <CloseIcon />
               </button>
             </div>
 
-            <div className="roles-modal-body">
-              <div className="roles-field">
-                <span>Roles Name *</span>
-                <input type="text" value={roleForm.name} onChange={handleRoleNameChange} placeholder="Enter role name" />
+            <div style={{ padding: '0 24px 24px' }}>
+              <label style={{ display: 'block', fontSize: '13px', marginBottom: '8px', color: '#171e2b', fontWeight: '500' }}>Roles Name <span style={{ color: '#E53E3E' }}>*</span></label>
+              <input
+                type="text"
+                placeholder="Enter role name"
+                value={newRoleName}
+                onChange={(e) => setNewRoleName(e.target.value)}
+                style={{ width: '100%', padding: '12px 14px', border: '1px solid #E3E7ED', borderRadius: '8px', outline: 'none', fontSize: '14px', color: '#171e2b', marginBottom: '24px' }}
+              />
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button type="button" onClick={() => setIsAddRoleModalOpen(false)} style={{ flex: 1, padding: '12px', background: '#F4F6F9', color: '#4A5568', border: 'none', borderRadius: '999px', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}>
+                  Cancel
+                </button>
+                <button type="button" onClick={saveNewRole} disabled={!newRoleName.trim()} style={{ flex: 1, padding: '12px', background: newRoleName.trim() ? '#795289' : '#F4F6F9', color: newRoleName.trim() ? '#FFF' : '#A0AEC0', border: 'none', borderRadius: '999px', fontSize: '14px', fontWeight: '500', cursor: newRoleName.trim() ? 'pointer' : 'default' }}>
+                  Save Role
+                </button>
               </div>
-
-              <div className="roles-assigned-block">
-                <span>USER ASSIGNED LIST</span>
-
-                <div className="roles-assigned-table">
-                  <div className="roles-assigned-head">
-                    <span className="sortable-head">
-                      Name
-                      <SortIcon />
-                    </span>
-                    <span className="sortable-head">
-                      Email
-                      <SortIcon />
-                    </span>
-                    <span>Action</span>
-                  </div>
-
-                  {roleForm.assignedUsers.map((user) => (
-                    <div key={user.id} className="roles-assigned-row">
-                      <div className="roles-assigned-user">
-                        <div className="roles-user-avatar" aria-hidden="true">
-                          <UserIcon />
-                        </div>
-                        <span>{user.name}</span>
-                      </div>
-                      <span className="roles-assigned-email">{user.email}</span>
-                      <button type="button" className="roles-remove-user-btn" onClick={() => removeAssignedUser(user.id)}>
-                        <RemoveIcon />
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-
-                  {roleForm.assignedUsers.length === 0 && (
-                    <div className="roles-assigned-empty">
-                      <p>No users assigned to this role.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="roles-modal-footer">
-              <button type="button" className="chapter-secondary-btn" onClick={closeEditModal}>
-                Cancel
-              </button>
-              <button type="button" className="chapter-primary-btn" onClick={saveRole} disabled={roleForm.name.trim() === ""}>
-                <CheckIcon />
-                Save Changes
-              </button>
-            </div>
-          </aside>
-        </div>
-      )}
-
-      {deleteRole && (
-        <div className="roles-confirm-overlay" onClick={() => setDeleteRoleId(null)}>
-          <div className="roles-confirm-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <div className="roles-confirm-icon" aria-hidden="true">
-              <AlertIcon />
-            </div>
-            <h2>Are you sure you want to delete this role?</h2>
-            <p>This action is permanent and cannot be undone. Do you want to proceed?</p>
-
-            <div className="roles-confirm-actions">
-              <button type="button" className="chapter-secondary-btn" onClick={() => setDeleteRoleId(null)}>
-                No, Keep It
-              </button>
-              <button type="button" className="chapter-primary-btn roles-delete-btn" onClick={confirmDeleteRole}>
-                Yes, Delete
-              </button>
             </div>
           </div>
         </div>

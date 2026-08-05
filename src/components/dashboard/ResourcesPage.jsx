@@ -4,7 +4,7 @@ import "./resources.css";
 const RESOURCE_CATEGORY_OPTIONS = ["Book", "Audio", "Music", "Video"];
 
 const RESOURCE_STEP_ITEMS = [
-  { id: 1, label: "Resource Info" },
+  { id: 1, label: "Content Info" },
   { id: 2, label: "Add Content" },
 ];
 
@@ -45,8 +45,8 @@ function createEmptyContentFiles() {
 
 function createEmptyResourceForm() {
   return {
+    publicationType: "Published Resource",
     title: "",
-    caption: "",
     category: "",
     thumbnail: null,
     contentType: "Text",
@@ -85,8 +85,8 @@ function formatResourceDate(date = new Date()) {
 
 function toResourceForm(resource) {
   return {
+    publicationType: resource.publicationType ?? "Published Resource",
     title: resource.title,
-    caption: resource.caption,
     category: resource.category,
     thumbnail: resource.thumbnail ? { ...resource.thumbnail } : null,
     contentType: resource.contentType ?? "Text",
@@ -104,94 +104,121 @@ function toResourceForm(resource) {
 const initialResources = [
   {
     id: 1,
-    title: "The Power of Now",
-    caption: "Eckhart Tolle's guide to spiritual enlightenment",
+    title: "Descartes' Error",
+    caption: "Antonio Damasio",
     dateAdded: "12 Nov 2025",
     category: "Book",
+    publicationType: "Published Resource",
     status: "Published",
-    thumbnail: { name: "the-power-of-now-thumbnail.jpg", sizeLabel: "59.7 KB" },
-    contentType: "Text",
-    contentTexts: {
-      ...createEmptyTextContent(),
-      en: "A concise spiritual guide about presence, awareness, and observing the thinking mind.",
-    },
+    thumbnail: { name: "descartes-error.jpg", sizeLabel: "59.7 KB" },
+    contentType: "Document",
+    contentTexts: createEmptyTextContent(),
     contentFiles: createEmptyContentFiles(),
   },
   {
     id: 2,
-    title: "A New Earth",
-    caption: "Awakening to your life's purpose - Eckhart Tolle.",
-    dateAdded: "12 Nov 2025",
-    category: "Book",
+    title: "A Practical Guide to Spiritual Enlightenment and Conscious Living",
+    caption: "Eckhart Tolle",
+    dateAdded: "11 Nov 2025",
+    category: "Audio",
+    publicationType: "Published Resource",
     status: "Published",
     thumbnail: { name: "a-new-earth-thumbnail.jpg", sizeLabel: "48.2 KB" },
-    contentType: "Text",
-    contentTexts: {
-      ...createEmptyTextContent(),
-      en: "An exploration of ego, inner stillness, and conscious transformation in daily life.",
-    },
+    contentType: "Audio",
+    contentTexts: createEmptyTextContent(),
     contentFiles: createEmptyContentFiles(),
   },
   {
     id: 3,
-    title: "Kumare",
-    caption: "Documentary on spiritual leadership and authenticity.",
-    dateAdded: "12 Nov 2025",
-    category: "Book",
-    status: "Published",
+    title: "How Social Media Platforms Shape Human Behavior and Society",
+    caption: "Sam Harris",
+    dateAdded: "10 Nov 2025",
+    category: "Music",
+    publicationType: "Published Resource",
+    status: "Drafted",
     thumbnail: { name: "kumare-thumbnail.jpg", sizeLabel: "64.8 KB" },
-    contentType: "Video",
+    contentType: "Audio",
     contentTexts: createEmptyTextContent(),
-    contentFiles: {
-      ...createEmptyContentFiles(),
-      Video: { name: "kumare-trailer.mp4", sizeLabel: "18.4 MB" },
-    },
+    contentFiles: createEmptyContentFiles(),
   },
   {
     id: 4,
-    title: "Waking Up - Sam Harris",
-    caption: "Podcast on mindfulness, consciousness and the self.",
-    dateAdded: "12 Nov 2025",
-    category: "Audio",
+    title: "A Guide to Spirituality Without Religion and Modern Mindfulness",
+    caption: "Jeff Orlowski",
+    dateAdded: "9 Nov 2025",
+    category: "Book",
+    publicationType: "Published Resource",
     status: "Published",
     thumbnail: { name: "waking-up-cover.jpg", sizeLabel: "42.1 KB" },
-    contentType: "Text",
-    contentTexts: {
-      ...createEmptyTextContent(),
-      en: "Episode notes and guided reflections drawn from the Waking Up audio series.",
-    },
+    contentType: "Document",
+    contentTexts: createEmptyTextContent(),
     contentFiles: createEmptyContentFiles(),
   },
   {
     id: 5,
-    title: "432 Hz Deep Meditation",
-    caption: "Ambient soundscapes for inner stillness and awareness.",
-    dateAdded: "12 Nov 2025",
-    category: "Music",
-    status: "Published",
-    thumbnail: { name: "432hz-deep-meditation.jpg", sizeLabel: "38.6 KB" },
+    title: "chapter-1-thumbnail.jpg",
+    caption: "",
+    dateAdded: "11 Nov 2025",
+    category: "Internal Asset",
+    publicationType: "Internal Asset",
+    status: "Internal Only",
+    thumbnail: { name: "chapter-1-thumbnail.jpg", sizeLabel: "38.6 KB" },
     contentType: "Image",
     contentTexts: createEmptyTextContent(),
-    contentFiles: {
-      ...createEmptyContentFiles(),
-      Image: { name: "432hz-cover.jpg", sizeLabel: "16 KB" },
-    },
+    contentFiles: createEmptyContentFiles(),
   },
   {
     id: 6,
-    title: "The Untethered Soul",
-    caption: "Michael A. Singer - the journey beyond yourself.",
-    dateAdded: "12 Nov 2025",
-    category: "Book",
-    status: "Drafted",
-    thumbnail: { name: "untethered-soul-thumbnail.jpg", sizeLabel: "34.4 KB" },
-    contentType: "Text",
-    contentTexts: {
-      ...createEmptyTextContent(),
-      en: "Draft notes for a future resource focused on letting go and inner freedom.",
-    },
+    title: "video-session-2",
+    caption: "",
+    dateAdded: "11 Nov 2025",
+    category: "Internal Asset",
+    publicationType: "Internal Asset",
+    status: "Internal Only",
+    thumbnail: { name: "video-session-2.jpg", sizeLabel: "34.4 KB" },
+    contentType: "Video",
+    contentTexts: createEmptyTextContent(),
     contentFiles: createEmptyContentFiles(),
   },
+  {
+    id: 7,
+    title: "the-power-of-now-ebook",
+    caption: "",
+    dateAdded: "10 Nov 2025",
+    category: "Internal Asset",
+    publicationType: "Internal Asset",
+    status: "Internal Only",
+    thumbnail: null,
+    contentType: "Document",
+    contentTexts: createEmptyTextContent(),
+    contentFiles: createEmptyContentFiles(),
+  },
+  {
+    id: 8,
+    title: "video-session-5",
+    caption: "",
+    dateAdded: "9 Nov 2025",
+    category: "Internal Asset",
+    publicationType: "Internal Asset",
+    status: "Internal Only",
+    thumbnail: { name: "video-session-5.jpg", sizeLabel: "34.4 KB" },
+    contentType: "Video",
+    contentTexts: createEmptyTextContent(),
+    contentFiles: createEmptyContentFiles(),
+  },
+  {
+    id: 9,
+    title: "the-power-of-now-audio",
+    caption: "",
+    dateAdded: "9 Nov 2025",
+    category: "Internal Asset",
+    publicationType: "Internal Asset",
+    status: "Internal Only",
+    thumbnail: null,
+    contentType: "Audio",
+    contentTexts: createEmptyTextContent(),
+    contentFiles: createEmptyContentFiles(),
+  }
 ];
 
 function ResourceVisualIcon({ type = "image" }) {
@@ -352,11 +379,11 @@ function UploadBox({ accept, helperText, label, onChange, type }) {
 }
 
 function ResourcesPage() {
-  const [activeTab, setActiveTab] = useState("Resource List");
+  const [activeTab, setActiveTab] = useState("Content List");
   const [resources, setResources] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All Category");
-  const [statusFilter, setStatusFilter] = useState("Status");
+  const [statusFilter, setStatusFilter] = useState("All Status");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [resourceStep, setResourceStep] = useState(1);
   const [resourceForm, setResourceForm] = useState(createEmptyResourceForm());
@@ -427,10 +454,9 @@ function ResourcesPage() {
       const matchesQuery =
         normalizedQuery === "" ||
         resource.title.toLowerCase().includes(normalizedQuery) ||
-        resource.caption.toLowerCase().includes(normalizedQuery) ||
         resource.category.toLowerCase().includes(normalizedQuery);
       const matchesCategory = categoryFilter === "All Category" || resource.category === categoryFilter;
-      const matchesStatus = statusFilter === "Status" || resource.status === statusFilter;
+      const matchesStatus = statusFilter === "All Status" || resource.status === statusFilter;
 
       return matchesQuery && matchesCategory && matchesStatus;
     });
@@ -443,8 +469,8 @@ function ResourcesPage() {
   }, [categoryFilter, categoryFilterOptions]);
 
   useEffect(() => {
-    if (statusFilter !== "Status" && !resources.some((resource) => resource.status === statusFilter)) {
-      setStatusFilter("Status");
+    if (statusFilter !== "All Status" && !resources.some((resource) => resource.status === statusFilter)) {
+      setStatusFilter("All Status");
     }
   }, [resources, statusFilter]);
 
@@ -454,8 +480,8 @@ function ResourcesPage() {
   const selectedContentFile = resourceForm.contentFiles[resourceForm.contentType] ?? null;
 
   const canContinue =
+    resourceForm.publicationType !== "" &&
     resourceForm.title.trim() !== "" &&
-    resourceForm.caption.trim() !== "" &&
     resourceForm.category !== "" &&
     Boolean(resourceForm.thumbnail);
 
@@ -564,12 +590,14 @@ function ResourcesPage() {
       return;
     }
 
+    const finalStatus = resourceForm.publicationType === "Internal Asset" ? "Internal Only" : nextStatus;
+
     const nextResource = {
       id: editingResourceId ?? Date.now(),
       title: resourceForm.title.trim(),
-      caption: resourceForm.caption.trim(),
       category: resourceForm.category,
-      status: nextStatus,
+      publicationType: resourceForm.publicationType,
+      status: finalStatus,
       dateAdded:
         resources.find((resource) => resource.id === editingResourceId)?.dateAdded ?? formatResourceDate(new Date()),
       thumbnail: resourceForm.thumbnail ? { ...resourceForm.thumbnail } : null,
@@ -616,18 +644,18 @@ function ResourcesPage() {
   return (
     <>
       <header className="dashboard-header chapter-header">
-        <h1>Resources</h1>
-        <p>Manage Published &amp; Suggested Resources</p>
+        <h1>Media Library</h1>
+        <p>Manage Publised &amp; Suggested Content</p>
       </header>
 
       <section className="chapter-page resources-page">
         <div className="resources-tabs">
           <button 
             type="button" 
-            className={`resources-tab${activeTab === "Resource List" ? " is-active" : ""}`}
-            onClick={() => setActiveTab("Resource List")}
+            className={`resources-tab${activeTab === "Content List" ? " is-active" : ""}`}
+            onClick={() => setActiveTab("Content List")}
           >
-            Resource List
+            Content List
           </button>
           <button 
             type="button" 
@@ -638,7 +666,7 @@ function ResourcesPage() {
           </button>
         </div>
 
-        {activeTab === "Resource List" ? (
+        {activeTab === "Content List" ? (
           <>
             <div className="resources-toolbar">
               <div className="chapter-filters resources-filters">
@@ -646,7 +674,7 @@ function ResourcesPage() {
               <SearchIcon />
               <input
                 type="search"
-                placeholder="Search resources..."
+                placeholder="Search practice or content name..."
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
               />
@@ -663,33 +691,41 @@ function ResourcesPage() {
 
             <label className="chapter-select chapter-select-shell resources-filter-select">
               <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                <option>Status</option>
+                <option>All Status</option>
                 <option>Published</option>
                 <option>Drafted</option>
+                <option>Internal Only</option>
               </select>
               <ChevronDownIcon />
             </label>
           </div>
 
           <button type="button" className="chapter-add-btn resources-add-btn" onClick={openCreateModal}>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true" style={{ width: 16, height: 16 }}>
               <path d="M12 5v14M5 12h14" />
             </svg>
-            Add Resource
+            <span className="add-content-badge">Add Content</span>
           </button>
         </div>
 
         <div className="chapter-table-card resources-table-card">
           <div className="resources-table-head">
             <span className="sortable-head">
-              Title
+              Content
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="m8 10 4-4 4 4" />
                 <path d="m16 14-4 4-4-4" />
               </svg>
             </span>
             <span className="sortable-head">
-              Content Type
+              Format
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m8 10 4-4 4 4" />
+                <path d="m16 14-4 4-4-4" />
+              </svg>
+            </span>
+            <span className="sortable-head">
+              Category
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="m8 10 4-4 4 4" />
                 <path d="m16 14-4 4-4-4" />
@@ -716,21 +752,29 @@ function ResourcesPage() {
             <article key={resource.id} className="resources-row">
               <div className="resources-title-cell">
                 <div className="resources-thumb" aria-hidden="true">
-                  <ResourceVisualIcon type="image" />
+                  <ResourceVisualIcon type={resource.contentType.toLowerCase()} />
                 </div>
 
                 <div className="resources-copy">
                   <h3>{resource.title}</h3>
-                  <p>{resource.caption}</p>
+                  {resource.caption && <p>{resource.caption}</p>}
                 </div>
               </div>
 
+              <span className="resources-type-text">{
+                resource.contentType === "Text" ? "PDF" : 
+                resource.contentType === "Video" ? (resource.title.includes("session-5") ? "MOV" : "MP4") :
+                resource.contentType === "Document" ? "PDF" :
+                resource.contentType === "Audio" ? "MP3" :
+                "JPG"
+              }</span>
               <span className="resources-category-pill">{resource.category}</span>
               <span className="resources-date">{resource.dateAdded}</span>
 
               <span
                 className={`resources-status-pill${
-                  resource.status === "Published" ? " is-published" : " is-drafted"
+                  resource.status === "Published" ? " is-published" : 
+                  resource.status === "Internal Only" ? " is-internal" : " is-drafted"
                 }`}
               >
                 <StatusIcon />
@@ -740,7 +784,7 @@ function ResourcesPage() {
               <div className="resources-actions">
                 <button
                   type="button"
-                  className="chapter-icon-btn"
+                  className="resources-action-btn"
                   aria-label={`Edit ${resource.title}`}
                   onClick={() => openEditModal(resource)}
                 >
@@ -748,7 +792,7 @@ function ResourcesPage() {
                 </button>
                 <button
                   type="button"
-                  className="chapter-icon-btn"
+                  className="resources-action-btn"
                   aria-label={`Delete ${resource.title}`}
                   onClick={() => deleteResource(resource.id)}
                 >
@@ -774,7 +818,7 @@ function ResourcesPage() {
                 <path d="m7 10 5 5 5-5" />
               </svg>
             </button>
-            <span>from {visibleResources.length} results</span>
+            <span>from {visibleResources.length} data</span>
           </div>
 
           <div className="practice-pagination">
@@ -860,7 +904,7 @@ function ResourcesPage() {
         <div className="resources-modal-overlay" onClick={resetModalState}>
           <aside className="resources-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
             <div className="resources-modal-header">
-              <h2>{editingResourceId ? "Edit Resource" : "Add Resource"}</h2>
+              <h2>{editingResourceId ? "Edit Content" : "Add Content"}</h2>
 
               <button
                 type="button"
@@ -904,22 +948,34 @@ function ResourcesPage() {
               {resourceStep === 1 && (
                 <div className="resources-form-grid">
                   <div className="resources-field">
-                    <span>Resource Title *</span>
-                    <input
-                      type="text"
-                      placeholder="Enter resource title"
-                      value={resourceForm.title}
-                      onChange={handleResourceFieldChange("title")}
-                    />
+                    <span>Publication Type *</span>
+                    <div className="resources-publication-types">
+                      <button 
+                        type="button" 
+                        className={`resources-pub-btn${resourceForm.publicationType === "Published Resource" ? " is-active" : ""}`}
+                        onClick={() => setResourceForm(c => ({...c, publicationType: "Published Resource"}))}
+                      >
+                        <ResourceVisualIcon type="document" />
+                        Published Resource
+                      </button>
+                      <button 
+                        type="button" 
+                        className={`resources-pub-btn${resourceForm.publicationType === "Internal Asset" ? " is-active" : ""}`}
+                        onClick={() => setResourceForm(c => ({...c, publicationType: "Internal Asset"}))}
+                      >
+                        <ResourceVisualIcon type="image" />
+                        Internal Asset
+                      </button>
+                    </div>
                   </div>
 
                   <div className="resources-field">
-                    <span>Resource Caption *</span>
+                    <span>Content Title *</span>
                     <input
                       type="text"
-                      placeholder="Enter resource caption or short explanation"
-                      value={resourceForm.caption}
-                      onChange={handleResourceFieldChange("caption")}
+                      placeholder="Enter content title"
+                      value={resourceForm.title}
+                      onChange={handleResourceFieldChange("title")}
                     />
                   </div>
 
@@ -927,7 +983,7 @@ function ResourcesPage() {
                     <span>Category *</span>
                     <label className="chapter-select chapter-select-shell resources-select-shell">
                       <select value={resourceForm.category} onChange={handleResourceFieldChange("category")}>
-                        <option value="">Select category</option>
+                        <option value="">Select content category</option>
                         {RESOURCE_CATEGORY_OPTIONS.map((option) => (
                           <option key={option}>{option}</option>
                         ))}
@@ -937,7 +993,7 @@ function ResourcesPage() {
                   </div>
 
                   <div className="resources-field">
-                    <span>Resource Thumbnail *</span>
+                    <span>Content Thumbnail *</span>
 
                     {resourceForm.thumbnail ? (
                       <FileCard

@@ -7,7 +7,7 @@ const initialPracticeRows = [
     goal: "Focus",
     duration: "5-20 mins",
     sessions: 5,
-    category: "Breathing",
+    category: "Breathwork",
     status: "Published",
   },
   {
@@ -32,10 +32,10 @@ const initialPracticeRows = [
     id: 4,
     title: "Mindful Moments",
     goal: "Mindfulness",
-    duration: "5-10 mins",
-    sessions: 1,
-    category: "Mindfulness",
-    status: "Drafted",
+    duration: "5-20 mins",
+    sessions: 5,
+    category: "Focus",
+    status: "Published",
   },
 ];
 
@@ -382,22 +382,28 @@ export function PracticeManagementPage() {
                       type="button"
                       className={`chapter-view-btn${expandedPracticeId === practice.id ? " is-expanded" : ""}`}
                       onClick={() => setExpandedPracticeId(expandedPracticeId === practice.id ? null : practice.id)}
+                      style={{ 
+                        display: "inline-flex", alignItems: "center", gap: "6px", 
+                        padding: "6px 12px", border: "1px solid #E9DFEF", borderRadius: "999px",
+                        background: expandedPracticeId === practice.id ? "#FAF5FF" : "transparent",
+                        color: "#795289", fontSize: "12px", fontWeight: "500", cursor: "pointer"
+                      }}
                     >
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M2.5 12s3.4-5.5 9.5-5.5S21.5 12 21.5 12 18.1 17.5 12 17.5 2.5 12 2.5 12Z" />
                         <circle cx="12" cy="12" r="2.5" />
                       </svg>
                       View Sessions
                     </button>
 
-                    <button type="button" className="chapter-icon-btn" aria-label={`Edit ${practice.title}`}>
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M13.8 5.7 18.3 10.2M6 18h4l8.6-8.6a1.7 1.7 0 0 0 0-2.4l-1.6-1.6a1.7 1.7 0 0 0-2.4 0L6 14v4Z" />
+                    <button type="button" className="chapter-icon-btn color-gray" aria-label={`Edit ${practice.title}`} style={{ padding: "6px", border: "1px solid #E3E7ED", borderRadius: "50%", background: "#FFF", color: "#A0AEC0", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
                       </svg>
                     </button>
 
-                    <button type="button" className="chapter-icon-btn" aria-label={`Delete ${practice.title}`}>
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <button type="button" className="chapter-icon-btn color-gray" aria-label={`Delete ${practice.title}`} style={{ padding: "6px", border: "1px solid #E3E7ED", borderRadius: "50%", background: "#FFF", color: "#A0AEC0", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M5 7h14M10 4h4m-7 3 1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9L17 7M10 11v5M14 11v5" />
                       </svg>
                     </button>
@@ -416,11 +422,20 @@ export function PracticeManagementPage() {
                       </button>
                     </div>
 
-                    {Array.from({ length: practice.sessions }).map((_, idx) => (
-                      <div key={idx} className="section-container">
-                        <div className="section-row">
-                          <div className="section-drag">
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                    {(practice.id === 1 ? [
+                      { title: "Session 1 - Introduction to Breath", type: "Video", status: "Published" },
+                      { title: "Session 2 - 4-7-8 Technique", type: "Video", status: "Published" },
+                      { title: "Session 3 - Box Breathwork", type: "Audio", status: "Published" },
+                      { title: "Session 4 - Alternate Nostril Video", type: "Video", status: "Drafted" },
+                    ] : Array.from({ length: practice.sessions }).map((_, idx) => ({
+                      title: `Session ${idx + 1} - ${idx === 0 ? 'Introduction' : 'Deep Dive'}`,
+                      type: "Video",
+                      status: idx === 0 ? "Published" : "Drafted"
+                    }))).map((session, idx) => (
+                      <div key={idx} className="section-container" style={{ marginBottom: "12px", border: "1px solid #E5E7EB", borderRadius: "12px", padding: "12px 16px" }}>
+                        <div className="section-row" style={{ display: "grid", gridTemplateColumns: "auto 1fr auto auto auto", alignItems: "center", gap: "16px" }}>
+                          <div className="section-drag" style={{ color: "#A0AEC0", cursor: "grab" }}>
+                            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="currentColor">
                               <circle cx="8" cy="7" r="1.5" />
                               <circle cx="16" cy="7" r="1.5" />
                               <circle cx="8" cy="12" r="1.5" />
@@ -429,34 +444,67 @@ export function PracticeManagementPage() {
                               <circle cx="16" cy="17" r="1.5" />
                             </svg>
                           </div>
-                          <span className="section-title">Session {idx + 1} - {idx === 0 ? 'Introduction' : 'Deep Dive'}</span>
-
-                          <span className="section-type-pill section-type-video">
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <rect x="2" y="6" width="20" height="12" rx="2" ry="2" />
-                              <polygon points="10 9 15 12 10 15 10 9" />
-                            </svg>
-                            Video
+                          
+                          <span className="section-title" style={{ fontSize: "14px", fontWeight: "500", color: "#171e2b" }}>
+                            {session.title}
                           </span>
 
-                          <span className={`section-status-pill section-status-${idx === 0 ? 'published' : 'drafted'}`}>
-                            <i aria-hidden="true" />
-                            {idx === 0 ? 'Published' : 'Drafted'}
+                          <span 
+                            className="section-type-pill" 
+                            style={{ 
+                              display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 10px", 
+                              borderRadius: "999px", fontSize: "12px", fontWeight: "500",
+                              background: session.type === "Video" ? "#FAE8FF" : "#EFF6FF",
+                              color: session.type === "Video" ? "#C026D3" : "#3B82F6"
+                            }}
+                          >
+                            {session.type === "Video" ? (
+                              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="2" y="6" width="20" height="12" rx="2" ry="2" />
+                                <polygon points="10 9 15 12 10 15 10 9" />
+                              </svg>
+                            ) : (
+                              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M9 18V5l12-2v13"></path>
+                                <circle cx="6" cy="18" r="3"></circle>
+                                <circle cx="18" cy="16" r="3"></circle>
+                              </svg>
+                            )}
+                            {session.type}
                           </span>
 
-                          <div className="section-actions">
-                            <button type="button" className="chapter-icon-btn" aria-label="Edit session">
-                              <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          <span 
+                            className="section-status-pill"
+                            style={{ 
+                              display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 10px", 
+                              borderRadius: "999px", fontSize: "12px", fontWeight: "500",
+                              background: session.status === "Published" ? "#E6F9F0" : "#F3F4F6",
+                              color: session.status === "Published" ? "#2B9367" : "#6B7280"
+                            }}
+                          >
+                            {session.status === "Published" ? (
+                              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                              </svg>
+                            ) : (
+                              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                                <polyline points="13 2 13 9 20 9"></polyline>
+                              </svg>
+                            )}
+                            {session.status}
+                          </span>
+
+                          <div className="section-actions" style={{ display: "flex", gap: "8px" }}>
+                            <button type="button" className="chapter-icon-btn color-gray" aria-label="Edit session" style={{ padding: "6px", border: "1px solid #E3E7ED", borderRadius: "50%", background: "#FFF", color: "#A0AEC0", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
                               </svg>
                             </button>
-                            <button type="button" className="chapter-icon-btn" aria-label="Delete session">
-                              <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <polyline points="3 6 5 6 21 6" />
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                <line x1="10" y1="11" x2="10" y2="17" />
-                                <line x1="14" y1="11" x2="14" y2="17" />
+                            <button type="button" className="chapter-icon-btn color-gray" aria-label="Delete session" style={{ padding: "6px", border: "1px solid #E3E7ED", borderRadius: "50%", background: "#FFF", color: "#A0AEC0", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M5 7h14M10 4h4m-7 3 1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9L17 7M10 11v5M14 11v5"></path>
                               </svg>
                             </button>
                           </div>
