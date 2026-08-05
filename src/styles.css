@@ -2658,28 +2658,40 @@ body,
   pointer-events: none;
 }
 
-.chapter-add-btn {
-  border: none;
-  border-radius: 999px;
-  min-height: 44px;
-  padding: 0 18px;
-  background: #717b8d;
-  color: #f4f7fb;
-  font-size: 14px;
-  font-family: inherit;
+.master-add-btn {
   display: inline-flex;
+  flex-direction: row;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
+  padding: 10px 16px;
+  gap: 6px;
+  min-width: 134px;
+  height: 40px;
+  background: #795289;
+  border-radius: 999px;
+  color: #FFFFFF;
+  border: none;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 14px;
+  white-space: nowrap;
   cursor: pointer;
+  transition: opacity 0.2s;
 }
 
-.chapter-add-btn svg {
+.master-add-btn:hover {
+  opacity: 0.9;
+}
+
+.master-add-btn svg {
   width: 16px;
+  height: 16px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
+  flex: none;
 }
 
 .chapter-table-head-redesign,
@@ -3120,7 +3132,7 @@ body,
 
 .chapter-primary-btn {
   border: none;
-  background: #717b8d;
+  background: #795289;
   color: #f4f7fb;
 }
 

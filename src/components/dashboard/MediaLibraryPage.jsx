@@ -294,8 +294,11 @@ function MediaLibraryPage() {
             </div>
           </div>
           
-          <button type="button" className="community-add-category-btn" style={{ minWidth: 140 }}>
-            + Add Content
+          <button type="button" className="master-add-btn">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Add Content
           </button>
         </div>
 

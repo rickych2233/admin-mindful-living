@@ -457,7 +457,7 @@ export function ChapterManagementPage() {
             </label>
           </div>
 
-          <button type="button" className="chapter-add-btn" onClick={() => { setEditingChapter(null); setIsDrawerOpen(true); }}>
+          <button type="button" className="master-add-btn" onClick={() => { setEditingChapter(null); setIsDrawerOpen(true); }}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 5v14M5 12h14" />
             </svg>

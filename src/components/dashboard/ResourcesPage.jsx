@@ -700,11 +700,11 @@ function ResourcesPage() {
             </label>
           </div>
 
-          <button type="button" className="chapter-add-btn resources-add-btn" onClick={openCreateModal}>
-            <svg viewBox="0 0 24 24" aria-hidden="true" style={{ width: 16, height: 16 }}>
+          <button type="button" className="master-add-btn" onClick={openCreateModal}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 5v14M5 12h14" />
             </svg>
-            <span className="add-content-badge">Add Content</span>
+            <span>Add Content</span>
           </button>
         </div>
 

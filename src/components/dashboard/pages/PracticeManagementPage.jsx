@@ -312,14 +312,14 @@ export function PracticeManagementPage() {
           </div>
 
           {activeTab === "practice" ? (
-            <button type="button" className="chapter-primary-btn practice-add-btn" onClick={() => setIsDrawerOpen(true)}>
+            <button type="button" className="master-add-btn" onClick={() => setIsDrawerOpen(true)}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 5v14M5 12h14" />
               </svg>
               Add Practice
             </button>
           ) : (
-            <button type="button" className="chapter-primary-btn practice-add-btn" onClick={() => setIsAddCategoryModalOpen(true)}>
+            <button type="button" className="master-add-btn" onClick={() => setIsAddCategoryModalOpen(true)}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 5v14M5 12h14" />
               </svg>
