@@ -6,6 +6,8 @@
   display: grid;
   grid-template-columns: 326px minmax(0, 1fr);
   gap: 16px;
+  height: calc(100vh - 180px);
+  min-height: 600px;
 }
 
 .roles-list-card,
@@ -13,14 +15,15 @@
   border: 1px solid #dde1e8;
   border-radius: 16px;
   background: #ffffff;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .roles-list-card {
   padding: 16px;
-  display: grid;
-  grid-template-rows: auto auto 1fr;
   gap: 16px;
-  min-height: 724px;
 }
 
 .roles-list-header {
@@ -115,7 +118,6 @@
 
 .roles-detail-card {
   padding: 16px 16px 8px;
-  min-height: 724px;
 }
 
 .roles-detail-header {

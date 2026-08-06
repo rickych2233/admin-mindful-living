@@ -435,7 +435,14 @@ function ResourcesPage() {
       const response = await fetch("http://localhost:3001/api/resources");
       if (response.ok) {
         const data = await response.json();
-        setResources(data);
+        const normalized = data.map((r) => ({
+          ...r,
+          contentType: r.content_type || "Text",
+          contentTexts: r.content_texts || {},
+          contentFiles: r.content_files || {},
+          dateAdded: r.created_at ? formatResourceDate(new Date(r.created_at)) : formatResourceDate(new Date()),
+        }));
+        setResources(normalized);
       }
     } catch (error) {
       console.error("Failed to fetch resources:", error);
@@ -585,7 +592,7 @@ function ResourcesPage() {
     setToast({ title, message });
   };
 
-  const saveResource = (nextStatus) => {
+  const saveResource = async (nextStatus) => {
     if (nextStatus === "Published" && !canPublish) {
       return;
     }
@@ -593,52 +600,70 @@ function ResourcesPage() {
     const finalStatus = resourceForm.publicationType === "Internal Asset" ? "Internal Only" : nextStatus;
 
     const nextResource = {
-      id: editingResourceId ?? Date.now(),
       title: resourceForm.title.trim(),
       category: resourceForm.category,
       publicationType: resourceForm.publicationType,
       status: finalStatus,
-      dateAdded:
-        resources.find((resource) => resource.id === editingResourceId)?.dateAdded ?? formatResourceDate(new Date()),
       thumbnail: resourceForm.thumbnail ? { ...resourceForm.thumbnail } : null,
-      contentType: resourceForm.contentType,
-      contentTexts: { ...resourceForm.contentTexts },
-      contentFiles: {
+      content_type: resourceForm.contentType,
+      content_texts: { ...resourceForm.contentTexts },
+      content_files: {
         ...resourceForm.contentFiles,
       },
     };
 
-    setResources((current) => {
+    try {
       if (editingResourceId) {
-        return current.map((resource) => (resource.id === editingResourceId ? nextResource : resource));
+        await fetch(`http://localhost:3001/api/resources/${editingResourceId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(nextResource),
+        });
+      } else {
+        await fetch(`http://localhost:3001/api/resources`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(nextResource),
+        });
       }
 
-      return [nextResource, ...current];
-    });
+      await fetchResources();
 
-    resetModalState();
+      resetModalState();
 
-    if (editingResourceId) {
+      if (editingResourceId) {
+        showToast(
+          nextStatus === "Drafted" ? "Draft Updated" : "Resource Updated",
+          nextStatus === "Drafted"
+            ? "Changes have been saved to your draft resource"
+            : "The resource has been updated successfully"
+        );
+        return;
+      }
+
       showToast(
-        nextStatus === "Drafted" ? "Draft Updated" : "Resource Updated",
+        nextStatus === "Drafted" ? "Resource Saved as Draft" : "New Resource Added",
         nextStatus === "Drafted"
-          ? "Changes have been saved to your draft resource"
-          : "The resource has been updated successfully"
+          ? "The resource has been saved to drafts"
+          : "You have successfully added new resource"
       );
-      return;
+    } catch (error) {
+      console.error("Failed to save resource:", error);
+      showToast("Error", "Failed to save resource");
     }
-
-    showToast(
-      nextStatus === "Drafted" ? "Resource Saved as Draft" : "New Resource Added",
-      nextStatus === "Drafted"
-        ? "The resource has been saved to drafts"
-        : "You have successfully added new resource"
-    );
   };
 
-  const deleteResource = (resourceId) => {
-    setResources((current) => current.filter((resource) => resource.id !== resourceId));
-    showToast("Resource Deleted", "The resource has been removed");
+  const deleteResource = async (resourceId) => {
+    try {
+      await fetch(`http://localhost:3001/api/resources/${resourceId}`, {
+        method: "DELETE",
+      });
+      await fetchResources();
+      showToast("Resource Deleted", "The resource has been removed");
+    } catch (error) {
+      console.error("Failed to delete resource:", error);
+      showToast("Error", "Failed to delete resource");
+    }
   };
 
   return (

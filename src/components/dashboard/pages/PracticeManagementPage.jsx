@@ -204,7 +204,7 @@ export function PracticeManagementPage() {
         )
         : true;
 
-  const handlePracticeContinue = () => {
+  const handlePracticeContinue = async () => {
     if (!canContinue) {
       return;
     }
@@ -214,20 +214,26 @@ export function PracticeManagementPage() {
       return;
     }
 
-    setPracticeRows((current) => [
-      ...current,
-      {
-        id: current.length + 1,
-        title: practiceForm.name.trim(),
-        goal: practiceForm.goalType.trim(),
-        duration: practiceForm.durationRange.trim(),
-        sessions: 1,
-        category: practiceForm.category.trim(),
-        status: "Drafted",
-      },
-    ]);
+    const newPractice = {
+      title: practiceForm.name.trim(),
+      goal: practiceForm.goalType.trim(),
+      duration: practiceForm.durationRange.trim(),
+      sessions: 1,
+      category: practiceForm.category.trim(),
+      status: "Drafted",
+    };
 
-    closePracticeDrawer();
+    try {
+      await fetch("http://localhost:3001/api/practices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newPractice),
+      });
+      await fetchPractices();
+      closePracticeDrawer();
+    } catch (error) {
+      console.error("Failed to add practice:", error);
+    }
   };
 
   const handleSaveCategory = () => {

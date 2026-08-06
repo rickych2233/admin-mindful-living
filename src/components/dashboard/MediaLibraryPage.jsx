@@ -3,17 +3,7 @@ import "./media.css";
 
 const mediaTypeOptions = ["All Media", "Image", "Video"];
 
-const initialMediaFiles = [
-  { id: 1, name: "Descartes' Error", author: "Antonio Damasio", format: "PDF", category: "Book", dateAdded: "12 Nov 2025", status: "Published" },
-  { id: 2, name: "A Practical Guide to Spiritual Enlig...", author: "Eckhart Tolle", format: "MP3", category: "Audio", dateAdded: "11 Nov 2025", status: "Published" },
-  { id: 3, name: "How Social Media Platforms Shape...", author: "Sam Harris", format: "MP3", category: "Music", dateAdded: "10 Nov 2025", status: "Drafted" },
-  { id: 4, name: "A Guide to Spirituality Without Religion and Modern Mindfulness", author: "Jeff Orlowski", format: "PDF", category: "Book", dateAdded: "9 Nov 2025", status: "Published" },
-  { id: 5, name: "chapter-1-thumbnail.jpg", author: "", format: "JPG", category: "Internal Asset", dateAdded: "11 Nov 2025", status: "Internal Only" },
-  { id: 6, name: "video-session-2", author: "", format: "MP4", category: "Internal Asset", dateAdded: "11 Nov 2025", status: "Internal Only" },
-  { id: 7, name: "the-power-of-now-ebook", author: "", format: "PDF", category: "Internal Asset", dateAdded: "10 Nov 2025", status: "Internal Only", color: "red" },
-  { id: 8, name: "video-session-5", author: "", format: "MOV", category: "Internal Asset", dateAdded: "9 Nov 2025", status: "Internal Only" },
-  { id: 9, name: "the-power-of-now-audio", author: "", format: "MP3", category: "Internal Asset", dateAdded: "9 Nov 2025", status: "Internal Only", color: "cyan" },
-];
+
 
 function SearchIcon() {
   return (
@@ -84,20 +74,30 @@ function EditIcon() {
   );
 }
 
-function CheckCircleIcon() {
+function PublishedStatusIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M9 12l2 2 4-4" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"></path>
     </svg>
   );
 }
 
-function ShieldCheckIcon() {
+function DraftedStatusIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-      <polyline points="9 12 11 14 15 10"></polyline>
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M9 7h4l4 4v6a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"></path>
+    </svg>
+  );
+}
+
+function InternalStatusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M5 12s3-6 7-6 7 6 7 6-3 6-7 6-7-6-7-6z" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"></path>
+      <circle cx="12" cy="12" r="2.5" stroke="#ffffff" strokeWidth="1.5" fill="none"></circle>
     </svg>
   );
 }
@@ -146,7 +146,35 @@ function triggerDownload(media) {
 
 function MediaLibraryPage() {
   const [activeTab, setActiveTab] = useState("Content List");
-  const [mediaFiles, setMediaFiles] = useState(initialMediaFiles);
+  const [mediaFiles, setMediaFiles] = useState([]);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [mediaForm, setMediaForm] = useState({
+    name: "",
+    author: "",
+    format: "MP4",
+    category: "Book",
+    status: "Published"
+  });
+
+  useEffect(() => {
+    fetchMediaFiles();
+  }, []);
+
+  const fetchMediaFiles = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/api/media");
+      if (response.ok) {
+        const data = await response.json();
+        const normalized = data.map((m) => ({
+          ...m,
+          dateAdded: m.date_added,
+        }));
+        setMediaFiles(normalized);
+      }
+    } catch (error) {
+      console.error("Failed to fetch media files:", error);
+    }
+  };
   const [searchQuery, setSearchQuery] = useState("");
   
   const [categoryFilter, setCategoryFilter] = useState("All Category");
@@ -194,10 +222,15 @@ function MediaLibraryPage() {
 
   const selectedMedia = mediaFiles.find((media) => media.id === selectedMediaId) ?? null;
 
-  const deleteMedia = (mediaId) => {
-    setMediaFiles((current) => current.filter((media) => media.id !== mediaId));
-    if (selectedMediaId === mediaId) {
-      setSelectedMediaId(null);
+  const deleteMedia = async (mediaId) => {
+    try {
+      await fetch(`http://localhost:3001/api/media/${mediaId}`, { method: "DELETE" });
+      setMediaFiles((current) => current.filter((media) => media.id !== mediaId));
+      if (selectedMediaId === mediaId) {
+        setSelectedMediaId(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete media:", error);
     }
   };
 
@@ -294,7 +327,7 @@ function MediaLibraryPage() {
             </div>
           </div>
           
-          <button type="button" className="master-add-btn">
+          <button type="button" className="master-add-btn" onClick={() => setIsAddModalOpen(true)}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 5v14M5 12h14" />
             </svg>
@@ -323,7 +356,7 @@ function MediaLibraryPage() {
           </div>
 
           {visibleMediaFiles.map((media) => (
-            <article key={media.id} className="media-row">
+            <article key={media.id} className="media-row" onClick={() => setSelectedMediaId(media.id)}>
               <div className="media-file-cell">
                 <div 
                   className="media-thumb" 
@@ -352,9 +385,9 @@ function MediaLibraryPage() {
               
               <div>
                 <span className={`media-status-pill ${media.status.toLowerCase().replace(" ", "-")}`}>
-                  {media.status === "Published" && <CheckCircleIcon />}
-                  {media.status === "Drafted" && <FileIcon />}
-                  {media.status === "Internal Only" && <ShieldCheckIcon />}
+                  {media.status === "Published" && <PublishedStatusIcon />}
+                  {media.status === "Drafted" && <DraftedStatusIcon />}
+                  {media.status === "Internal Only" && <InternalStatusIcon />}
                   {media.status}
                 </span>
               </div>
@@ -365,6 +398,7 @@ function MediaLibraryPage() {
                   className="community-action-btn color-gray"
                   aria-label={`Edit ${media.name}`}
                   style={{ padding: "6px", minWidth: 0, minHeight: 0, width: "32px", height: "32px", justifyContent: "center" }}
+                  onClick={(e) => { e.stopPropagation(); }}
                 >
                   <EditIcon />
                 </button>
@@ -373,6 +407,7 @@ function MediaLibraryPage() {
                   className="community-action-btn color-gray"
                   aria-label={`Delete ${media.name}`}
                   style={{ padding: "6px", minWidth: 0, minHeight: 0, width: "32px", height: "32px", justifyContent: "center" }}
+                  onClick={(e) => { e.stopPropagation(); deleteMedia(media.id); }}
                 >
                   <TrashIcon />
                 </button>
@@ -468,6 +503,63 @@ function MediaLibraryPage() {
               </button>
             </div>
           </aside>
+        </div>
+      )}
+      {isAddModalOpen && (
+        <div className="chapter-drawer-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setIsAddModalOpen(false)}>
+          <div className="community-modal" onClick={(e) => e.stopPropagation()} style={{ width: 400, backgroundColor: 'white', padding: 24, borderRadius: 12 }}>
+            <div className="community-modal-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 600 }}>Add Media</h2>
+              <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setIsAddModalOpen(false)}>
+                <CloseIcon />
+              </button>
+            </div>
+            <div className="community-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div className="chapter-form-field">
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: '#4B5563' }}>Name</label>
+                <input type="text" style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: 6 }} value={mediaForm.name} onChange={(e) => setMediaForm({...mediaForm, name: e.target.value})} placeholder="Media Name" />
+              </div>
+              <div className="chapter-form-field">
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: '#4B5563' }}>Author</label>
+                <input type="text" style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: 6 }} value={mediaForm.author} onChange={(e) => setMediaForm({...mediaForm, author: e.target.value})} placeholder="Author" />
+              </div>
+              <div className="chapter-form-field">
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: '#4B5563' }}>Format</label>
+                <select style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: 6 }} value={mediaForm.format} onChange={(e) => setMediaForm({...mediaForm, format: e.target.value})}>
+                  <option>MP4</option><option>MP3</option><option>PDF</option><option>JPG</option><option>MOV</option>
+                </select>
+              </div>
+              <div className="chapter-form-field">
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: '#4B5563' }}>Category</label>
+                <select style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: 6 }} value={mediaForm.category} onChange={(e) => setMediaForm({...mediaForm, category: e.target.value})}>
+                  <option>Book</option><option>Audio</option><option>Music</option><option>Movie</option><option>Internal Asset</option>
+                </select>
+              </div>
+              <div className="chapter-form-field">
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: '#4B5563' }}>Status</label>
+                <select style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: 6 }} value={mediaForm.status} onChange={(e) => setMediaForm({...mediaForm, status: e.target.value})}>
+                  <option>Published</option><option>Drafted</option><option>Internal Only</option>
+                </select>
+              </div>
+            </div>
+            <div className="community-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+              <button type="button" className="chapter-secondary-btn" onClick={() => setIsAddModalOpen(false)}>Cancel</button>
+              <button type="button" className="chapter-primary-btn" onClick={async () => {
+                try {
+                  await fetch("http://localhost:3001/api/media", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(mediaForm),
+                  });
+                  if (typeof fetchMediaFiles === "function") {
+                    await fetchMediaFiles();
+                  }
+                  setIsAddModalOpen(false);
+                  setMediaForm({ name: "", author: "", format: "MP4", category: "Book", status: "Published" });
+                } catch(err) { console.error(err) }
+              }}>Save</button>
+            </div>
+          </div>
         </div>
       )}
     </>

@@ -236,6 +236,27 @@ function WarningIcon() {
 export function CommunityPage() {
   const [activeTab, setActiveTab] = useState("Discussion List");
   const [searchQuery, setSearchQuery] = useState("");
+  const [discussions, setDiscussions] = useState([]);
+
+  React.useEffect(() => {
+    fetchDiscussions();
+  }, []);
+
+  const fetchDiscussions = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/api/community/discussions");
+      if (response.ok) {
+        const data = await response.json();
+        const normalized = data.map(d => ({
+          ...d,
+          categoryColor: d.category_color
+        }));
+        setDiscussions(normalized);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
   const [categoryFilter, setCategoryFilter] = useState("All Category");
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   
@@ -444,7 +465,7 @@ export function CommunityPage() {
               <span>Action</span>
             </div>
 
-            {MOCK_DISCUSSIONS.map((discussion) => (
+            {discussions.map((discussion) => (
               <article key={discussion.id} className="community-row">
                 <div className="community-discussion-cell">
                   <img src={discussion.avatar} alt={discussion.name} className="community-avatar" />

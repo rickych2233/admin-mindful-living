@@ -2,6 +2,7 @@ const LOCAL_API_BASE_URL = import.meta.env.VITE_LOCAL_API_BASE_URL || "http://lo
 const SERVER_API_BASE_URL = import.meta.env.VITE_SERVER_API_BASE_URL || "http://187.124.129.55";
 const USERS_API_PATH = import.meta.env.VITE_USERS_API_PATH || "/api/users";
 const CHAPTERS_API_PATH = import.meta.env.VITE_CHAPTERS_API_PATH || "/api/chapters";
+const ROLES_API_PATH = import.meta.env.VITE_ROLES_API_PATH || "/api/roles";
 
 // Detect if we're running in local development
 const IS_LOCAL_HOST =
@@ -46,6 +47,18 @@ const CHAPTERS_API_FALLBACKS = [
   ...(!USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/chapters`] : []),
 ];
 
+const ROLES_API_URL = `${API_BASE_URL}${ROLES_API_PATH}`;
+const RELATIVE_ROLES_API_PATH = "/api/roles";
+const CURRENT_ORIGIN_ROLES_API_URL = CURRENT_ORIGIN ? `${CURRENT_ORIGIN}${RELATIVE_ROLES_API_PATH}` : RELATIVE_ROLES_API_PATH;
+
+const ROLES_API_FALLBACKS = [
+  RELATIVE_ROLES_API_PATH,
+  CURRENT_ORIGIN_ROLES_API_URL,
+  ROLES_API_URL,
+  `${API_BASE_URL}/api/roles`,
+  ...(!USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/roles`] : []),
+];
+
 function getSectionsApiFallbacks(chapterId) {
   const encodedId = encodeURIComponent(String(chapterId));
   return CHAPTERS_API_FALLBACKS.map(
@@ -66,6 +79,9 @@ export {
   USERS_API_FALLBACKS,
   CHAPTERS_API_URL,
   CHAPTERS_API_FALLBACKS,
+  ROLES_API_PATH,
+  ROLES_API_URL,
+  ROLES_API_FALLBACKS,
   getSectionsApiFallbacks,
 };
 

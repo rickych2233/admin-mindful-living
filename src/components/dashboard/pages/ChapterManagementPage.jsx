@@ -53,42 +53,8 @@ export function ChapterManagementPage() {
     if (sectionsMap[cId]) return;
     setSectionsLoading((p) => ({ ...p, [cId]: true }));
     try {
-      // FORCE MOCKUP DATA FOR UI REVIEW
-      const mockupData = [
-        {
-          id: 991,
-          title: "Section A - What is Presence?",
-          status: "Published",
-          contents: [
-            { id: 101, title: "Understanding the Basics of Presence", type: "Video", is_required: true },
-            { id: 102, title: "Guided Meditation", type: "Audio", is_required: true },
-            { id: 103, title: "Reflection Exercise", type: "Text", is_required: false },
-          ],
-        },
-        {
-          id: 992,
-          title: "Section B - The Observer",
-          status: "Published",
-          contents: [
-            { id: 201, title: "How to Observe Thoughts Clearly", type: "Video", is_required: true },
-            { id: 202, title: "Mind vs Awareness Visualization", type: "Audio", is_required: true },
-            { id: 203, title: "Reflection Exercise", type: "Text", is_required: true },
-          ],
-        },
-        {
-          id: 993,
-          title: "Section C - Breath Awareness",
-          status: "Drafted",
-          contents: [
-            { id: 301, title: "Guided Breath Practice", type: "Video", is_required: true },
-            { id: 302, title: "Breathwork Technique Tutorial", type: "Audio", is_required: true },
-            { id: 303, title: "Daily Practice Exercise", type: "Text", is_required: false },
-          ],
-        },
-      ];
-      // Simulate network delay
-      await new Promise(r => setTimeout(r, 400));
-      setSectionsMap((p) => ({ ...p, [cId]: mockupData }));
+      const data = await fetchSectionsByChapter(cId);
+      setSectionsMap((p) => ({ ...p, [cId]: data || [] }));
     } catch (err) {
       console.error("Failed to fetch sections:", err);
       setSectionsMap((p) => ({ ...p, [cId]: [] }));
