@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import "./media.css";
+import "./media-add.css";
 
 const mediaTypeOptions = ["All Media", "Image", "Video"];
 
@@ -14,10 +15,10 @@ function SearchIcon() {
   );
 }
 
-function ChevronDownIcon() {
+function ChevronDownIcon(props) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m7 10 5 5 5-5" />
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polyline points="6 9 12 15 18 9" />
     </svg>
   );
 }
@@ -130,6 +131,15 @@ function MediaVisualIcon() {
   );
 }
 
+function PlayCircleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="12" fill="#ffffff"></circle>
+      <path d="M10 8l6 4-6 4z" fill="#151c29"></path>
+    </svg>
+  );
+}
+
 function triggerDownload(media) {
   const blob = new Blob([`Placeholder file for ${media.name}.${media.format.toLowerCase()}`], {
     type: "application/octet-stream",
@@ -144,25 +154,128 @@ function triggerDownload(media) {
   window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
 }
 
+function EyeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+  );
+}
+
+function BookmarkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+    </svg>
+  );
+}
+
+function ImageIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 32, height: 32 }}>
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+      <circle cx="8.5" cy="8.5" r="1.5"></circle>
+      <polyline points="21 15 16 10 5 21"></polyline>
+    </svg>
+  );
+}
+
+function TextIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 6h16M4 12h16M4 18h7" />
+    </svg>
+  );
+}
+
+function VideoIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <polygon points="10 9 10 15 15 12" />
+    </svg>
+  );
+}
+
+function ImageIcon2() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  );
+}
+
+function DocumentIcon({ style }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10 9 9 9 8 9" />
+    </svg>
+  );
+}
+
+function CheckIcon({ style }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+const MOCK_USER_SUGGESTIONS = [
+  { id: 1, name: "Marie Laura", title: "Stillness Speaks — E. Tolle", date: "11 Nov 2025", category: "Book", avatar: "https://i.pravatar.cc/150?u=1" },
+  { id: 2, name: "Kenny Roberts", title: "Inner Worlds Outer Worlds", date: "12 Nov 2025", category: "Movie", avatar: "https://i.pravatar.cc/150?u=2" },
+  { id: 3, name: "Sophia Turner", title: "The Art of Happiness — D. Lama", date: "13 Nov 2025", category: "Book", avatar: "https://i.pravatar.cc/150?u=3" },
+  { id: 4, name: "Liam Johnson", title: "Planet Earth II", date: "14 Nov 2025", category: "Audio", avatar: "https://i.pravatar.cc/150?u=4" },
+  { id: 5, name: "Ava Martinez", title: "Inception", date: "15 Nov 2025", category: "Movie", avatar: "https://i.pravatar.cc/150?u=5" },
+];
+
 function MediaLibraryPage() {
   const [activeTab, setActiveTab] = useState("Content List");
   const [mediaFiles, setMediaFiles] = useState([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addStep, setAddStep] = useState(1);
+  const [selectedThumbnail, setSelectedThumbnail] = useState(null);
+  const [selectedMediaFile, setSelectedMediaFile] = useState(null);
+  const thumbnailInputRef = useRef(null);
+  const mediaInputRef = useRef(null);
+  const [isRelatedChapterOpen, setIsRelatedChapterOpen] = useState(false);
+  const [chapters, setChapters] = useState([]);
   const [mediaForm, setMediaForm] = useState({
     name: "",
     author: "",
-    format: "MP4",
+    format: "Video",
     category: "Book",
-    status: "Published"
+    status: "Published",
+    relatedChapters: []
   });
 
-  useEffect(() => {
-    fetchMediaFiles();
-  }, []);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All Category");
+  const [statusFilter, setStatusFilter] = useState("All Status");
+  
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [selectedMediaId, setSelectedMediaId] = useState(null);
+
+  const selectedMedia = useMemo(() => {
+    return mediaFiles.find(media => media.id === selectedMediaId);
+  }, [selectedMediaId, mediaFiles]);
+
+  const isContent = useMemo(() => {
+    if (!selectedMedia) return false;
+    return selectedMedia.category === "Book" || selectedMedia.format === "PDF";
+  }, [selectedMedia]);
 
   const fetchMediaFiles = async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/media");
+      const response = await fetch("/api/media");
       if (response.ok) {
         const data = await response.json();
         const normalized = data.map((m) => ({
@@ -175,15 +288,22 @@ function MediaLibraryPage() {
       console.error("Failed to fetch media files:", error);
     }
   };
-  const [searchQuery, setSearchQuery] = useState("");
-  
-  const [categoryFilter, setCategoryFilter] = useState("All Category");
-  const [statusFilter, setStatusFilter] = useState("All Status");
-  
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
-  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
-  
-  const [selectedMediaId, setSelectedMediaId] = useState(null);
+
+  const fetchChapters = async () => {
+    try {
+      const response = await fetch("/api/chapters");
+      const data = await response.json();
+      setChapters(Array.isArray(data) ? data : (data.chapters || data.data || []));
+    } catch (error) {
+      console.error("Failed to fetch chapters:", error);
+      setChapters([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchMediaFiles();
+    fetchChapters();
+  }, []);
 
   useEffect(() => {
     if (!selectedMediaId) {
@@ -220,11 +340,14 @@ function MediaLibraryPage() {
     }
   }, [mediaFiles, selectedMediaId]);
 
-  const selectedMedia = mediaFiles.find((media) => media.id === selectedMediaId) ?? null;
+  const [editingMediaId, setEditingMediaId] = useState(null);
 
   const deleteMedia = async (mediaId) => {
+    if (!window.confirm("Are you sure you want to delete this media file?")) {
+      return;
+    }
     try {
-      await fetch(`http://localhost:3001/api/media/${mediaId}`, { method: "DELETE" });
+      await fetch(`/api/media/${mediaId}`, { method: "DELETE" });
       setMediaFiles((current) => current.filter((media) => media.id !== mediaId));
       if (selectedMediaId === mediaId) {
         setSelectedMediaId(null);
@@ -232,6 +355,27 @@ function MediaLibraryPage() {
     } catch (error) {
       console.error("Failed to delete media:", error);
     }
+  };
+
+  const openEditModal = (media) => {
+    setEditingMediaId(media.id);
+    setMediaForm({
+      name: media.name || "",
+      author: media.author || "",
+      format: media.format || "Video",
+      category: media.category || "Book",
+      status: media.status || "Published",
+      relatedChapters: media.related_chapters || media.relatedChapters || [],
+      shortQuote: media.short_quote || media.shortQuote || "",
+      whyItMatters: media.why_it_matters || media.whyItMatters || "",
+      corpusConnection: media.corpus_connection || media.corpusConnection || "",
+      criticalNote: media.critical_note || media.criticalNote || "",
+      integrationQuestion: media.integration_question || media.integrationQuestion || ""
+    });
+    setSelectedThumbnail(media.thumbnail || null);
+    setSelectedMediaFile(media.content_file || media.contentFile || null);
+    setAddStep(1);
+    setIsAddModalOpen(true);
   };
 
   return (
@@ -254,9 +398,11 @@ function MediaLibraryPage() {
           ))}
         </div>
 
-        <div className="media-toolbar">
-          <div className="chapter-filters media-filters">
-            <label className="chapter-search media-search" aria-label="Search practice or content name...">
+        {activeTab === "Content List" ? (
+          <>
+            <div className="media-toolbar">
+              <div className="chapter-filters media-filters">
+                <label className="chapter-search media-search" aria-label="Search practice or content name...">
               <SearchIcon />
               <input
                 type="search"
@@ -327,7 +473,12 @@ function MediaLibraryPage() {
             </div>
           </div>
           
-          <button type="button" className="master-add-btn" onClick={() => setIsAddModalOpen(true)}>
+          <button type="button" className="master-add-btn" onClick={() => { 
+            setEditingMediaId(null);
+            setMediaForm({ name: "", author: "", format: "Video", category: "Book", status: "Published", relatedChapters: [] });
+            setIsAddModalOpen(true); 
+            setAddStep(1); 
+          }}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 5v14M5 12h14" />
             </svg>
@@ -395,18 +546,16 @@ function MediaLibraryPage() {
               <div className="media-actions">
                 <button
                   type="button"
-                  className="community-action-btn color-gray"
+                  className="chapter-icon-btn"
                   aria-label={`Edit ${media.name}`}
-                  style={{ padding: "6px", minWidth: 0, minHeight: 0, width: "32px", height: "32px", justifyContent: "center" }}
-                  onClick={(e) => { e.stopPropagation(); }}
+                  onClick={(e) => { e.stopPropagation(); openEditModal(media); }}
                 >
                   <EditIcon />
                 </button>
                 <button
                   type="button"
-                  className="community-action-btn color-gray"
+                  className="chapter-icon-btn"
                   aria-label={`Delete ${media.name}`}
-                  style={{ padding: "6px", minWidth: 0, minHeight: 0, width: "32px", height: "32px", justifyContent: "center" }}
                   onClick={(e) => { e.stopPropagation(); deleteMedia(media.id); }}
                 >
                   <TrashIcon />
@@ -418,148 +567,525 @@ function MediaLibraryPage() {
           {visibleMediaFiles.length === 0 && (
             <div className="chapter-empty-state">
               <p>No media files match the current filters.</p>
+              </div>
+            )}
+          </div>
+  
+          <div className="practice-footer media-footer">
+            <div className="practice-footer-left">
+              <span>Showing</span>
+              <button type="button" className="practice-page-size">
+                10
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m7 10 5 5 5-5" />
+                </svg>
+              </button>
+              <span>from {visibleMediaFiles.length} data</span>
             </div>
-          )}
-        </div>
+  
+            <div className="practice-pagination">
+              <button type="button" className="practice-page-btn" aria-label="Previous page">
+                <svg viewBox="0 0 24 24" aria-hidden="true" stroke="currentColor" fill="none" strokeWidth="2">
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
+              </button>
+              <button type="button" className="practice-page-btn" style={{ background: '#f6effa', color: '#795289', borderColor: '#f6effa' }}>1</button>
+              <button type="button" className="practice-page-btn" aria-label="Next page">
+                <svg viewBox="0 0 24 24" aria-hidden="true" stroke="currentColor" fill="none" strokeWidth="2">
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </>
+        ) : (
+        <>
+          <div className="chapter-table-card media-table-card">
+            <div className="suggestion-table-head">
+              <span className="sortable-head">Suggested by <SortIcon /></span>
+              <span className="sortable-head">Title <SortIcon /></span>
+              <span className="sortable-head">Date <SortIcon /></span>
+              <span className="sortable-head">Category <SortIcon /></span>
+            </div>
 
-        <div className="practice-footer media-footer">
-          <div className="practice-footer-left">
-            <span>Showing</span>
-            <button type="button" className="practice-page-size">
-              10
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m7 10 5 5 5-5" />
-              </svg>
-            </button>
-            <span>from {visibleMediaFiles.length} results</span>
+            {MOCK_USER_SUGGESTIONS.map((suggestion) => (
+              <article key={suggestion.id} className="suggestion-row">
+                <div className="suggestion-user-cell">
+                  <img src={suggestion.avatar} alt={suggestion.name} />
+                  <strong>{suggestion.name}</strong>
+                </div>
+                <span className="suggestion-cell-text">{suggestion.title}</span>
+                <span className="suggestion-cell-text">{suggestion.date}</span>
+                <span className="suggestion-cell-text">{suggestion.category}</span>
+              </article>
+            ))}
           </div>
 
-          <div className="practice-pagination">
-            <span className="practice-page-indicator">1 of 1 pages</span>
-            <button type="button" className="practice-page-btn" aria-label="Previous page">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m15 6-6 6 6 6" />
-              </svg>
-            </button>
-            <button type="button" className="practice-page-btn" aria-label="Next page">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m9 6 6 6-6 6" />
-              </svg>
-            </button>
+          <div className="practice-footer media-footer">
+            <div className="practice-footer-left">
+              <span>Show</span>
+              <button type="button" className="practice-page-size">
+                10
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m7 10 5 5 5-5" />
+                </svg>
+              </button>
+              <span>from 5 data</span>
+            </div>
+
+            <div className="practice-pagination">
+              <button type="button" className="practice-page-btn" aria-label="Previous page" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true" stroke="currentColor" fill="none" strokeWidth="2">
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
+              </button>
+              <button type="button" className="practice-page-btn" style={{ background: '#f6effa', color: '#795289', borderColor: '#f6effa' }}>1</button>
+              <button type="button" className="practice-page-btn" aria-label="Next page">
+                <svg viewBox="0 0 24 24" aria-hidden="true" stroke="currentColor" fill="none" strokeWidth="2">
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </button>
+            </div>
           </div>
-        </div>
+        </>
+        )}
       </section>
 
       {selectedMedia && (
         <div className="media-drawer-overlay" onClick={() => setSelectedMediaId(null)}>
           <aside className="media-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
             <div className="media-drawer-header">
-              <h2>Detail Media</h2>
-              <button type="button" className="chapter-drawer-close" aria-label="Close media detail" onClick={() => setSelectedMediaId(null)}>
+              <h2>{isContent ? "Detail Content" : "Detail Media"}</h2>
+              <button type="button" className="chapter-drawer-close" aria-label="Close detail" onClick={() => setSelectedMediaId(null)}>
                 <CloseIcon />
               </button>
             </div>
 
             <div className="media-drawer-body">
-              <div className="media-preview-box" aria-hidden="true">
-                <MediaVisualIcon />
-              </div>
-
-              <div className="media-detail-grid">
-                <div className="media-detail-item">
-                  <span>File Name</span>
-                  <strong>{selectedMedia.name}</strong>
+              {isContent ? (
+                <div className="content-detail-layout">
+                   <div className="content-thumbnail-block">
+                     <span className="content-label">Content Thumbnail</span>
+                     <div className="content-file-card">
+                       <img src="https://images.unsplash.com/photo-1528716321680-815a8cdb8cbe?w=100&q=80" alt="Thumb" />
+                       <div>
+                         <strong>descartes'_error.jpg</strong>
+                         <span>59.7 KB</span>
+                       </div>
+                     </div>
+                   </div>
+                   
+                   <div className="media-detail-item">
+                     <span>Content Title</span>
+                     <strong>{selectedMedia.name}</strong>
+                   </div>
+                   <div className="media-detail-item">
+                     <span>Author</span>
+                     <strong>{selectedMedia.author || "-"}</strong>
+                   </div>
+                   <div className="media-detail-item">
+                     <span>Category</span>
+                     <strong>{selectedMedia.category}</strong>
+                   </div>
+                   
+                   <div className="media-detail-item">
+                     <span>Short Quote</span>
+                     <strong style={{ fontWeight: 400 }}>The body is the foundation of the conscious mind.</strong>
+                   </div>
+                   <div className="media-detail-item">
+                     <span>Why It Matters</span>
+                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>Damasio demonstrates that reasoning emerges through the interaction between body, emotion, and cognition. This work helps readers understand that awareness is not purely intellectual but deeply embodied.</strong>
+                   </div>
+                   <div className="media-detail-item">
+                     <span>Corpus Connection</span>
+                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>This resource supports the idea of the “Human Vehicle”: consciousness does not pilot from an abstract cloud, but through the body, the nervous system, and internal signals.</strong>
+                   </div>
+                   <div className="media-detail-item">
+                     <span>Related Chapter</span>
+                     <div style={{ color: "#151c29", lineHeight: 1.5 }}>
+                       • Chapter 2 - The Human Vehicle<br/>
+                       • Chapter 4 - Awareness &amp; Presence
+                     </div>
+                   </div>
+                   <div className="media-detail-item">
+                     <span>Critical Note</span>
+                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>His approach remains academic and materialist. It strongly anchors sovereignty in biology, but does not directly cover the energetic dimension developed in the Corpus.</strong>
+                   </div>
+                   <div className="media-detail-item">
+                     <span>Integration Question</span>
+                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>During a recent decision, have you scanned your physical sensations (stomach, throat, heart) before concluding with your intellect?</strong>
+                   </div>
                 </div>
-                <div className="media-detail-item">
-                  <span>File Format</span>
-                  <strong>{selectedMedia.format}</strong>
-                </div>
-                <div className="media-detail-item">
-                  <span>File Size</span>
-                  <strong>{selectedMedia.fileSize}</strong>
-                </div>
-                <div className="media-detail-item">
-                  <span>Date Added</span>
-                  <strong>{selectedMedia.dateAddedDetail}</strong>
-                </div>
-                <div className="media-detail-item">
-                  <span>Uploaded by</span>
-                  <div className="media-uploader">
-                    <div className="media-uploader-avatar" aria-hidden="true">
-                      <UserIcon />
+              ) : (
+                <>
+                  {selectedMedia.format === "MP4" || selectedMedia.format === "MOV" || selectedMedia.format === "Video" ? (
+                    <div className="media-video-preview" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1528716321680-815a8cdb8cbe?w=600&q=80')" }}>
+                       <div className="play-icon-circle">
+                         <PlayCircleIcon />
+                       </div>
                     </div>
-                    <strong>{selectedMedia.uploadedBy}</strong>
+                  ) : (
+                    <div className="media-audio-preview">
+                       <div className="audio-icon-box">
+                         <MusicIcon />
+                       </div>
+                    </div>
+                  )}
+
+                  <div className="media-detail-grid">
+                    <div className="media-detail-item">
+                      <span>File Name</span>
+                      <strong>{selectedMedia.name}</strong>
+                    </div>
+                    <div className="media-detail-item">
+                      <span>File Format</span>
+                      <strong>{selectedMedia.format}</strong>
+                    </div>
+                    <div className="media-detail-item">
+                      <span>File Size</span>
+                      <strong>{selectedMedia.fileSize || (selectedMedia.format === "MP4" ? "120 MB" : "5.2 KB")}</strong>
+                    </div>
+                    <div className="media-detail-item">
+                      <span>Date Added</span>
+                      <strong>{selectedMedia.dateAddedDetail || `${selectedMedia.dateAdded || "12 Nov 2025"} at 08:35`}</strong>
+                    </div>
+                    <div className="media-detail-item">
+                      <span>Uploaded by</span>
+                      <div className="media-uploader">
+                        <div className="media-uploader-avatar">
+                          <img src="https://i.pravatar.cc/150?u=adrian" alt="Adrian" style={{ width: "100%", height: "100%", borderRadius: "50%" }} />
+                        </div>
+                        <strong>{selectedMedia.uploadedBy || "Adrian Halim"}</strong>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </>
+              )}
             </div>
 
             <div className="media-drawer-footer">
               <button type="button" className="chapter-secondary-btn" onClick={() => setSelectedMediaId(null)}>
                 Close
               </button>
-              <button type="button" className="chapter-primary-btn media-download-btn" onClick={() => triggerDownload(selectedMedia)}>
-                Download File
-              </button>
+              {!isContent && (
+                <button type="button" className="chapter-primary-btn media-download-btn" onClick={() => triggerDownload(selectedMedia)}>
+                  <DownloadIcon /> Download File
+                </button>
+              )}
             </div>
           </aside>
         </div>
       )}
       {isAddModalOpen && (
-        <div className="chapter-drawer-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setIsAddModalOpen(false)}>
-          <div className="community-modal" onClick={(e) => e.stopPropagation()} style={{ width: 400, backgroundColor: 'white', padding: 24, borderRadius: 12 }}>
-            <div className="community-modal-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 600 }}>Add Media</h2>
-              <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setIsAddModalOpen(false)}>
+        <div className="media-drawer-overlay" onClick={() => { setIsAddModalOpen(false); setAddStep(1); }}>
+          <aside className="media-drawer" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <div className="media-drawer-header">
+              <h2>{editingMediaId ? "Edit Content" : "Add Content"}</h2>
+              <button type="button" className="chapter-drawer-close" aria-label="Close" onClick={() => { setIsAddModalOpen(false); setAddStep(1); }}>
                 <CloseIcon />
               </button>
             </div>
-            <div className="community-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div className="chapter-form-field">
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: '#4B5563' }}>Name</label>
-                <input type="text" style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: 6 }} value={mediaForm.name} onChange={(e) => setMediaForm({...mediaForm, name: e.target.value})} placeholder="Media Name" />
+
+            <div className="media-drawer-body">
+              <div className="add-content-stepper">
+                <div className="add-content-stepper-line"></div>
+                <div className={`add-content-step ${addStep >= 1 ? "active" : ""}`}>
+                  <div className="add-content-step-circle">
+                    {addStep > 1 ? <CheckIcon style={{ width: 18, height: 18 }} /> : "1"}
+                  </div>
+                  <span className="add-content-step-label">Content Info</span>
+                </div>
+                <div className={`add-content-step ${addStep >= 2 ? "active" : ""}`}>
+                  <div className="add-content-step-circle">2</div>
+                  <span className="add-content-step-label">Add Content</span>
+                </div>
               </div>
-              <div className="chapter-form-field">
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: '#4B5563' }}>Author</label>
-                <input type="text" style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: 6 }} value={mediaForm.author} onChange={(e) => setMediaForm({...mediaForm, author: e.target.value})} placeholder="Author" />
+
+              {addStep === 1 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div className="chapter-form-field">
+                  <label style={{ display: 'block', marginBottom: 12, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Publication Type <span style={{color: '#EF4444'}}>*</span></label>
+                  <div className="publication-type-options">
+                    <div className={`publication-type-card ${mediaForm.status === "Published" ? "active" : ""}`} onClick={() => setMediaForm({...mediaForm, status: "Published"})}>
+                      <EyeIcon />
+                      <span>Published Resource</span>
+                    </div>
+                    <div className={`publication-type-card ${mediaForm.status === "Internal Only" ? "active" : ""}`} onClick={() => setMediaForm({...mediaForm, status: "Internal Only"})}>
+                      <BookmarkIcon />
+                      <span>Internal Asset</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="chapter-form-field">
+                  <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Content Title <span style={{color: '#EF4444'}}>*</span></label>
+                  <input type="text" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8 }} value={mediaForm.name} onChange={(e) => setMediaForm({...mediaForm, name: e.target.value})} placeholder={mediaForm.status === "Published" ? "Descartes' Error" : "Enter content title"} />
+                </div>
+
+                {mediaForm.status === "Published" && (
+                  <>
+                    <div className="chapter-form-field">
+                      <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Author <span style={{color: '#EF4444'}}>*</span></label>
+                      <input type="text" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8 }} value={mediaForm.author} onChange={(e) => setMediaForm({...mediaForm, author: e.target.value})} placeholder="e.g. Antonio Damasio" />
+                    </div>
+                    
+                    <div className="chapter-form-field">
+                      <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Category <span style={{color: '#EF4444'}}>*</span></label>
+                      <div style={{ position: 'relative' }}>
+                        <select style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, appearance: 'none' }} value={mediaForm.category} onChange={(e) => setMediaForm({...mediaForm, category: e.target.value})}>
+                          <option>Select content category</option><option>Book</option><option>Audio</option><option>Music</option><option>Movie</option>
+                        </select>
+                        <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                          <ChevronDownIcon />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="chapter-form-field">
+                      <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Short Quote <span style={{color: '#EF4444'}}>*</span></label>
+                      <input type="text" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8 }} placeholder="e.g. The body is the foundation of the conscious mind." value={mediaForm.shortQuote || ""} onChange={(e) => setMediaForm({...mediaForm, shortQuote: e.target.value})} />
+                    </div>
+
+                    <div className="chapter-form-field">
+                      <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Why It Matters <span style={{color: '#EF4444'}}>*</span></label>
+                      <textarea rows="3" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, resize: 'none', fontFamily: 'inherit' }} placeholder="Describe the key insight or benefit of this resource..." value={mediaForm.whyItMatters || ""} onChange={(e) => setMediaForm({...mediaForm, whyItMatters: e.target.value})}></textarea>
+                    </div>
+
+                    <div className="chapter-form-field">
+                      <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Corpus Connection <span style={{color: '#EF4444'}}>*</span></label>
+                      <textarea rows="3" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, resize: 'none', fontFamily: 'inherit' }} placeholder="Describe the relationship between this resource and the Corpus..." value={mediaForm.corpusConnection || ""} onChange={(e) => setMediaForm({...mediaForm, corpusConnection: e.target.value})}></textarea>
+                    </div>
+
+                    <div className="chapter-form-field">
+                      <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Related Chapter</label>
+                      <div style={{ position: 'relative' }}>
+                        <button 
+                          type="button"
+                          style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, background: '#fff', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                          onClick={() => setIsRelatedChapterOpen(!isRelatedChapterOpen)}
+                        >
+                          <span style={{ color: (mediaForm.relatedChapters || []).length > 0 ? '#151c29' : '#8d95a4' }}>
+                            {(mediaForm.relatedChapters || []).length === 0 ? "Select related chapters" : 
+                             (mediaForm.relatedChapters || []).length === 1 ? chapters.find(c => c.id === mediaForm.relatedChapters[0])?.title || "1 Chapter Selected" : 
+                             `${(mediaForm.relatedChapters || []).length} Chapters Selected`}
+                          </span>
+                          <ChevronDownIcon style={{ width: 16, height: 16, color: '#8d95a4' }} />
+                        </button>
+                        {isRelatedChapterOpen && (
+                          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, background: '#fff', border: '1px solid #edf1f5', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10, maxHeight: 200, overflowY: 'auto', padding: 8 }}>
+                            {(Array.isArray(chapters) ? chapters : []).map(ch => (
+                              <label key={ch.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', borderRadius: 6, transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                                <input 
+                                  type="checkbox" 
+                                  style={{ width: 16, height: 16, accentColor: '#795289' }}
+                                  checked={(mediaForm.relatedChapters || []).includes(ch.id)}
+                                  onChange={(e) => {
+                                    const currentRelated = mediaForm.relatedChapters || [];
+                                    if (e.target.checked) {
+                                      setMediaForm({...mediaForm, relatedChapters: [...currentRelated, ch.id]});
+                                    } else {
+                                      setMediaForm({...mediaForm, relatedChapters: currentRelated.filter(id => id !== ch.id)});
+                                    }
+                                  }}
+                                />
+                                <span style={{ fontSize: 13, color: '#151c29' }}>{ch.title}</span>
+                              </label>
+                            ))}
+                            {(!Array.isArray(chapters) || chapters.length === 0) && (
+                              <div style={{ padding: '8px 12px', fontSize: 13, color: '#8d95a4' }}>No chapters found</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="chapter-form-field">
+                      <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Critical Note <span style={{color: '#EF4444'}}>*</span></label>
+                      <textarea rows="3" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, resize: 'none', fontFamily: 'inherit' }} placeholder="Provide critical context about this resource..." value={mediaForm.criticalNote || ""} onChange={(e) => setMediaForm({...mediaForm, criticalNote: e.target.value})}></textarea>
+                    </div>
+
+                    <div className="chapter-form-field">
+                      <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Integration Question <span style={{color: '#EF4444'}}>*</span></label>
+                      <textarea rows="3" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, resize: 'none', fontFamily: 'inherit' }} placeholder="Ask a question that encourages personal reflection..." value={mediaForm.integrationQuestion || ""} onChange={(e) => setMediaForm({...mediaForm, integrationQuestion: e.target.value})}></textarea>
+                    </div>
+                  </>
+                )}
+
+                {mediaForm.status === "Internal Only" && (
+                  <div className="chapter-form-field">
+                    <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Category <span style={{color: '#EF4444'}}>*</span></label>
+                    <div style={{ position: 'relative' }}>
+                      <select style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, appearance: 'none' }} value={mediaForm.category} onChange={(e) => setMediaForm({...mediaForm, category: e.target.value})}>
+                        <option>Select content category</option><option>Book</option><option>Audio</option><option>Music</option><option>Movie</option><option>Internal Asset</option>
+                      </select>
+                      <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                        <ChevronDownIcon />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="chapter-form-field">
+                  <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Content Thumbnail <span style={{color: '#EF4444'}}>*</span></label>
+                  {selectedThumbnail ? (
+                    <div className="thumbnail-upload-box">
+                      <div className="thumbnail-upload-left">
+                        <img src={selectedThumbnail.preview} alt="Thumbnail" />
+                        <div className="thumbnail-upload-info">
+                          <strong>{selectedThumbnail.name}</strong>
+                          <span>{selectedThumbnail.size}</span>
+                        </div>
+                      </div>
+                      <button type="button" className="thumbnail-delete-btn" onClick={() => setSelectedThumbnail(null)}>
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="drag-drop-box" onClick={() => thumbnailInputRef.current?.click()}>
+                      <input type="file" ref={thumbnailInputRef} style={{ display: 'none' }} accept="image/png, image/jpeg" onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                          const file = e.target.files[0];
+                          setSelectedThumbnail({
+                            name: file.name,
+                            size: (file.size / 1024).toFixed(1) + ' KB',
+                            preview: URL.createObjectURL(file)
+                          });
+                        }
+                      }} />
+                      <div className="drag-drop-icon">
+                        <ImageIcon />
+                      </div>
+                      <div className="drag-drop-text">Drag &amp; Drop or <strong>Choose File</strong> to Upload</div>
+                      <div className="drag-drop-subtext">Supported file: PNG, JPG&nbsp;&nbsp;&nbsp;Max. size: 2 MB</div>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="chapter-form-field">
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: '#4B5563' }}>Format</label>
-                <select style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: 6 }} value={mediaForm.format} onChange={(e) => setMediaForm({...mediaForm, format: e.target.value})}>
-                  <option>MP4</option><option>MP3</option><option>PDF</option><option>JPG</option><option>MOV</option>
-                </select>
-              </div>
-              <div className="chapter-form-field">
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: '#4B5563' }}>Category</label>
-                <select style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: 6 }} value={mediaForm.category} onChange={(e) => setMediaForm({...mediaForm, category: e.target.value})}>
-                  <option>Book</option><option>Audio</option><option>Music</option><option>Movie</option><option>Internal Asset</option>
-                </select>
-              </div>
-              <div className="chapter-form-field">
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500, color: '#4B5563' }}>Status</label>
-                <select style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: 6 }} value={mediaForm.status} onChange={(e) => setMediaForm({...mediaForm, status: e.target.value})}>
-                  <option>Published</option><option>Drafted</option><option>Internal Only</option>
-                </select>
-              </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                  <div className="chapter-form-field">
+                    <label style={{ display: 'block', marginBottom: 12, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Content Type <span style={{color: '#EF4444'}}>*</span></label>
+                    <div className="content-type-grid">
+                      <div className={`content-type-card ${mediaForm.format === "Text" ? "active" : ""}`} onClick={() => setMediaForm({...mediaForm, format: "Text"})}>
+                        <TextIcon />
+                        <span>Text</span>
+                      </div>
+                      <div className={`content-type-card ${mediaForm.format === "Video" ? "active" : ""}`} onClick={() => setMediaForm({...mediaForm, format: "Video"})}>
+                        <VideoIcon />
+                        <span>Video</span>
+                      </div>
+                      <div className={`content-type-card ${mediaForm.format === "Image" ? "active" : ""}`} onClick={() => setMediaForm({...mediaForm, format: "Image"})}>
+                        <ImageIcon2 />
+                        <span>Image</span>
+                      </div>
+                      <div className={`content-type-card ${mediaForm.format === "Document" ? "active" : ""}`} onClick={() => setMediaForm({...mediaForm, format: "Document"})}>
+                        <DocumentIcon />
+                        <span>Document</span>
+                      </div>
+                      <div className={`content-type-card ${mediaForm.format === "Audio" ? "active" : ""}`} onClick={() => setMediaForm({...mediaForm, format: "Audio"})}>
+                        <MusicIcon />
+                        <span>Audio</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="chapter-form-field">
+                    <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Upload File <span style={{color: '#EF4444'}}>*</span></label>
+                    {selectedMediaFile ? (
+                      <div className="thumbnail-upload-box">
+                        <div className="thumbnail-upload-left">
+                          <div className="media-uploader-avatar" style={{ background: '#795289', color: 'white', borderRadius: 8, width: 48, height: 48 }}>
+                            {mediaForm.format === "Video" ? <VideoIcon /> : mediaForm.format === "Audio" ? <MusicIcon /> : mediaForm.format === "Image" ? <ImageIcon /> : <DocumentIcon />}
+                          </div>
+                          <div className="thumbnail-upload-info">
+                            <strong>{selectedMediaFile.name}</strong>
+                            <span>{selectedMediaFile.size}</span>
+                          </div>
+                        </div>
+                        <button type="button" className="thumbnail-delete-btn" onClick={() => setSelectedMediaFile(null)}>
+                          <TrashIcon />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="drag-drop-box" onClick={() => mediaInputRef.current?.click()}>
+                        <input type="file" ref={mediaInputRef} style={{ display: 'none' }} 
+                          accept={
+                            mediaForm.format === "Video" ? "video/mp4, video/quicktime" :
+                            mediaForm.format === "Audio" ? "audio/mpeg, audio/wav, audio/ogg" :
+                            mediaForm.format === "Image" ? "image/jpeg, image/png, image/webp" :
+                            ".pdf,.doc,.docx,.txt"
+                          } 
+                          onChange={(e) => {
+                          if (e.target.files?.[0]) {
+                            const file = e.target.files[0];
+                            setSelectedMediaFile({
+                              name: file.name,
+                              size: (file.size / (1024 * 1024)).toFixed(1) + ' MB'
+                            });
+                          }
+                        }} />
+                        <div className="drag-drop-icon">
+                          {mediaForm.format === "Video" ? <VideoIcon /> : mediaForm.format === "Audio" ? <MusicIcon /> : mediaForm.format === "Image" ? <ImageIcon /> : <DocumentIcon />}
+                        </div>
+                        <div className="drag-drop-text">Drag &amp; Drop or <strong>Choose File</strong> to Upload</div>
+                        <div className="drag-drop-subtext">
+                          {mediaForm.format === "Video" ? "Supported file: MP4, MOV   Max. size: 500 MB" :
+                           mediaForm.format === "Audio" ? "Supported file: MP3, WAV, OGG   Max. size: 50 MB" :
+                           mediaForm.format === "Image" ? "Supported file: JPG, PNG, WEBP   Max. size: 10 MB" :
+                           "Supported file: PDF, DOC, DOCX, TXT   Max. size: 25 MB"}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="community-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
-              <button type="button" className="chapter-secondary-btn" onClick={() => setIsAddModalOpen(false)}>Cancel</button>
-              <button type="button" className="chapter-primary-btn" onClick={async () => {
-                try {
-                  await fetch("http://localhost:3001/api/media", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(mediaForm),
-                  });
-                  if (typeof fetchMediaFiles === "function") {
-                    await fetchMediaFiles();
-                  }
-                  setIsAddModalOpen(false);
-                  setMediaForm({ name: "", author: "", format: "MP4", category: "Book", status: "Published" });
-                } catch(err) { console.error(err) }
-              }}>Save</button>
-            </div>
-          </div>
+
+            {addStep === 1 ? (
+              <div className="media-drawer-footer">
+                <button type="button" className="chapter-secondary-btn" onClick={() => { setIsAddModalOpen(false); setAddStep(1); }}>Cancel</button>
+                <button type="button" className="chapter-primary-btn" style={{ gap: 8 }} onClick={() => setAddStep(2)}>
+                  Continue 
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <div className="media-drawer-footer" style={{ justifyContent: 'space-between' }}>
+                <button type="button" className="chapter-secondary-btn" style={{ gap: 8 }} onClick={() => setAddStep(1)}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                  </svg>
+                  Previous
+                </button>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button type="button" className="chapter-secondary-btn" style={{ gap: 8 }}>
+                    <DocumentIcon style={{ width: 16, height: 16 }} /> Save as Draft
+                  </button>
+                  <button type="button" className="chapter-primary-btn" style={{ gap: 8 }} onClick={async () => {
+                    try {
+                      await fetch(editingMediaId ? `/api/media/${editingMediaId}` : "/api/media", {
+                        method: editingMediaId ? "PUT" : "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ ...mediaForm, thumbnail: selectedThumbnail, contentFile: selectedMediaFile }),
+                      });
+                      if (typeof fetchMediaFiles === "function") {
+                        await fetchMediaFiles();
+                      }
+                      setIsAddModalOpen(false);
+                      setAddStep(1);
+                      setSelectedThumbnail(null);
+                      setSelectedMediaFile(null);
+                      setMediaForm({ name: "", author: "", format: "Video", category: "Book", status: "Published", relatedChapters: [] });
+                    } catch(err) { console.error(err) }
+                  }}>
+                    <CheckIcon style={{ width: 16, height: 16 }} /> Publish Now
+                  </button>
+                </div>
+              </div>
+            )}
+          </aside>
         </div>
       )}
     </>

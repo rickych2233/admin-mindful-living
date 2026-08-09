@@ -10,7 +10,8 @@ import { DashboardOverview } from "./pages/DashboardOverview";
 import { ChapterManagementPage } from "./pages/ChapterManagementPage";
 import { PracticeManagementPage } from "./pages/PracticeManagementPage";
 import { UserManagementPage } from "./pages/UserManagementPage";
-import { CommunityPage } from "./pages/CommunityPage";
+import CommunityPage from "./pages/CommunityPage";
+import NotesBookmarksPage from "./pages/NotesBookmarksPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 
 import { dashboardSegmentByItemId } from "./data/constants";
@@ -91,7 +92,7 @@ function DashboardPage({ onLogout = () => {} }) {
         {activeItem === "practice" && <PracticeManagementPage />}
         {activeItem === "user" && <UserManagementPage />}
         {activeItem === "community" && <CommunityPage />}
-        {activeItem === "notes" && <PlaceholderPage title="Notes & Bookmarks" />}
+        {activeItem === "notes" && <NotesBookmarksPage />}
         {activeItem === "resources" && <ResourcesPage />}
         {activeItem === "roles" && <RolesPermissionsPageView />}
         {activeItem === "media" && <MediaLibraryPage />}

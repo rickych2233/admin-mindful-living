@@ -237,20 +237,20 @@ export function DashboardOverview() {
             <article className="satyatech-card">
               <h4 className="st-card-subtitle" style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>Community Overview</h4>
               <p className="st-card-detail" style={{ marginBottom: '1.5rem', color: '#6b7280' }}>Discussion & moderation</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '130px', background: 'linear-gradient(135deg, #ffffff 0%, #f2fcf6 100%)', border: '1px solid #e9d8f4', padding: '1.5rem', borderRadius: '16px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '130px', background: 'linear-gradient(135deg, #ffffff 0%, #f2fcf6 100%)', border: '1px solid #e9d8f4', padding: '1.5rem', borderRadius: '16px' }}>
                   <p className="st-card-label" style={{ margin: 0, color: '#6b7280', fontWeight: '400', fontSize: '1rem', textTransform: 'none', letterSpacing: 'normal' }}>Total Discussion</p>
                   <h3 className="st-card-value" style={{ fontSize: '2rem', margin: 0, color: '#111827', fontWeight: '700' }}>1024</h3>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '130px', background: 'linear-gradient(135deg, #ffffff 0%, #f2fcf6 100%)', border: '1px solid #e9d8f4', padding: '1.5rem', borderRadius: '16px' }}>
+                <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '130px', background: 'linear-gradient(135deg, #ffffff 0%, #f2fcf6 100%)', border: '1px solid #e9d8f4', padding: '1.5rem', borderRadius: '16px' }}>
                   <p className="st-card-label" style={{ margin: 0, color: '#6b7280', fontWeight: '400', fontSize: '1rem', textTransform: 'none', letterSpacing: 'normal' }}>Reported & Pending</p>
                   <h3 className="st-card-value" style={{ fontSize: '2rem', margin: 0, color: '#111827', fontWeight: '700' }}>7 <span style={{ fontSize: '1rem', fontWeight: '500' }}>pending</span></h3>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '130px', background: 'linear-gradient(135deg, #ffffff 0%, #f2fcf6 100%)', border: '1px solid #e9d8f4', padding: '1.5rem', borderRadius: '16px' }}>
+                <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '130px', background: 'linear-gradient(135deg, #ffffff 0%, #f2fcf6 100%)', border: '1px solid #e9d8f4', padding: '1.5rem', borderRadius: '16px' }}>
                   <p className="st-card-label" style={{ margin: 0, color: '#6b7280', fontWeight: '400', fontSize: '1rem', textTransform: 'none', letterSpacing: 'normal' }}>Hidden Message</p>
                   <h3 className="st-card-value" style={{ fontSize: '2rem', margin: 0, color: '#111827', fontWeight: '700' }}>23</h3>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '130px', background: 'linear-gradient(135deg, #ffffff 0%, #f2fcf6 100%)', border: '1px solid #e9d8f4', padding: '1.5rem', borderRadius: '16px' }}>
+                <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '130px', background: 'linear-gradient(135deg, #ffffff 0%, #f2fcf6 100%)', border: '1px solid #e9d8f4', padding: '1.5rem', borderRadius: '16px' }}>
                   <p className="st-card-label" style={{ margin: 0, color: '#6b7280', fontWeight: '400', fontSize: '1rem', textTransform: 'none', letterSpacing: 'normal' }}>Active Categories</p>
                   <h3 className="st-card-value" style={{ fontSize: '2rem', margin: 0, color: '#111827', fontWeight: '700' }}>9</h3>
                 </div>
@@ -327,7 +327,7 @@ export function DashboardOverview() {
             </article>
           </div>
 
-          <div className="satyatech-cards-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginTop: '1.5rem' }}>
+          <div className="satyatech-cards-row" style={{ marginTop: '1.5rem' }}>
             {/* Chapter Completion Rate */}
             <article className="satyatech-card">
               <h4 className="st-card-subtitle" style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>Chapter Completion Rate</h4>
@@ -359,14 +359,14 @@ export function DashboardOverview() {
               <h4 className="st-card-subtitle" style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>Recent Donations</h4>
               <p className="st-card-detail" style={{ marginBottom: '1.5rem', color: '#6b7280' }}>Latest contributions</p>
 
-              <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden' }}>
-                <div style={{ background: '#f8f5fa', padding: '1rem', display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr' }}>
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', overflowX: 'auto' }}>
+                <div style={{ background: '#f8f5fa', padding: '1rem', display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr', minWidth: '400px' }}>
                   <span style={{ fontSize: '0.9rem', color: '#8e6d9b', fontWeight: '500' }}>Supporter</span>
                   <span style={{ fontSize: '0.9rem', color: '#8e6d9b', fontWeight: '500' }}>Date</span>
                   <span style={{ fontSize: '0.9rem', color: '#8e6d9b', fontWeight: '500', textAlign: 'right' }}>Amount</span>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: '400px' }}>
                   {[
                     { name: 'Adam Coles', date: '20 Jan 2026', amount: '$998.20' },
                     { name: 'Ashley Williams', date: '19 Jan 2026', amount: '$825.40' },

@@ -21,6 +21,7 @@ const initialChapterForm = {
   exerciseRequired: false,
   sectionType: "Text",
   mediaList: [],
+  thumbnailPreview: "",
 };
 
 export function ChapterManagementPage() {
@@ -166,6 +167,7 @@ export function ChapterManagementPage() {
       exerciseRequired: false,
       sectionType: "Text",
       mediaList: [],
+      thumbnailPreview: "",
     });
     setChapterStep(1);
     setIsDrawerOpen(true);
@@ -181,9 +183,14 @@ export function ChapterManagementPage() {
   const handleThumbnailChange = (event) => {
     const nextFile = event.target.files?.[0];
 
+    if (chapterForm.thumbnailPreview) {
+      URL.revokeObjectURL(chapterForm.thumbnailPreview);
+    }
+
     setChapterForm((current) => ({
       ...current,
       thumbnailName: nextFile ? nextFile.name : "",
+      thumbnailPreview: nextFile ? URL.createObjectURL(nextFile) : "",
     }));
   };
 
@@ -712,7 +719,7 @@ export function ChapterManagementPage() {
                       <div className="chapter-thumbnail-preview" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#F7FAFC' }}>
                         <div className="chapter-thumbnail-info" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <div className="thumb-img-placeholder" style={{ width: '40px', height: '40px', borderRadius: '6px', background: '#CBD5E0', overflow: 'hidden' }}>
-                            <img src="/placeholder-thumb.jpg" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => e.target.style.display = 'none'} />
+                            <img src={chapterForm.thumbnailPreview || "/placeholder-thumb.jpg"} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => e.target.style.display = 'none'} />
                           </div>
                           <div className="thumb-details" style={{ display: 'flex', flexDirection: 'column' }}>
                             <span className="file-name" style={{ fontSize: '14px', fontWeight: '500', color: '#2D3748' }}>{chapterForm.thumbnailName}</span>
@@ -982,7 +989,7 @@ export function ChapterManagementPage() {
                       <span style={{ display: 'block', fontSize: '13px', color: '#718096', marginBottom: '8px' }}>Chapter Thumbnail</span>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: '40px', height: '40px', borderRadius: '6px', background: '#CBD5E0', overflow: 'hidden' }}>
-                          <img src="/placeholder-thumb.jpg" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => e.target.style.display = 'none'} />
+                          <img src={chapterForm.thumbnailPreview || "/placeholder-thumb.jpg"} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => e.target.style.display = 'none'} />
                         </div>
                         <span style={{ fontSize: '14px', color: '#2D3748', fontWeight: '500' }}>{chapterForm.thumbnailName || "No file selected"}</span>
                       </div>

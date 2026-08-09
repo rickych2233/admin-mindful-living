@@ -72,6 +72,7 @@ function buildFileDescriptor(file) {
   return {
     name: file.name,
     sizeLabel: formatFileSize(file.size),
+    preview: URL.createObjectURL(file),
   };
 }
 
@@ -346,7 +347,26 @@ function FileCard({ file, type, onRemove, removeLabel }) {
   return (
     <div className="resources-file-card">
       <div className="resources-file-meta">
-        <div className="resources-file-icon" aria-hidden="true">
+        {file?.preview && type === "image" ? (
+          <img 
+            src={file.preview} 
+            alt={file.name} 
+            className="resources-file-icon" 
+            style={{ objectFit: 'cover' }} 
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.style.display = 'none';
+              if (e.target.nextSibling) {
+                e.target.nextSibling.style.display = 'grid';
+              }
+            }} 
+          />
+        ) : null}
+        <div 
+          className="resources-file-icon" 
+          aria-hidden="true" 
+          style={{ display: file?.preview && type === "image" ? 'none' : 'grid' }}
+        >
           <ResourceVisualIcon type={type === "video" ? "video" : "image"} />
         </div>
 
@@ -432,7 +452,7 @@ function ResourcesPage() {
 
   const fetchResources = async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/resources");
+      const response = await fetch("/api/resources");
       if (response.ok) {
         const data = await response.json();
         const normalized = data.map((r) => ({
@@ -535,10 +555,18 @@ function ResourcesPage() {
       return;
     }
 
-    setResourceForm((current) => ({
-      ...current,
-      thumbnail: buildFileDescriptor(file),
-    }));
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setResourceForm((current) => ({
+        ...current,
+        thumbnail: {
+          name: file.name,
+          sizeLabel: formatFileSize(file.size),
+          preview: e.target.result,
+        },
+      }));
+    };
+    reader.readAsDataURL(file);
 
     event.target.value = "";
   };
@@ -614,13 +642,13 @@ function ResourcesPage() {
 
     try {
       if (editingResourceId) {
-        await fetch(`http://localhost:3001/api/resources/${editingResourceId}`, {
+        await fetch(`/api/resources/${editingResourceId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(nextResource),
         });
       } else {
-        await fetch(`http://localhost:3001/api/resources`, {
+        await fetch(`/api/resources`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(nextResource),
@@ -655,7 +683,7 @@ function ResourcesPage() {
 
   const deleteResource = async (resourceId) => {
     try {
-      await fetch(`http://localhost:3001/api/resources/${resourceId}`, {
+      await fetch(`/api/resources/${resourceId}`, {
         method: "DELETE",
       });
       await fetchResources();
@@ -776,7 +804,26 @@ function ResourcesPage() {
           {visibleResources.map((resource) => (
             <article key={resource.id} className="resources-row">
               <div className="resources-title-cell">
-                <div className="resources-thumb" aria-hidden="true">
+                {resource.thumbnail?.preview ? (
+                  <img
+                    src={resource.thumbnail.preview}
+                    alt={resource.title}
+                    className="resources-thumb"
+                    style={{ objectFit: 'cover' }}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.style.display = 'none';
+                      if (e.target.nextSibling) {
+                        e.target.nextSibling.style.display = 'grid';
+                      }
+                    }}
+                  />
+                ) : null}
+                <div 
+                  className="resources-thumb" 
+                  aria-hidden="true" 
+                  style={{ display: resource.thumbnail?.preview ? 'none' : 'grid' }}
+                >
                   <ResourceVisualIcon type={resource.contentType.toLowerCase()} />
                 </div>
 
@@ -809,7 +856,7 @@ function ResourcesPage() {
               <div className="resources-actions">
                 <button
                   type="button"
-                  className="resources-action-btn"
+                  className="chapter-icon-btn"
                   aria-label={`Edit ${resource.title}`}
                   onClick={() => openEditModal(resource)}
                 >
@@ -817,7 +864,7 @@ function ResourcesPage() {
                 </button>
                 <button
                   type="button"
-                  className="resources-action-btn"
+                  className="chapter-icon-btn"
                   aria-label={`Delete ${resource.title}`}
                   onClick={() => deleteResource(resource.id)}
                 >

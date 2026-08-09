@@ -244,7 +244,7 @@ export function CommunityPage() {
 
   const fetchDiscussions = async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/community/discussions");
+      const response = await fetch("/api/community/discussions");
       if (response.ok) {
         const data = await response.json();
         const normalized = data.map(d => ({
@@ -574,7 +574,7 @@ export function CommunityPage() {
                 <div className="community-actions">
                   <button
                     type="button"
-                    className="resources-action-btn"
+                    className="chapter-icon-btn"
                     onClick={() => {
                       setEditingCategory(category);
                       setNewCategoryName(category.name);
@@ -586,7 +586,7 @@ export function CommunityPage() {
                   </button>
                   <button
                     type="button"
-                    className="resources-action-btn"
+                    className="chapter-icon-btn"
                     onClick={() => setIsDeleteCategoryModalOpen(true)}
                   >
                     <TrashIcon />

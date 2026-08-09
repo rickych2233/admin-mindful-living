@@ -251,6 +251,33 @@ body,
   color: rgba(255, 255, 255, 0.55);
 }
 
+/* Mobile Responsiveness for Login */
+@media (max-width: 860px) {
+  .satyatech-login-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
+  .login-left {
+    padding: 24px;
+    flex: 1;
+  }
+
+  .login-right {
+    display: none;
+  }
+
+  .login-form-wrapper h1 {
+    font-size: 22px;
+  }
+
+  .login-form-wrapper .subtitle {
+    font-size: 13px;
+  }
+}
+
 .dashboard-page {
   min-height: 100vh;
   padding: 0;
@@ -774,7 +801,8 @@ body,
 .chapter-table-card {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   background: #ffffff;
 }
 
@@ -2120,7 +2148,8 @@ body,
 .chapter-table-card,
 .user-table-card,
 .roles-table-card {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .chapter-toolbar,
@@ -2192,6 +2221,20 @@ body,
     grid-template-columns: 1fr;
   }
 
+  .sidebar-wrapper {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    z-index: 120;
+  }
+
+  .sidebar-wrapper.is-open {
+    width: auto;
+    height: auto;
+    overflow: visible;
+  }
+
   .dashboard-scrim {
     position: fixed;
     inset: 0;
@@ -2215,7 +2258,7 @@ body,
     z-index: 120;
   }
 
-  .sidebar-nav.is-open {
+  .sidebar-wrapper.is-open .sidebar-nav {
     transform: translateX(0);
   }
 
@@ -2233,7 +2276,7 @@ body,
     top: 0;
     left: 0;
     right: 0;
-    z-index: 100;
+    z-index: 60;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
@@ -3616,7 +3659,8 @@ body,
 }
 
 .practice-table-card {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .practice-table-head,
@@ -4271,7 +4315,8 @@ body,
 }
 
 .community-table-card {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .community-table-head,

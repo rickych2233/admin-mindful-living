@@ -60,6 +60,7 @@ const initialPracticeForm = {
   sessionType: "Guided Audio",
   sessionDuration: "",
   sessionDescription: "",
+  thumbnailPreview: "",
 };
 
 export function PracticeManagementPage() {
@@ -76,6 +77,8 @@ export function PracticeManagementPage() {
   const [expandedPracticeId, setExpandedPracticeId] = useState(null);
   const [practiceStep, setPracticeStep] = useState(1);
   const [practiceForm, setPracticeForm] = useState(initialPracticeForm);
+  const [editingPractice, setEditingPractice] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!isDrawerOpen) {
@@ -96,7 +99,7 @@ export function PracticeManagementPage() {
 
   const fetchPractices = async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/practices");
+      const response = await fetch("/api/practices");
       if (response.ok) {
         const data = await response.json();
         setPracticeRows(data);
@@ -175,6 +178,47 @@ export function PracticeManagementPage() {
     setIsDrawerOpen(false);
     setPracticeStep(1);
     setPracticeForm(initialPracticeForm);
+    setEditingPractice(null);
+  };
+
+  const handleEditPractice = (practice) => {
+    setEditingPractice(practice);
+    setPracticeForm({
+      name: practice.title || "",
+      caption: practice.caption || "",
+      category: practice.category || "",
+      durationRange: practice.duration || "",
+      goalType: practice.goal || "",
+      thumbnailName: practice.thumbnail ? "existing-thumbnail.jpg" : "",
+      thumbnailPreview: practice.thumbnail || "",
+      sessionTitle: "",
+      sessionType: "Guided Audio",
+      sessionDuration: "",
+      sessionDescription: "",
+    });
+    setPracticeStep(1);
+    setIsDrawerOpen(true);
+  };
+
+  const handleDeletePractice = async (practiceId) => {
+    if (!window.confirm("Are you sure you want to delete this practice?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/practices/${practiceId}`, {
+        method: "DELETE",
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to delete practice");
+      }
+
+      await fetchPractices();
+    } catch (err) {
+      console.error(err);
+      alert(`Gagal menghapus practice: ${err.message}`);
+    }
   };
 
   const handlePracticeFieldChange = (field) => (event) => {
@@ -187,11 +231,27 @@ export function PracticeManagementPage() {
   const handlePracticeThumbnailChange = (event) => {
     const nextFile = event.target.files?.[0];
 
-    setPracticeForm((current) => ({
-      ...current,
-      thumbnailName: nextFile ? nextFile.name : "",
-    }));
+    if (!nextFile) {
+      setPracticeForm((current) => ({
+        ...current,
+        thumbnailName: "",
+        thumbnailPreview: "",
+      }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setPracticeForm((current) => ({
+        ...current,
+        thumbnailName: nextFile.name,
+        thumbnailPreview: e.target.result,
+      }));
+    };
+    reader.readAsDataURL(nextFile);
   };
+
+  const isEditMode = editingPractice !== null;
 
   const canContinue =
     practiceStep === 1
@@ -220,19 +280,32 @@ export function PracticeManagementPage() {
       duration: practiceForm.durationRange.trim(),
       sessions: 1,
       category: practiceForm.category.trim(),
+      caption: practiceForm.caption.trim(),
+      thumbnail: practiceForm.thumbnailPreview || practiceForm.thumbnailName || null,
       status: "Drafted",
     };
 
+    setIsSubmitting(true);
     try {
-      await fetch("http://localhost:3001/api/practices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newPractice),
-      });
+      if (isEditMode) {
+        await fetch(`/api/practices/${editingPractice.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...newPractice, status: editingPractice.status }),
+        });
+      } else {
+        await fetch("/api/practices", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newPractice),
+        });
+      }
       await fetchPractices();
       closePracticeDrawer();
     } catch (error) {
-      console.error("Failed to add practice:", error);
+      console.error("Failed to save practice:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -318,7 +391,7 @@ export function PracticeManagementPage() {
           </div>
 
           {activeTab === "practice" ? (
-            <button type="button" className="master-add-btn" onClick={() => setIsDrawerOpen(true)}>
+            <button type="button" className="master-add-btn" onClick={() => { setEditingPractice(null); setIsDrawerOpen(true); }}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 5v14M5 12h14" />
               </svg>
@@ -363,10 +436,14 @@ export function PracticeManagementPage() {
 
                   <div className="practice-main-cell" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                     <img
-                      src="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=120&q=80"
+                      src={practice.thumbnail || "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=120&q=80"}
                       alt={practice.title}
                       className="chapter-thumb"
                       style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=120&q=80";
+                      }}
                     />
                     <div className="chapter-copy">
                       <h3>{practice.title}</h3>
@@ -402,13 +479,13 @@ export function PracticeManagementPage() {
                       View Sessions
                     </button>
 
-                    <button type="button" className="chapter-icon-btn color-gray" aria-label={`Edit ${practice.title}`} style={{ padding: "6px", border: "1px solid #E3E7ED", borderRadius: "50%", background: "#FFF", color: "#A0AEC0", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <button type="button" className="chapter-icon-btn" aria-label={`Edit ${practice.title}`} onClick={() => handleEditPractice(practice)}>
                       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
                       </svg>
                     </button>
 
-                    <button type="button" className="chapter-icon-btn color-gray" aria-label={`Delete ${practice.title}`} style={{ padding: "6px", border: "1px solid #E3E7ED", borderRadius: "50%", background: "#FFF", color: "#A0AEC0", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <button type="button" className="chapter-icon-btn" aria-label={`Delete ${practice.title}`} onClick={() => handleDeletePractice(practice.id)}>
                       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M5 7h14M10 4h4m-7 3 1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9L17 7M10 11v5M14 11v5" />
                       </svg>
@@ -503,12 +580,12 @@ export function PracticeManagementPage() {
                           </span>
 
                           <div className="section-actions" style={{ display: "flex", gap: "8px" }}>
-                            <button type="button" className="chapter-icon-btn color-gray" aria-label="Edit session" style={{ padding: "6px", border: "1px solid #E3E7ED", borderRadius: "50%", background: "#FFF", color: "#A0AEC0", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <button type="button" className="chapter-icon-btn" aria-label="Edit session">
                               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
                               </svg>
                             </button>
-                            <button type="button" className="chapter-icon-btn color-gray" aria-label="Delete session" style={{ padding: "6px", border: "1px solid #E3E7ED", borderRadius: "50%", background: "#FFF", color: "#A0AEC0", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <button type="button" className="chapter-icon-btn" aria-label="Delete session">
                               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M5 7h14M10 4h4m-7 3 1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9L17 7M10 11v5M14 11v5"></path>
                               </svg>
@@ -612,8 +689,8 @@ export function PracticeManagementPage() {
           <aside className="chapter-drawer practice-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
             <div className="chapter-drawer-header">
               <div>
-                <h2>Add Practice</h2>
-                <p>Step through to set up practice and first session</p>
+                <h2>{isEditMode ? "Edit Practice" : "Add Practice"}</h2>
+                <p>{isEditMode ? "Update practice and section details" : "Step through to set up practice and first session"}</p>
               </div>
 
               <button type="button" className="chapter-drawer-close" aria-label="Close add practice form" onClick={closePracticeDrawer}>
@@ -715,19 +792,32 @@ export function PracticeManagementPage() {
 
                   <div className="chapter-field">
                     <span>Practice Thumbnail *</span>
-                    <label className="chapter-upload-box">
-                      <input type="file" accept=".png,.jpg,.jpeg" onChange={handlePracticeThumbnailChange} />
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <circle cx="8" cy="8" r="2" />
-                        <path d="m5 18 4.2-5.2a2 2 0 0 1 3 .1L14 15l1.3-1.5a2 2 0 0 1 3 .1L20 16v2H5Z" />
-                      </svg>
-                      <strong>{practiceForm.thumbnailName || "Drag & Drop or Choose File to Upload"}</strong>
-                      <span>
-                        {practiceForm.thumbnailName
-                          ? "Supported file: PNG, JPG"
-                          : "Supported file: PNG, JPG      Max. size: 2 MB"}
-                      </span>
-                    </label>
+                    {practiceForm.thumbnailName ? (
+                      <div className="chapter-thumbnail-preview" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#F7FAFC' }}>
+                        <div className="chapter-thumbnail-info" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div className="thumb-img-placeholder" style={{ width: '40px', height: '40px', borderRadius: '6px', background: '#CBD5E0', overflow: 'hidden' }}>
+                            <img src={practiceForm.thumbnailPreview || "/placeholder-thumb.jpg"} alt="Thumbnail Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => e.target.style.display = 'none'} />
+                          </div>
+                          <div className="thumb-details" style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span className="file-name" style={{ fontSize: '14px', fontWeight: '500', color: '#2D3748' }}>{practiceForm.thumbnailName}</span>
+                            <span className="file-size" style={{ fontSize: '12px', color: '#718096' }}>59.7 KB</span>
+                          </div>
+                        </div>
+                        <button type="button" className="thumb-delete-btn" onClick={() => setPracticeForm(f => ({ ...f, thumbnailName: "" }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E53E3E' }}>
+                          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="chapter-upload-box">
+                        <input type="file" accept=".png,.jpg,.jpeg" onChange={handlePracticeThumbnailChange} />
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <circle cx="8" cy="8" r="2" />
+                          <path d="m5 18 4.2-5.2a2 2 0 0 1 3 .1L14 15l1.3-1.5a2 2 0 0 1 3 .1L20 16v2H5Z" />
+                        </svg>
+                        <strong>Drag & Drop or Choose File to Upload</strong>
+                        <span>Supported file: PNG, JPG &nbsp;&nbsp;&nbsp;&nbsp; Max. size: 2 MB</span>
+                      </label>
+                    )}
                   </div>
                 </div>
               )}
