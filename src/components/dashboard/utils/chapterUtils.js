@@ -205,6 +205,44 @@ export function normalizeChapter(item) {
   };
 }
 
+export async function reorderChapters(chapterIds) {
+  const endpoints = CHAPTERS_API_FALLBACKS.map((endpoint) =>
+    `${String(endpoint).replace(/\/+$/, "")}/reorder`
+  );
+
+  let lastError = "Gagal mengubah urutan chapter";
+
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ chapterIds }),
+      });
+
+      const result = await parseJsonSafely(response);
+
+      if (!response.ok) {
+        lastError = `${response.status} ${result?.message || "Endpoint tidak ditemukan"}`;
+        continue;
+      }
+
+      return result;
+    } catch (error) {
+      lastError = error.message || "Network error";
+    }
+  }
+
+  try {
+    throw new Error(lastError);
+  } catch (error) {
+    console.error("Error reordering chapters:", error);
+    throw error;
+  }
+}
+
 export function useChaptersCollection() {
   const [rows, setRows] = useState([]);
   const [isLoading, setIsLoading] = useState(true);

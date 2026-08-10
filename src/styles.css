@@ -683,7 +683,7 @@ body,
 }
 
 .chapter-header h1 {
-  font-size: 34px;
+  font-size: 28px;
 }
 
 .chapter-page {
@@ -1541,7 +1541,7 @@ body,
 .dashboard-header h1,
 .chapter-header h1 {
   margin: 0;
-  font-size: 36px;
+  font-size: 28px;
   line-height: 1.05;
   font-weight: 900;
   letter-spacing: -0.05em;
@@ -2506,7 +2506,7 @@ body,
 
   .dashboard-header h1,
   .chapter-header h1 {
-    font-size: 26px;
+    font-size: 28px;
     line-height: 1.15;
     font-weight: 800;
   }

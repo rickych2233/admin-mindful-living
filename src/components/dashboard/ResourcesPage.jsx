@@ -555,16 +555,53 @@ function ResourcesPage() {
       return;
     }
 
+    if (file.size > 2 * 1024 * 1024) {
+      alert("File size exceeds 2MB. Please upload a smaller file.");
+      event.target.value = "";
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
-      setResourceForm((current) => ({
-        ...current,
-        thumbnail: {
-          name: file.name,
-          sizeLabel: formatFileSize(file.size),
-          preview: e.target.result,
-        },
-      }));
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
+        
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = Math.round((height *= MAX_WIDTH / width));
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = Math.round((width *= MAX_HEIGHT / height));
+            height = MAX_HEIGHT;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        const resizedBase64 = canvas.toDataURL("image/jpeg", 0.8);
+        
+        setResourceForm((current) => ({
+          ...current,
+          thumbnail: {
+            name: file.name,
+            sizeLabel: formatFileSize(file.size),
+            preview: resizedBase64,
+          },
+        }));
+      };
+      img.src = e.target.result;
     };
     reader.readAsDataURL(file);
 
@@ -592,6 +629,12 @@ function ResourcesPage() {
   const handleContentFileChange = (event) => {
     const file = event.target.files?.[0];
     if (!file) {
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert("File size exceeds 2MB. Please upload a smaller file.");
+      event.target.value = "";
       return;
     }
 

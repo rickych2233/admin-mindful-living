@@ -945,11 +945,52 @@ function MediaLibraryPage() {
                       <input type="file" ref={thumbnailInputRef} style={{ display: 'none' }} accept="image/png, image/jpeg" onChange={(e) => {
                         if (e.target.files?.[0]) {
                           const file = e.target.files[0];
-                          setSelectedThumbnail({
-                            name: file.name,
-                            size: (file.size / 1024).toFixed(1) + ' KB',
-                            preview: URL.createObjectURL(file)
-                          });
+                          if (file.size > 2 * 1024 * 1024) {
+                            alert("File size exceeds 2MB. Please upload a smaller file.");
+                            e.target.value = null;
+                            return;
+                          }
+                          
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const img = new Image();
+                            img.onload = () => {
+                              const canvas = document.createElement("canvas");
+                              let width = img.width;
+                              let height = img.height;
+                              
+                              const MAX_WIDTH = 800;
+                              const MAX_HEIGHT = 800;
+                              
+                              if (width > height) {
+                                if (width > MAX_WIDTH) {
+                                  height = Math.round((height *= MAX_WIDTH / width));
+                                  width = MAX_WIDTH;
+                                }
+                              } else {
+                                if (height > MAX_HEIGHT) {
+                                  width = Math.round((width *= MAX_HEIGHT / height));
+                                  height = MAX_HEIGHT;
+                                }
+                              }
+                              
+                              canvas.width = width;
+                              canvas.height = height;
+                              
+                              const ctx = canvas.getContext("2d");
+                              ctx.drawImage(img, 0, 0, width, height);
+                              
+                              const resizedBase64 = canvas.toDataURL("image/jpeg", 0.8);
+                              
+                              setSelectedThumbnail({
+                                name: file.name,
+                                size: (file.size / 1024).toFixed(1) + ' KB',
+                                preview: resizedBase64
+                              });
+                            };
+                            img.src = event.target.result;
+                          };
+                          reader.readAsDataURL(file);
                         }
                       }} />
                       <div className="drag-drop-icon">
@@ -1018,6 +1059,11 @@ function MediaLibraryPage() {
                           onChange={(e) => {
                           if (e.target.files?.[0]) {
                             const file = e.target.files[0];
+                            if (file.size > 2 * 1024 * 1024) {
+                              alert("File size exceeds 2MB. Please upload a smaller file.");
+                              e.target.value = null;
+                              return;
+                            }
                             setSelectedMediaFile({
                               name: file.name,
                               size: (file.size / (1024 * 1024)).toFixed(1) + ' MB'
@@ -1029,10 +1075,10 @@ function MediaLibraryPage() {
                         </div>
                         <div className="drag-drop-text">Drag &amp; Drop or <strong>Choose File</strong> to Upload</div>
                         <div className="drag-drop-subtext">
-                          {mediaForm.format === "Video" ? "Supported file: MP4, MOV   Max. size: 500 MB" :
-                           mediaForm.format === "Audio" ? "Supported file: MP3, WAV, OGG   Max. size: 50 MB" :
-                           mediaForm.format === "Image" ? "Supported file: JPG, PNG, WEBP   Max. size: 10 MB" :
-                           "Supported file: PDF, DOC, DOCX, TXT   Max. size: 25 MB"}
+                          {mediaForm.format === "Video" ? "Supported file: MP4, MOV   Max. size: 2 MB" :
+                           mediaForm.format === "Audio" ? "Supported file: MP3, WAV, OGG   Max. size: 2 MB" :
+                           mediaForm.format === "Image" ? "Supported file: JPG, PNG, WEBP   Max. size: 2 MB" :
+                           "Supported file: PDF, DOC, DOCX, TXT   Max. size: 2 MB"}
                         </div>
                       </div>
                     )}

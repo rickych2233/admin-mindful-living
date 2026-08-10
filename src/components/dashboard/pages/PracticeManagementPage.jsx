@@ -39,9 +39,7 @@ const initialPracticeRows = [
   },
 ];
 
-const initialCategories = [
-  "Breathwork", "Cardiac Coherence", "Mindfulness", "Focus", "Grounding", "Sleep", "Nervous System Reset", "Energy / Vitality"
-];
+const initialCategories = [];
 
 const practiceStepItems = [
   { id: 1, label: "Practice Info" },
@@ -55,11 +53,12 @@ const initialPracticeForm = {
   category: "",
   durationRange: "",
   goalType: "",
+  relatedChapters: [],
   thumbnailName: "",
   sessionTitle: "",
-  sessionType: "Guided Audio",
-  sessionDuration: "",
-  sessionDescription: "",
+  sessionType: "Video",
+  sessionContentFileName: "",
+  sessionContentFileObj: null,
   thumbnailPreview: "",
 };
 
@@ -73,12 +72,26 @@ export function PracticeManagementPage() {
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showCategorySuccessToast, setShowCategorySuccessToast] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [addedCategories, setAddedCategories] = useState(initialCategories);
   const [expandedPracticeId, setExpandedPracticeId] = useState(null);
   const [practiceStep, setPracticeStep] = useState(1);
   const [practiceForm, setPracticeForm] = useState(initialPracticeForm);
+  const [editingSessionIndex, setEditingSessionIndex] = useState(null);
+  const [isAddingSession, setIsAddingSession] = useState(false);
+  const [isSessionDeleteModalOpen, setIsSessionDeleteModalOpen] = useState(false);
+  const [deletingSessionData, setDeletingSessionData] = useState(null);
+  const [isPracticeDeleteModalOpen, setIsPracticeDeleteModalOpen] = useState(false);
+  const [deletingPracticeId, setDeletingPracticeId] = useState(null);
+  const [isCategoryDeleteModalOpen, setIsCategoryDeleteModalOpen] = useState(false);
+  const [deletingCategory, setDeletingCategory] = useState(null);
+  const [draggedPracticeIndex, setDraggedPracticeIndex] = useState(null);
+  const [draggedCategoryIndex, setDraggedCategoryIndex] = useState(null);
+  const [draggedSessionData, setDraggedSessionData] = useState(null);
   const [editingPractice, setEditingPractice] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [chapters, setChapters] = useState([]);
+  const [isRelatedChapterOpen, setIsRelatedChapterOpen] = useState(false);
 
   useEffect(() => {
     if (!isDrawerOpen) {
@@ -95,14 +108,59 @@ export function PracticeManagementPage() {
 
   useEffect(() => {
     fetchPractices();
+    fetchChapters();
+    fetchCategories();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch("/api/practices/categories");
+      if (response.ok) {
+        const data = await response.json();
+        setAddedCategories(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+    }
+  };
+
+  const fetchChapters = async () => {
+    try {
+      const response = await fetch("/api/chapters");
+      const data = await response.json();
+      setChapters(Array.isArray(data) ? data : (data.chapters || data.data || []));
+    } catch (error) {
+      console.error("Failed to fetch chapters:", error);
+      setChapters([]);
+    }
+  };
 
   const fetchPractices = async () => {
     try {
       const response = await fetch("/api/practices");
       if (response.ok) {
         const data = await response.json();
-        setPracticeRows(data);
+        const mapped = data.map((item) => {
+          let sessionsData = [];
+          if (item.sessions_data) {
+            sessionsData = typeof item.sessions_data === 'string' ? JSON.parse(item.sessions_data) : item.sessions_data;
+          }
+          return {
+            id: item.id,
+            title: item.title,
+            category: item.category,
+            goal: item.goal,
+            duration: item.duration,
+            caption: item.caption,
+            thumbnail: item.thumbnail,
+            sessionsCount: item.sessions || sessionsData.length || 1,
+            sessions: sessionsData,
+            relatedChapters: item.related_chapters || item.relatedChapters || [],
+            status: item.status,
+            date: item.created_at ? new Date(item.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "-",
+          };
+        });
+        setPracticeRows(mapped);
       }
     } catch (error) {
       console.error("Failed to fetch practices:", error);
@@ -111,8 +169,11 @@ export function PracticeManagementPage() {
 
 
   const categoryOptions = useMemo(
-    () => ["All Category", ...new Set(practiceRows.map((practice) => practice.category))],
-    [practiceRows]
+    () => ["All Category", ...new Set([
+      ...addedCategories.map(c => c.name),
+      ...practiceRows.map((practice) => practice.category)
+    ])],
+    [practiceRows, addedCategories]
   );
 
   const filteredPracticeRows = useMemo(() => {
@@ -122,7 +183,6 @@ export function PracticeManagementPage() {
       const matchesQuery =
         normalizedQuery === "" ||
         practice.title.toLowerCase().includes(normalizedQuery) ||
-        practice.goal.toLowerCase().includes(normalizedQuery) ||
         practice.category.toLowerCase().includes(normalizedQuery);
       const matchesCategory = categoryFilter === "All Category" || practice.category === categoryFilter;
       const matchesStatus = statusFilter === "All Status" || practice.status === statusFilter;
@@ -134,30 +194,24 @@ export function PracticeManagementPage() {
   const categoryRows = useMemo(() => {
     const buckets = new Map();
 
+    addedCategories.forEach((cat) => {
+      buckets.set(cat.name, {
+        id: cat.id,
+        name: cat.name,
+        totalPractices: 0,
+        status: "Published",
+      });
+    });
+
     practiceRows.forEach((practice) => {
       const current = buckets.get(practice.category) || {
         id: practice.category,
         name: practice.category,
         totalPractices: 0,
-        status: "Drafted",
+        status: "Published",
       };
-
       current.totalPractices += 1;
-      if (practice.status === "Published") {
-        current.status = "Published";
-      }
       buckets.set(practice.category, current);
-    });
-
-    addedCategories.forEach((cat) => {
-      if (!buckets.has(cat)) {
-        buckets.set(cat, {
-          id: cat,
-          name: cat,
-          totalPractices: 0,
-          status: "Drafted",
-        });
-      }
     });
 
     return [...buckets.values()];
@@ -179,34 +233,309 @@ export function PracticeManagementPage() {
     setPracticeStep(1);
     setPracticeForm(initialPracticeForm);
     setEditingPractice(null);
+    setEditingSessionIndex(null);
+    setIsAddingSession(false);
   };
 
   const handleEditPractice = (practice) => {
     setEditingPractice(practice);
+    const session = practice.sessions && practice.sessions.length > 0 ? practice.sessions[0] : {};
+    
     setPracticeForm({
       name: practice.title || "",
       caption: practice.caption || "",
       category: practice.category || "",
       durationRange: practice.duration || "",
       goalType: practice.goal || "",
+      relatedChapters: practice.relatedChapters || [],
       thumbnailName: practice.thumbnail ? "existing-thumbnail.jpg" : "",
       thumbnailPreview: practice.thumbnail || "",
-      sessionTitle: "",
-      sessionType: "Guided Audio",
-      sessionDuration: "",
-      sessionDescription: "",
+      sessionTitle: session.title || "",
+      sessionType: session.type || "Video",
+      sessionContentFileName: session.contentFileName || "",
+      sessionContentFileObj: null,
     });
     setPracticeStep(1);
+    setEditingSessionIndex(null);
+    setIsAddingSession(false);
     setIsDrawerOpen(true);
   };
 
-  const handleDeletePractice = async (practiceId) => {
-    if (!window.confirm("Are you sure you want to delete this practice?")) {
-      return;
-    }
+  const handleTogglePracticeStatus = async (practiceId) => {
+    const practice = practiceRows.find((p) => p.id === practiceId);
+    if (!practice) return;
+
+    const previousStatus = practice.status;
+    const nextStatus = previousStatus === "Published" ? "Drafted" : "Published";
+
+    setPracticeRows((current) =>
+      current.map((p) =>
+        p.id === practiceId
+          ? {
+            ...p,
+            status: nextStatus,
+          }
+          : p
+      )
+    );
 
     try {
       const response = await fetch(`/api/practices/${practiceId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...practice, status: nextStatus, sessions_data: practice.sessions, sessions: practice.sessionsCount, related_chapters: practice.relatedChapters }),
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to update status");
+      }
+    } catch (error) {
+      console.error("Failed to update practice status:", error);
+      // Revert on error
+      setPracticeRows((current) =>
+        current.map((p) =>
+          p.id === practiceId
+            ? {
+              ...p,
+              status: previousStatus,
+            }
+            : p
+        )
+      );
+    }
+  };
+
+  const handleToggleSessionStatus = async (practiceId, sessionIndex) => {
+    const practice = practiceRows.find(p => p.id === practiceId);
+    if (!practice) return;
+
+    const currentSessions = Array.isArray(practice.sessions) ? [...practice.sessions] : [];
+    const session = currentSessions[sessionIndex];
+    if (!session) return;
+
+    const previousStatus = session.status || "Drafted";
+    const nextStatus = previousStatus === "Published" ? "Drafted" : "Published";
+    currentSessions[sessionIndex] = { ...session, status: nextStatus };
+
+    setPracticeRows(current =>
+      current.map(p =>
+        p.id === practiceId
+          ? { ...p, sessions: currentSessions }
+          : p
+      )
+    );
+
+    try {
+      const response = await fetch(`/api/practices/${practiceId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...practice, sessions_data: currentSessions, sessions: practice.sessionsCount, related_chapters: practice.relatedChapters }),
+      });
+      if (!response.ok) throw new Error("Failed to update session status");
+    } catch (error) {
+      console.error("Failed to update session status:", error);
+      fetchPractices(); // revert on error
+    }
+  };
+
+  const handleEditSession = (practice, sessionIndex) => {
+    const session = Array.isArray(practice.sessions) ? practice.sessions[sessionIndex] : {};
+    setEditingPractice(practice);
+    setPracticeForm({
+      ...initialPracticeForm,
+      name: practice.title || "",
+      caption: practice.caption || "",
+      category: practice.category || "",
+      durationRange: practice.duration || "",
+      relatedChapters: practice.relatedChapters || [],
+      thumbnailName: practice.thumbnail ? "existing-thumbnail.jpg" : "",
+      thumbnailPreview: practice.thumbnail || "",
+      sessionTitle: session.title || "",
+      sessionType: session.type || "Video",
+      sessionContentFileName: session.contentFileName || "",
+      sessionContentFileObj: null,
+    });
+    setPracticeStep(2); // Go straight to session edit
+    setEditingSessionIndex(sessionIndex);
+    setIsAddingSession(false);
+    setIsDrawerOpen(true);
+  };
+
+  const handleAddSession = (practice) => {
+    setEditingPractice(practice);
+    setPracticeForm({
+      ...initialPracticeForm,
+      name: practice.title || "",
+      caption: practice.caption || "",
+      category: practice.category || "",
+      durationRange: practice.duration || "",
+      relatedChapters: practice.relatedChapters || [],
+      thumbnailName: practice.thumbnail ? "existing-thumbnail.jpg" : "",
+      thumbnailPreview: practice.thumbnail || "",
+      sessionTitle: "",
+      sessionType: "Video",
+      sessionContentFileName: "",
+      sessionContentFileObj: null,
+    });
+    setPracticeStep(2);
+    setEditingSessionIndex(null);
+    setIsAddingSession(true);
+    setIsDrawerOpen(true);
+  };
+
+  const handleAddPractice = () => {
+    setEditingPractice(null);
+    setPracticeForm(initialPracticeForm);
+    setPracticeStep(1);
+    setEditingSessionIndex(null);
+    setIsAddingSession(false);
+    setIsDrawerOpen(true);
+  };
+
+  const handleDeleteSessionPrompt = (practice, sessionIndex) => {
+    setDeletingSessionData({ practice, sessionIndex });
+    setIsSessionDeleteModalOpen(true);
+  };
+
+  const confirmDeleteSession = async () => {
+    if (!deletingSessionData) return;
+    const { practice, sessionIndex } = deletingSessionData;
+    
+    try {
+      const currentSessions = Array.isArray(practice.sessions) ? [...practice.sessions] : [];
+      currentSessions.splice(sessionIndex, 1);
+      
+      await fetch(`/api/practices/${practice.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...practice, sessions_data: currentSessions, sessions: currentSessions.length, related_chapters: practice.relatedChapters }),
+      });
+      await fetchPractices();
+      setIsSessionDeleteModalOpen(false);
+      setDeletingSessionData(null);
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+    }
+  };
+
+  const handlePracticeDragStart = (e, index) => {
+    setDraggedPracticeIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handlePracticeDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handlePracticeDrop = async (e, targetIndex) => {
+    e.preventDefault();
+    if (draggedPracticeIndex === null || draggedPracticeIndex === targetIndex) return;
+
+    const newRows = [...practiceRows];
+    const draggedItem = newRows.splice(draggedPracticeIndex, 1)[0];
+    newRows.splice(targetIndex, 0, draggedItem);
+    
+    setPracticeRows(newRows);
+    setDraggedPracticeIndex(null);
+
+    try {
+      const practiceIds = newRows.map(p => p.id);
+      const response = await fetch("/api/practices/reorder", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ practiceIds }),
+      });
+      if (!response.ok) throw new Error("Failed to reorder practices");
+    } catch (err) {
+      console.error("Failed to save practice order:", err);
+      fetchPractices(); // revert
+    }
+  };
+
+  const handleCategoryDragStart = (e, index) => {
+    setDraggedCategoryIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleCategoryDrop = async (e, targetIndex) => {
+    e.preventDefault();
+    if (draggedCategoryIndex === null || draggedCategoryIndex === targetIndex) return;
+
+    const newRows = [...categoryRows];
+    const draggedItem = newRows.splice(draggedCategoryIndex, 1)[0];
+    newRows.splice(targetIndex, 0, draggedItem);
+    
+    // Optimistic UI update
+    setAddedCategories(newRows);
+    setDraggedCategoryIndex(null);
+
+    try {
+      const categoryIds = newRows.map(c => c.id).filter(id => typeof id === 'number');
+      const response = await fetch("/api/practices/categories/reorder", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryIds }),
+      });
+      if (!response.ok) throw new Error("Failed to reorder categories");
+    } catch (err) {
+      console.error("Failed to save category order:", err);
+      fetchCategories(); // revert
+    }
+  };
+
+  const handleSessionDragStart = (e, practiceId, sessionIndex) => {
+    setDraggedSessionData({ practiceId, sessionIndex });
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleSessionDragOver = (e, practiceId, sessionIndex) => {
+    e.preventDefault();
+    if (draggedSessionData?.practiceId === practiceId) {
+      e.dataTransfer.dropEffect = "move";
+    }
+  };
+
+  const handleSessionDrop = async (e, practiceId, targetIndex) => {
+    e.preventDefault();
+    if (!draggedSessionData || draggedSessionData.practiceId !== practiceId || draggedSessionData.sessionIndex === targetIndex) {
+      return;
+    }
+
+    const practice = practiceRows.find(p => p.id === practiceId);
+    if (!practice) return;
+
+    const newSessions = [...(practice.sessions || [])];
+    const draggedItem = newSessions.splice(draggedSessionData.sessionIndex, 1)[0];
+    newSessions.splice(targetIndex, 0, draggedItem);
+
+    setPracticeRows(current => 
+      current.map(p => p.id === practiceId ? { ...p, sessions: newSessions } : p)
+    );
+    setDraggedSessionData(null);
+
+    try {
+      await fetch(`/api/practices/${practiceId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...practice, sessions_data: newSessions, sessions: newSessions.length, related_chapters: practice.relatedChapters }),
+      });
+    } catch (error) {
+      console.error("Failed to reorder sessions:", error);
+      fetchPractices(); // revert
+    }
+  };
+
+  const handleDeletePractice = (practiceId) => {
+    setDeletingPracticeId(practiceId);
+    setIsPracticeDeleteModalOpen(true);
+  };
+
+  const confirmDeletePractice = async () => {
+    if (!deletingPracticeId) return;
+
+    try {
+      const response = await fetch(`/api/practices/${deletingPracticeId}`, {
         method: "DELETE",
       });
       
@@ -215,6 +544,8 @@ export function PracticeManagementPage() {
       }
 
       await fetchPractices();
+      setIsPracticeDeleteModalOpen(false);
+      setDeletingPracticeId(null);
     } catch (err) {
       console.error(err);
       alert(`Gagal menghapus practice: ${err.message}`);
@@ -240,13 +571,53 @@ export function PracticeManagementPage() {
       return;
     }
 
+    if (nextFile.size > 2 * 1024 * 1024) {
+      alert("File size exceeds 2MB. Please upload a smaller file.");
+      event.target.value = null;
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
-      setPracticeForm((current) => ({
-        ...current,
-        thumbnailName: nextFile.name,
-        thumbnailPreview: e.target.result,
-      }));
+      const img = new Image();
+      img.onload = () => {
+        // Create canvas to resize image
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        
+        // Max dimensions
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
+        
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = Math.round((height *= MAX_WIDTH / width));
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = Math.round((width *= MAX_HEIGHT / height));
+            height = MAX_HEIGHT;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert back to base64, with 0.8 quality (JPEG) to save more space
+        const resizedBase64 = canvas.toDataURL("image/jpeg", 0.8);
+        
+        setPracticeForm((current) => ({
+          ...current,
+          thumbnailName: nextFile.name,
+          thumbnailPreview: resizedBase64,
+        }));
+      };
+      img.src = e.target.result;
     };
     reader.readAsDataURL(nextFile);
   };
@@ -255,43 +626,96 @@ export function PracticeManagementPage() {
 
   const canContinue =
     practiceStep === 1
-      ? ["name", "caption", "category", "durationRange", "goalType"].every(
+      ? ["name", "caption", "category", "durationRange"].every(
         (field) => practiceForm[field].trim() !== ""
-      )
+      ) && practiceForm.relatedChapters.length > 0
       : practiceStep === 2
-        ? ["sessionTitle", "sessionType", "sessionDuration", "sessionDescription"].every(
+        ? ["sessionTitle", "sessionType"].every(
           (field) => practiceForm[field].trim() !== ""
         )
         : true;
 
-  const handlePracticeContinue = async () => {
+  const handlePracticeContinue = async (submitStatus = null) => {
     if (!canContinue) {
       return;
     }
 
-    if (practiceStep < 3) {
+    if (practiceStep < 3 && editingSessionIndex === null && !isAddingSession) {
       setPracticeStep((current) => current + 1);
       return;
     }
 
-    const newPractice = {
-      title: practiceForm.name.trim(),
-      goal: practiceForm.goalType.trim(),
-      duration: practiceForm.durationRange.trim(),
-      sessions: 1,
-      category: practiceForm.category.trim(),
-      caption: practiceForm.caption.trim(),
-      thumbnail: practiceForm.thumbnailPreview || practiceForm.thumbnailName || null,
-      status: "Drafted",
-    };
+    const finalStatus = submitStatus || (isEditMode ? editingPractice.status : "Published");
 
     setIsSubmitting(true);
     try {
+      let finalContentFileName = practiceForm.sessionContentFileName;
+      
+      // Upload file jika ada file baru yang dipilih
+      if (practiceForm.sessionContentFileObj) {
+        const formData = new FormData();
+        formData.append("file", practiceForm.sessionContentFileObj);
+        
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          finalContentFileName = uploadData.filename;
+        } else {
+          console.error("Upload failed");
+          setIsSubmitting(false);
+          alert("Gagal mengunggah file. Pastikan Nginx mengizinkan ukuran file besar.");
+          return;
+        }
+      }
+
+      const sessionPayload = {
+        title: practiceForm.sessionTitle.trim(),
+        type: practiceForm.sessionType.trim(),
+        contentFileName: finalContentFileName
+      };
+      
+      let finalSessionsData = [sessionPayload];
+      let sessionsCount = 1;
+
+      if (isEditMode && Array.isArray(editingPractice.sessions)) {
+        finalSessionsData = [...editingPractice.sessions];
+        if (editingSessionIndex !== null) {
+          finalSessionsData[editingSessionIndex] = sessionPayload;
+        } else if (isAddingSession) {
+          finalSessionsData.push(sessionPayload);
+        } else {
+          // Modifying the first session as fallback if editing whole practice
+          if (finalSessionsData.length > 0) {
+            finalSessionsData[0] = sessionPayload;
+          } else {
+            finalSessionsData = [sessionPayload];
+          }
+        }
+        sessionsCount = finalSessionsData.length;
+      }
+
+      const newPractice = {
+        title: practiceForm.name.trim(),
+        goal: "-",
+        duration: practiceForm.durationRange.trim(),
+        sessions: sessionsCount,
+        category: practiceForm.category.trim(),
+        caption: practiceForm.caption.trim(),
+        thumbnail: practiceForm.thumbnailPreview || practiceForm.thumbnailName || null,
+        related_chapters: practiceForm.relatedChapters,
+        sessions_data: finalSessionsData,
+        status: finalStatus,
+      };
+
       if (isEditMode) {
         await fetch(`/api/practices/${editingPractice.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...newPractice, status: editingPractice.status }),
+          body: JSON.stringify(newPractice),
         });
       } else {
         await fetch("/api/practices", {
@@ -309,13 +733,69 @@ export function PracticeManagementPage() {
     }
   };
 
-  const handleSaveCategory = () => {
+  const handleSaveCategory = async () => {
     if (!newCategoryName.trim()) return;
-    setAddedCategories((prev) => [...prev, newCategoryName.trim()]);
-    setIsAddCategoryModalOpen(false);
-    setNewCategoryName("");
-    setShowCategorySuccessToast(true);
-    setTimeout(() => setShowCategorySuccessToast(false), 5000);
+    
+    try {
+      if (editingCategoryId) {
+        const res = await fetch(`/api/practices/categories/${editingCategoryId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newCategoryName.trim() })
+        });
+        if (res.ok) await fetchCategories();
+      } else {
+        const res = await fetch("/api/practices/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newCategoryName.trim() })
+        });
+        if (res.ok) await fetchCategories();
+      }
+      setIsAddCategoryModalOpen(false);
+      setNewCategoryName("");
+      setEditingCategoryId(null);
+      setShowCategorySuccessToast(true);
+      setTimeout(() => setShowCategorySuccessToast(false), 5000);
+    } catch (error) {
+      console.error("Failed to save category:", error);
+    }
+  };
+
+  const handleEditCategory = (category) => {
+    if (typeof category.id !== 'number') {
+      alert("This category was created automatically and cannot be edited. Please create it manually first.");
+      return;
+    }
+    setEditingCategoryId(category.id);
+    setNewCategoryName(category.name);
+    setIsAddCategoryModalOpen(true);
+  };
+
+  const handleDeleteCategory = async (category) => {
+    if (typeof category.id !== 'number') {
+      alert("This category was created automatically and cannot be deleted.");
+      return;
+    }
+    if (category.totalPractices > 0) {
+      alert("Cannot delete a category that is still tagged to practices.");
+      return;
+    }
+    
+    setDeletingCategory(category);
+    setIsCategoryDeleteModalOpen(true);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!deletingCategory) return;
+    try {
+      await fetch(`/api/practices/categories/${deletingCategory.id}`, { method: "DELETE" });
+      await fetchCategories();
+      setIsCategoryDeleteModalOpen(false);
+      setDeletingCategory(null);
+    } catch (error) {
+      console.error("Failed to delete category:", error);
+    }
   };
 
   const footerLabel =
@@ -391,14 +871,14 @@ export function PracticeManagementPage() {
           </div>
 
           {activeTab === "practice" ? (
-            <button type="button" className="master-add-btn" onClick={() => { setEditingPractice(null); setIsDrawerOpen(true); }}>
+            <button type="button" className="master-add-btn" onClick={handleAddPractice}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 5v14M5 12h14" />
               </svg>
               Add Practice
             </button>
           ) : (
-            <button type="button" className="master-add-btn" onClick={() => setIsAddCategoryModalOpen(true)}>
+            <button type="button" className="master-add-btn" onClick={() => { setEditingCategoryId(null); setNewCategoryName(""); setIsAddCategoryModalOpen(true); }}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 5v14M5 12h14" />
               </svg>
@@ -417,11 +897,22 @@ export function PracticeManagementPage() {
               <span style={{ textAlign: "right", paddingRight: "8px" }}>Action</span>
             </div>
 
-            {filteredPracticeRows.map((practice) => (
+            {filteredPracticeRows.map((practice, index) => {
+              const isDragAndDropEnabled = searchQuery === "" && categoryFilter === "All Category" && statusFilter === "All Status";
+              const actualIndex = isDragAndDropEnabled ? index : null;
+              
+              return (
               <React.Fragment key={practice.id}>
-                <article className="practice-row">
+                <article 
+                  className={`practice-row ${draggedPracticeIndex === actualIndex ? 'dragging' : ''}`}
+                  draggable={isDragAndDropEnabled}
+                  onDragStart={(e) => isDragAndDropEnabled && handlePracticeDragStart(e, actualIndex)}
+                  onDragOver={(e) => isDragAndDropEnabled && handlePracticeDragOver(e, actualIndex)}
+                  onDrop={(e) => isDragAndDropEnabled && handlePracticeDrop(e, actualIndex)}
+                  style={{ opacity: draggedPracticeIndex === actualIndex ? 0.5 : 1 }}
+                >
                   <div className="chapter-order-cell">
-                    <button type="button" className="chapter-drag-btn" aria-label={`Move ${practice.title}`}>
+                    <button type="button" className="chapter-drag-btn" aria-label={`Move ${practice.title}`} style={{ cursor: isDragAndDropEnabled ? 'grab' : 'not-allowed', pointerEvents: isDragAndDropEnabled ? 'auto' : 'none' }}>
                       <svg viewBox="0 0 24 24" aria-hidden="true">
                         <circle cx="8" cy="7" r="1.5" />
                         <circle cx="16" cy="7" r="1.5" />
@@ -448,14 +939,19 @@ export function PracticeManagementPage() {
                     <div className="chapter-copy">
                       <h3>{practice.title}</h3>
                       <p>
-                        {practice.duration} {"\u2022"} {practice.sessions} {practice.sessions === 1 ? 'session' : 'sessions'}
+                        {practice.duration} {"\u2022"} {practice.sessionsCount} {practice.sessionsCount === 1 ? 'session' : 'sessions'}
                       </p>
                     </div>
                   </div>
 
                   <span className="practice-category-text">{practice.category}</span>
 
-                  <div className={`chapter-status-pill chapter-status-${practice.status.toLowerCase()}`}>
+                  <div 
+                    className={`chapter-status-pill chapter-status-${practice.status.toLowerCase()}`}
+                    onClick={() => handleTogglePracticeStatus(practice.id)}
+                    style={{ cursor: "pointer" }}
+                    title="Click to toggle status"
+                  >
                     <i aria-hidden="true" />
                     <span>{practice.status}</span>
                   </div>
@@ -497,7 +993,7 @@ export function PracticeManagementPage() {
                   <div className="section-panel">
                     <div className="section-panel-header">
                       <span>Sessions in {practice.title} Practice</span>
-                      <button type="button" className="section-add-btn">
+                      <button type="button" className="section-add-btn" onClick={() => handleAddSession(practice)}>
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                           <path d="M12 5v14M5 12h14" />
                         </svg>
@@ -505,17 +1001,16 @@ export function PracticeManagementPage() {
                       </button>
                     </div>
 
-                    {(practice.id === 1 ? [
-                      { title: "Session 1 - Introduction to Breath", type: "Video", status: "Published" },
-                      { title: "Session 2 - 4-7-8 Technique", type: "Video", status: "Published" },
-                      { title: "Session 3 - Box Breathwork", type: "Audio", status: "Published" },
-                      { title: "Session 4 - Alternate Nostril Video", type: "Video", status: "Drafted" },
-                    ] : Array.from({ length: practice.sessions }).map((_, idx) => ({
-                      title: `Session ${idx + 1} - ${idx === 0 ? 'Introduction' : 'Deep Dive'}`,
-                      type: "Video",
-                      status: idx === 0 ? "Published" : "Drafted"
-                    }))).map((session, idx) => (
-                      <div key={idx} className="section-container" style={{ marginBottom: "12px", border: "1px solid #E5E7EB", borderRadius: "12px", padding: "12px 16px" }}>
+                    {Array.isArray(practice.sessions) && practice.sessions.map((session, idx) => (
+                      <div 
+                        key={idx} 
+                        className="section-container" 
+                        style={{ marginBottom: "12px", border: "1px solid #E5E7EB", borderRadius: "12px", padding: "12px 16px", opacity: draggedSessionData?.practiceId === practice.id && draggedSessionData?.sessionIndex === idx ? 0.5 : 1 }}
+                        draggable={true}
+                        onDragStart={(e) => handleSessionDragStart(e, practice.id, idx)}
+                        onDragOver={(e) => handleSessionDragOver(e, practice.id, idx)}
+                        onDrop={(e) => handleSessionDrop(e, practice.id, idx)}
+                      >
                         <div className="section-row" style={{ display: "grid", gridTemplateColumns: "auto 1fr auto auto auto", alignItems: "center", gap: "16px" }}>
                           <div className="section-drag" style={{ color: "#A0AEC0", cursor: "grab" }}>
                             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="currentColor">
@@ -558,14 +1053,17 @@ export function PracticeManagementPage() {
 
                           <span 
                             className="section-status-pill"
+                            onClick={() => handleToggleSessionStatus(practice.id, idx)}
                             style={{ 
                               display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 10px", 
                               borderRadius: "999px", fontSize: "12px", fontWeight: "500",
-                              background: session.status === "Published" ? "#E6F9F0" : "#F3F4F6",
-                              color: session.status === "Published" ? "#2B9367" : "#6B7280"
+                              background: (session.status || "Drafted") === "Published" ? "#E6F9F0" : "#F3F4F6",
+                              color: (session.status || "Drafted") === "Published" ? "#2B9367" : "#6B7280",
+                              cursor: "pointer"
                             }}
+                            title="Click to toggle status"
                           >
-                            {session.status === "Published" ? (
+                            {(session.status || "Drafted") === "Published" ? (
                               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
@@ -576,16 +1074,16 @@ export function PracticeManagementPage() {
                                 <polyline points="13 2 13 9 20 9"></polyline>
                               </svg>
                             )}
-                            {session.status}
+                            {session.status || "Drafted"}
                           </span>
 
                           <div className="section-actions" style={{ display: "flex", gap: "8px" }}>
-                            <button type="button" className="chapter-icon-btn" aria-label="Edit session">
+                            <button type="button" className="chapter-icon-btn" aria-label="Edit session" onClick={() => handleEditSession(practice, idx)}>
                               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
                               </svg>
                             </button>
-                            <button type="button" className="chapter-icon-btn" aria-label="Delete session">
+                            <button type="button" className="chapter-icon-btn" aria-label="Delete session" onClick={() => handleDeleteSessionPrompt(practice, idx)}>
                               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M5 7h14M10 4h4m-7 3 1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9L17 7M10 11v5M14 11v5"></path>
                               </svg>
@@ -597,7 +1095,8 @@ export function PracticeManagementPage() {
                   </div>
                 )}
               </React.Fragment>
-            ))}
+              );
+            })}
 
             {filteredPracticeRows.length === 0 && (
               <div className="chapter-empty-state">
@@ -615,9 +1114,20 @@ export function PracticeManagementPage() {
             </div>
 
             {filteredCategoryRows.map((category, index) => (
-              <article key={category.id} className="practice-category-row">
+              <article 
+                key={category.id} 
+                className="practice-category-row"
+                draggable
+                onDragStart={(e) => handleCategoryDragStart(e, index)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => handleCategoryDrop(e, index)}
+                style={{
+                  opacity: draggedCategoryIndex === index ? 0.5 : 1,
+                  transition: "all 0.2s ease"
+                }}
+              >
                 <div className="chapter-order-cell">
-                  <button type="button" className="chapter-drag-btn" aria-label={`Move ${category.name}`}>
+                  <button type="button" className="chapter-drag-btn" aria-label={`Move ${category.name}`} style={{ cursor: 'grab' }}>
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <circle cx="8" cy="7" r="1.5" />
                       <circle cx="16" cy="7" r="1.5" />
@@ -634,12 +1144,12 @@ export function PracticeManagementPage() {
                 <span className="practice-category-total">{category.totalPractices} Practice</span>
 
                 <div className="chapter-actions">
-                  <button type="button" className="chapter-icon-btn" aria-label={`Edit ${category.name}`}>
+                  <button type="button" className="chapter-icon-btn" aria-label={`Edit ${category.name}`} onClick={() => handleEditCategory(category)}>
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M13.8 5.7 18.3 10.2M6 18h4l8.6-8.6a1.7 1.7 0 0 0 0-2.4l-1.6-1.6a1.7 1.7 0 0 0-2.4 0L6 14v4Z" />
                     </svg>
                   </button>
-                  <button type="button" className="chapter-icon-btn" aria-label={`Delete ${category.name}`}>
+                  <button type="button" className="chapter-icon-btn" aria-label={`Delete ${category.name}`} onClick={() => handleDeleteCategory(category)}>
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M5 7h14M10 4h4m-7 3 1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9L17 7M10 11v5M14 11v5" />
                     </svg>
@@ -774,20 +1284,56 @@ export function PracticeManagementPage() {
                     </label>
                   </div>
 
-                  <div className="chapter-field">
-                    <span>Goal Type *</span>
-                    <label className="chapter-select chapter-select-shell chapter-step-select">
-                      <select value={practiceForm.goalType} onChange={handlePracticeFieldChange("goalType")}>
-                        <option value="">Select goal type</option>
-                        <option>Focus</option>
-                        <option>Clean mind</option>
-                        <option>Sleep</option>
-                        <option>Relaxation</option>
-                      </select>
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <div className="chapter-field" style={{ position: 'relative' }}>
+                    <span>Related Chapters <span style={{ color: '#E53E3E' }}>*</span></span>
+                    <div 
+                      className="chapter-select chapter-select-shell chapter-step-select"
+                      onClick={() => setIsRelatedChapterOpen(!isRelatedChapterOpen)}
+                      style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                    >
+                      <span style={{ color: practiceForm.relatedChapters.length > 0 ? '#151c29' : '#8d95a4' }}>
+                        {practiceForm.relatedChapters.length === 0 ? "Select related chapters" : 
+                         practiceForm.relatedChapters.length === 1 ? chapters.find(c => c.id === practiceForm.relatedChapters[0])?.title || "1 Chapter Selected" : 
+                         `${practiceForm.relatedChapters.length} Chapters Selected`}
+                      </span>
+                      <svg viewBox="0 0 24 24" aria-hidden="true" style={{ transform: isRelatedChapterOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
                         <path d="m7 10 5 5 5-5" />
                       </svg>
-                    </label>
+                    </div>
+
+                    {isRelatedChapterOpen && (
+                      <div style={{
+                        position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                        background: '#FFF', border: '1px solid #E2E8F0', borderRadius: '12px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)', zIndex: 50, padding: '8px 0',
+                        maxHeight: '200px', overflowY: 'auto'
+                      }}>
+                        {chapters.map(ch => (
+                          <label key={ch.id} style={{
+                            display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px',
+                            cursor: 'pointer', transition: 'background 0.2s'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#F7FAFC'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <input 
+                              type="checkbox" 
+                              checked={practiceForm.relatedChapters.includes(ch.id)}
+                              onChange={(e) => {
+                                const currentRelated = practiceForm.relatedChapters;
+                                if (e.target.checked) {
+                                  setPracticeForm({...practiceForm, relatedChapters: [...currentRelated, ch.id]});
+                                } else {
+                                  setPracticeForm({...practiceForm, relatedChapters: currentRelated.filter(id => id !== ch.id)});
+                                }
+                              }}
+                              style={{ width: '16px', height: '16px', accentColor: '#795289', cursor: 'pointer' }}
+                            />
+                            <span style={{ fontSize: '14px', color: '#4A5568' }}>{ch.title}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="chapter-field">
@@ -823,49 +1369,112 @@ export function PracticeManagementPage() {
               )}
 
               {practiceStep === 2 && (
-                <div className="chapter-form-grid">
+                <div className="chapter-form-grid" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                   <div className="chapter-field">
-                    <span>Session Title *</span>
+                    <span>Session Name <span style={{ color: '#E53E3E' }}>*</span></span>
                     <input
                       type="text"
-                      placeholder="Enter first session title"
+                      placeholder="Enter session name"
                       value={practiceForm.sessionTitle}
                       onChange={handlePracticeFieldChange("sessionTitle")}
                     />
                   </div>
 
                   <div className="chapter-field">
-                    <span>Session Type *</span>
-                    <label className="chapter-select chapter-select-shell chapter-step-select">
-                      <select value={practiceForm.sessionType} onChange={handlePracticeFieldChange("sessionType")}>
-                        <option>Guided Audio</option>
-                        <option>Text</option>
-                        <option>Video</option>
-                      </select>
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="m7 10 5 5 5-5" />
-                      </svg>
-                    </label>
+                    <span>Content Type <span style={{ color: '#E53E3E' }}>*</span></span>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setPracticeForm(f => ({ ...f, sessionType: "Video" }))}
+                        style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                          gap: '12px', padding: '24px', borderRadius: '12px', cursor: 'pointer',
+                          border: practiceForm.sessionType === "Video" ? '2px solid #795289' : '1px solid #E2E8F0',
+                          background: practiceForm.sessionType === "Video" ? '#FAF5FF' : '#FFF',
+                          color: practiceForm.sessionType === "Video" ? '#795289' : '#4A5568',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="2" y="4" width="20" height="16" rx="2" />
+                          <polygon points="10 9 10 15 15 12" />
+                        </svg>
+                        <span style={{ fontWeight: '500', fontSize: '15px' }}>Video</span>
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={() => setPracticeForm(f => ({ ...f, sessionType: "Audio" }))}
+                        style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                          gap: '12px', padding: '24px', borderRadius: '12px', cursor: 'pointer',
+                          border: practiceForm.sessionType === "Audio" ? '2px solid #795289' : '1px solid #E2E8F0',
+                          background: practiceForm.sessionType === "Audio" ? '#FAF5FF' : '#FFF',
+                          color: practiceForm.sessionType === "Audio" ? '#795289' : '#4A5568',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 2v20M8 8v8M16 8v8M4 11v2M20 11v2" />
+                        </svg>
+                        <span style={{ fontWeight: '500', fontSize: '15px' }}>Audio</span>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="chapter-field">
-                    <span>Session Duration *</span>
-                    <input
-                      type="text"
-                      placeholder="e.g. 8 mins"
-                      value={practiceForm.sessionDuration}
-                      onChange={handlePracticeFieldChange("sessionDuration")}
-                    />
+                    <span>Upload File <span style={{ color: '#E53E3E' }}>*</span></span>
+                    {practiceForm.sessionContentFileName ? (
+                      <div className="chapter-thumbnail-preview" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#F7FAFC' }}>
+                        <div className="chapter-thumbnail-info" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div className="thumb-img-placeholder" style={{ width: '40px', height: '40px', borderRadius: '6px', background: '#CBD5E0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                          </div>
+                          <div className="thumb-details" style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span className="file-name" style={{ fontSize: '14px', fontWeight: '500', color: '#2D3748' }}>{practiceForm.sessionContentFileName}</span>
+                            <span className="file-size" style={{ fontSize: '12px', color: '#718096' }}>
+                              {practiceForm.sessionContentFileObj ? (practiceForm.sessionContentFileObj.size / (1024 * 1024)).toFixed(2) + ' MB' : 'Uploaded File'}
+                            </span>
+                          </div>
+                        </div>
+                        <button type="button" className="thumb-delete-btn" onClick={() => setPracticeForm(f => ({ ...f, sessionContentFileName: "" }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E53E3E' }}>
+                          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="chapter-upload-box" style={{ borderStyle: 'dashed' }}>
+                        <input type="file" accept={practiceForm.sessionType === "Video" ? "video/mp4,video/quicktime,video/*,.mp4,.mov" : "audio/mpeg,audio/wav,audio/*,.mp3,.wav"} onClick={(e) => (e.target.value = null)} onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            setPracticeForm(f => ({ 
+                              ...f, 
+                              sessionContentFileName: e.target.files[0].name,
+                              sessionContentFileObj: e.target.files[0]
+                            }));
+                          }
+                        }} />
+                        <svg viewBox="0 0 24 24" aria-hidden="true" style={{ width: '32px', height: '32px', marginBottom: '8px' }}>
+                          <path d="M15 10l-3-3m0 0l-3 3m3-3v8M3 16v2a2 2 0 002 2h14a2 2 0 002-2v-2" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                        </svg>
+                        <strong>Drag & Drop or <span style={{ color: '#3182CE' }}>Choose File</span> to Upload</strong>
+                        <span style={{ color: '#718096' }}>
+                          Supported file: {practiceForm.sessionType === "Video" ? "MP4, MOV" : "MP3, WAV"} &nbsp;&nbsp;&nbsp;&nbsp; Max. size: 500 MB
+                        </span>
+                      </label>
+                    )}
                   </div>
-
-                  <div className="chapter-field chapter-field-wide">
-                    <span>Session Description *</span>
-                    <textarea
-                      rows="6"
-                      placeholder="Describe the first practice session"
-                      value={practiceForm.sessionDescription}
-                      onChange={handlePracticeFieldChange("sessionDescription")}
-                    />
+                  
+                  <div style={{
+                    display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '16px',
+                    background: '#FEFCBF', borderRadius: '8px', border: '1px solid #F6E05E'
+                  }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#D69E2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="12"></line>
+                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span style={{ fontSize: '14px', color: '#B7791F' }}>
+                      You can add more sessions once you finish adding the chapter.
+                    </span>
                   </div>
                 </div>
               )}
@@ -912,12 +1521,20 @@ export function PracticeManagementPage() {
                 {practiceStep === 1 ? "Cancel" : "Back"}
               </button>
 
-              <button type="button" className="chapter-primary-btn" onClick={handlePracticeContinue} disabled={!canContinue}>
-                {practiceStep === 3 ? "Publish" : "Continue"}
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M5 12h14m-5-5 5 5-5 5" />
-                </svg>
-              </button>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                {(practiceStep === 3 || editingSessionIndex !== null) && (
+                  <button type="button" onClick={() => handlePracticeContinue("Drafted")} disabled={!canContinue || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF', border: '1px solid #EAE6F0', color: '#795289', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
+                    Save Draft
+                  </button>
+                )}
+
+                <button type="button" onClick={() => handlePracticeContinue("Published")} disabled={!canContinue || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#795289', border: 'none', color: '#FFF', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
+                  {(practiceStep === 3 || editingSessionIndex !== null) ? "Publish" : "Continue"}
+                  <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14m-5-5 5 5-5 5" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </aside>
         </div>
@@ -927,7 +1544,7 @@ export function PracticeManagementPage() {
         <div className="chapter-drawer-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setIsAddCategoryModalOpen(false)}>
           <div style={{ background: '#FFF', borderRadius: '12px', padding: '24px', width: '400px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#1A202C' }}>Add Category</h3>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#1A202C' }}>{editingCategoryId ? 'Edit Category' : 'Add Category'}</h3>
               <button type="button" onClick={() => setIsAddCategoryModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#A0AEC0', padding: 0 }}>
                 <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
@@ -1005,6 +1622,84 @@ export function PracticeManagementPage() {
               to { transform: translateY(0); opacity: 1; }
             }
           `}</style>
+        </div>
+      )}
+
+      {isSessionDeleteModalOpen && (
+        <div className="chapter-delete-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setIsSessionDeleteModalOpen(false)}>
+          <div className="chapter-delete-modal-content" style={{ background: '#FFF', borderRadius: '16px', padding: '32px', width: '400px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <svg viewBox="0 0 24 24" width="24" height="24" stroke="#DC2626" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: '0 0 8px 0' }}>Are you sure you want to delete this session?</h3>
+            <p style={{ fontSize: '14px', color: '#6B7280', margin: '0 0 24px 0', lineHeight: '1.5' }}>
+              You are about to permanently delete this item.<br />All associated content and data will be removed.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button type="button" onClick={() => setIsSessionDeleteModalOpen(false)} style={{ padding: '10px 24px', borderRadius: '100px', border: '1px solid #E5E7EB', background: '#FFF', color: '#4B5563', fontWeight: '500', cursor: 'pointer', flex: 1 }}>
+                No, Keep It
+              </button>
+              <button type="button" onClick={confirmDeleteSession} style={{ padding: '10px 24px', borderRadius: '100px', border: 'none', background: '#DC2626', color: '#FFF', fontWeight: '500', cursor: 'pointer', flex: 1 }}>
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isPracticeDeleteModalOpen && (
+        <div className="chapter-delete-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setIsPracticeDeleteModalOpen(false)}>
+          <div className="chapter-delete-modal-content" style={{ background: '#FFF', borderRadius: '16px', padding: '32px', width: '400px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <svg viewBox="0 0 24 24" width="24" height="24" stroke="#DC2626" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: '0 0 8px 0' }}>Are you sure you want to delete this practice?</h3>
+            <p style={{ fontSize: '14px', color: '#6B7280', margin: '0 0 24px 0', lineHeight: '1.5' }}>
+              You are about to permanently delete this item.<br />All associated content and data will be removed.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button type="button" onClick={() => setIsPracticeDeleteModalOpen(false)} style={{ padding: '10px 24px', borderRadius: '100px', border: '1px solid #E5E7EB', background: '#FFF', color: '#4B5563', fontWeight: '500', cursor: 'pointer', flex: 1 }}>
+                No, Keep It
+              </button>
+              <button type="button" onClick={confirmDeletePractice} style={{ padding: '10px 24px', borderRadius: '100px', border: 'none', background: '#DC2626', color: '#FFF', fontWeight: '500', cursor: 'pointer', flex: 1 }}>
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCategoryDeleteModalOpen && (
+        <div className="chapter-delete-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setIsCategoryDeleteModalOpen(false)}>
+          <div className="chapter-delete-modal-content" style={{ background: '#FFF', borderRadius: '16px', padding: '32px', width: '400px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <svg viewBox="0 0 24 24" width="24" height="24" stroke="#DC2626" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: '0 0 8px 0' }}>Are you sure you want to delete {deletingCategory?.name}?</h3>
+            <p style={{ fontSize: '14px', color: '#6B7280', margin: '0 0 24px 0', lineHeight: '1.5' }}>
+              You are about to permanently delete this category.<br />This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button type="button" onClick={() => setIsCategoryDeleteModalOpen(false)} style={{ padding: '10px 24px', borderRadius: '100px', border: '1px solid #E5E7EB', background: '#FFF', color: '#4B5563', fontWeight: '500', cursor: 'pointer', flex: 1 }}>
+                Cancel
+              </button>
+              <button type="button" onClick={confirmDeleteCategory} style={{ padding: '10px 24px', borderRadius: '100px', border: 'none', background: '#DC2626', color: '#FFF', fontWeight: '500', cursor: 'pointer', flex: 1 }}>
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>

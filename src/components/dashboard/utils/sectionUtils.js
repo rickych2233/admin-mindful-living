@@ -24,6 +24,7 @@ export function normalizeSection(item) {
     order,
     title: item.title || item.name || "-",
     description: item.description || "",
+    content: item.content || "",
     type,
     status,
     createdAt: item.createdAt || item.created_at || null,

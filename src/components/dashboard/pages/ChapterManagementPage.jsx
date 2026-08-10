@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { useChaptersCollection, createChapter, updateChapter, deleteChapter, toggleChapterStatus } from "../utils/chapterUtils";
+import { useChaptersCollection, createChapter, updateChapter, deleteChapter, toggleChapterStatus, reorderChapters } from "../utils/chapterUtils";
 import { fetchSectionsByChapter, createSection, deleteSection, toggleSectionStatus, normalizeSection } from "../utils/sectionUtils";
 
 const chapterStepItems = [
@@ -42,7 +42,40 @@ export function ChapterManagementPage() {
   const [sectionForm, setSectionForm] = useState({ title: "", description: "", type: "Text" });
   const [sectionSubmitting, setSectionSubmitting] = useState(false);
   const [activeLanguageTab, setActiveLanguageTab] = useState("English 🇬🇧");
-  const [showPublishedModal, setShowPublishedModal] = useState(false);
+  const [showPublishedModal, setShowPublishedModal] = useState({ show: false, status: null });
+  const [draggedChapterIndex, setDraggedChapterIndex] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({ show: false, type: null, targetId: null, chapterId: null });
+
+  const handleDragStart = (e, index) => {
+    setDraggedChapterIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = async (e, targetIndex) => {
+    e.preventDefault();
+    if (draggedChapterIndex === null || draggedChapterIndex === targetIndex) return;
+
+    const newRows = [...chapterRows];
+    const draggedItem = newRows.splice(draggedChapterIndex, 1)[0];
+    newRows.splice(targetIndex, 0, draggedItem);
+    
+    setChapterRows(newRows);
+    setDraggedChapterIndex(null);
+
+    try {
+      const chapterIds = newRows.map(c => c.apiId || c.id);
+      await reorderChapters(chapterIds);
+    } catch (err) {
+      console.error("Failed to save reorder", err);
+      alert("Failed to save new chapter order.");
+      refetch();
+    }
+  };
 
   const handleToggleExpand = useCallback(async (chapter) => {
     const cId = chapter.apiId ?? chapter.id;
@@ -64,16 +97,9 @@ export function ChapterManagementPage() {
     }
   }, [expandedChapterId, sectionsMap]);
 
-  const handleDeleteSection = async (chapter, sectionId) => {
+  const openDeleteSectionModal = (chapter, sectionId) => {
     const cId = chapter.apiId ?? chapter.id;
-    if (!confirm("Are you sure you want to delete this section?")) return;
-    try {
-      await deleteSection(cId, sectionId);
-      setSectionsMap((p) => ({ ...p, [cId]: (p[cId] || []).filter((s) => s.id !== sectionId) }));
-      refetch();
-    } catch (err) {
-      alert(`Gagal menghapus section: ${err.message}`);
-    }
+    setDeleteModal({ show: true, type: 'section', targetId: sectionId, chapterId: cId });
   };
 
   const handleToggleSectionStatus = async (chapter, sectionId) => {
@@ -152,22 +178,36 @@ export function ChapterManagementPage() {
     setEditingChapter(null);
   };
 
-  const handleEditChapter = (chapter) => {
+  const handleEditChapter = async (chapter) => {
     setEditingChapter(chapter);
+    
+    // Default empty section
+    let firstSection = null;
+    try {
+      const cId = chapter.apiId ?? chapter.id;
+      const fetchedSections = await fetchSectionsByChapter(cId);
+      if (fetchedSections && fetchedSections.length > 0) {
+        firstSection = fetchedSections[0];
+      }
+    } catch (err) {
+      console.error("Error fetching sections for edit chapter:", err);
+    }
+    
     setChapterForm({
       title: chapter.title || "",
       description: chapter.summary || "",
-      thumbnailName: "",
-      sectionName: "",
-      sectionCaption: "",
-      sectionContent: "",
+      thumbnailName: chapter.thumbnail ? "existing-thumbnail.jpg" : "",
+      sectionId: firstSection?.id || null,
+      sectionName: firstSection?.title || "",
+      sectionCaption: firstSection?.description || "",
+      sectionContent: firstSection?.content || "",
       exerciseTitle: "",
       exerciseDuration: "2 Minutes",
       exerciseInstructions: "",
       exerciseRequired: false,
-      sectionType: "Text",
+      sectionType: firstSection?.type || "Text",
       mediaList: [],
-      thumbnailPreview: "",
+      thumbnailPreview: chapter.thumbnail || "",
     });
     setChapterStep(1);
     setIsDrawerOpen(true);
@@ -183,15 +223,61 @@ export function ChapterManagementPage() {
   const handleThumbnailChange = (event) => {
     const nextFile = event.target.files?.[0];
 
-    if (chapterForm.thumbnailPreview) {
-      URL.revokeObjectURL(chapterForm.thumbnailPreview);
+    if (!nextFile) {
+      setChapterForm((current) => ({
+        ...current,
+        thumbnailName: "",
+        thumbnailPreview: "",
+      }));
+      return;
     }
 
-    setChapterForm((current) => ({
-      ...current,
-      thumbnailName: nextFile ? nextFile.name : "",
-      thumbnailPreview: nextFile ? URL.createObjectURL(nextFile) : "",
-    }));
+    if (nextFile.size > 2 * 1024 * 1024) {
+      alert("File size exceeds 2MB. Please upload a smaller file.");
+      event.target.value = null;
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
+        
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = Math.round((height *= MAX_WIDTH / width));
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = Math.round((width *= MAX_HEIGHT / height));
+            height = MAX_HEIGHT;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        const resizedBase64 = canvas.toDataURL("image/jpeg", 0.8);
+        
+        setChapterForm((current) => ({
+          ...current,
+          thumbnailName: nextFile.name,
+          thumbnailPreview: resizedBase64,
+        }));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(nextFile);
   };
 
   const isEditMode = editingChapter !== null;
@@ -200,12 +286,17 @@ export function ChapterManagementPage() {
     chapterStep === 1
       ? chapterForm.title.trim() !== "" && chapterForm.description.trim() !== ""
       : chapterStep === 2
-        ? chapterForm.sectionName.trim() !== "" && chapterForm.sectionCaption.trim() !== ""
+        ? (isEditMode ? true : chapterForm.sectionName.trim() !== "" && chapterForm.sectionCaption.trim() !== "")
         : true;
 
   const handleFileChange = (e, type) => {
     const file = e.target.files[0];
     if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("File size exceeds 2MB. Please upload a smaller file.");
+        e.target.value = null;
+        return;
+      }
       const url = URL.createObjectURL(file);
       setChapterForm(f => ({
         ...f,
@@ -229,15 +320,25 @@ export function ChapterManagementPage() {
     document.execCommand(command, false, value);
   };
 
-  const handleContinue = async (submitStatus = "Drafted") => {
-    const isEvent = submitStatus && typeof submitStatus === "object" && submitStatus.target;
-    const finalStatus = isEvent ? "Drafted" : submitStatus;
+  const handleContinue = async (submitStatus) => {
+    // If an event object is accidentally passed, default to "Drafted"
+    let finalStatus = "Drafted";
+    if (typeof submitStatus === "string") {
+      finalStatus = submitStatus;
+    }
 
     if (!canContinue) {
       return;
     }
 
     if (chapterStep < 3) {
+      if (chapterStep === 2) {
+        // Explicitly capture content Editable value before moving to Step 3
+        const editor = document.querySelector('.custom-rte-content');
+        if (editor) {
+          setChapterForm(f => ({ ...f, sectionContent: editor.innerHTML }));
+        }
+      }
       setChapterStep((current) => current + 1);
       return;
     }
@@ -252,7 +353,22 @@ export function ChapterManagementPage() {
           title: chapterForm.title.trim(),
           description: chapterForm.description.trim(),
           status: finalStatus !== "Drafted" ? finalStatus : (editingChapter.status || "Drafted"),
+          thumbnail: chapterForm.thumbnailPreview || null,
         };
+
+        if (chapterForm.sectionName && chapterForm.sectionName.trim()) {
+          // Fallback to reading DOM directly in case onBlur hasn't updated state yet during the click event
+          const latestContent = document.querySelector('.custom-rte-content')?.innerHTML || chapterForm.sectionContent;
+          chapterData.sections = [
+            {
+              id: chapterForm.sectionId,
+              title: chapterForm.sectionName.trim(),
+              description: chapterForm.sectionCaption.trim(),
+              content: latestContent,
+              type: chapterForm.sectionType,
+            },
+          ];
+        }
 
         const result = await updateChapter(apiId, chapterData);
 
@@ -264,6 +380,7 @@ export function ChapterManagementPage() {
                 title: result.chapter?.title || result.title || chapterData.title,
                 summary: result.chapter?.description || result.description || chapterData.description,
                 status: finalStatus !== "Drafted" ? finalStatus : (editingChapter.status || "Drafted"),
+                thumbnail: chapterData.thumbnail || c.thumbnail,
               }
               : c
           )
@@ -288,14 +405,19 @@ export function ChapterManagementPage() {
 
     try {
       const normalizedTitle = chapterForm.title.trim();
+      // Fallback to reading DOM directly in case onBlur hasn't updated state yet during the click event
+      const latestContent = document.querySelector('.custom-rte-content')?.innerHTML || chapterForm.sectionContent;
+      
       const chapterData = {
         title: normalizedTitle,
         description: chapterForm.description.trim(),
         status: finalStatus,
+        thumbnail: chapterForm.thumbnailPreview || null,
         sections: [
           {
             title: chapterForm.sectionName.trim(),
             description: chapterForm.sectionCaption.trim(),
+            content: latestContent,
             type: chapterForm.sectionType,
           },
         ],
@@ -316,9 +438,9 @@ export function ChapterManagementPage() {
       closeChapterDrawer();
       refetch();
 
-      if (finalStatus === "Published") {
-        setShowPublishedModal(true);
-        setTimeout(() => setShowPublishedModal(false), 5000); // auto-hide after 5 seconds
+      if (finalStatus === "Published" || finalStatus === "Drafted") {
+        setShowPublishedModal({ show: true, status: finalStatus });
+        setTimeout(() => setShowPublishedModal({ show: false, status: null }), 5000); // auto-hide after 5 seconds
       }
     } catch (err) {
       setSubmitError(err.message || "Gagal membuat chapter. Silakan coba lagi.");
@@ -327,20 +449,33 @@ export function ChapterManagementPage() {
     }
   };
 
-  const handleDeleteChapter = async (chapterId) => {
-    if (!confirm("Are you sure you want to delete this chapter?")) {
-      return;
-    }
+  const openDeleteChapterModal = (chapterId) => {
+    setDeleteModal({ show: true, type: 'chapter', targetId: chapterId, chapterId: null });
+  };
 
-    const chapter = chapterRows.find((c) => c.id === chapterId);
-    const apiId = chapter?.apiId ?? chapterId;
+  const confirmDeleteAction = async () => {
+    const { type, targetId, chapterId } = deleteModal;
+    setDeleteModal({ show: false, type: null, targetId: null, chapterId: null });
 
-    try {
-      await deleteChapter(apiId);
-      setChapterRows((current) => current.filter((c) => c.id !== chapterId));
-      refetch();
-    } catch (err) {
-      alert(`Gagal menghapus chapter: ${err.message}`);
+    if (type === 'chapter') {
+      const chapter = chapterRows.find((c) => c.id === targetId);
+      const apiId = chapter?.apiId ?? targetId;
+
+      try {
+        await deleteChapter(apiId);
+        setChapterRows((current) => current.filter((c) => c.id !== targetId));
+        refetch();
+      } catch (err) {
+        alert(`Gagal menghapus chapter: ${err.message}`);
+      }
+    } else if (type === 'section') {
+      try {
+        await deleteSection(chapterId, targetId);
+        setSectionsMap((p) => ({ ...p, [chapterId]: (p[chapterId] || []).filter((s) => s.id !== targetId) }));
+        refetch();
+      } catch (err) {
+        alert(`Gagal menghapus section: ${err.message}`);
+      }
     }
   };
 
@@ -471,11 +606,22 @@ export function ChapterManagementPage() {
               <span>Action</span>
             </div>
 
-            {filteredChapterRows.map((chapter) => (
+            {filteredChapterRows.map((chapter, index) => {
+              const isDragAndDropEnabled = searchQuery === "" && statusFilter === "All Status";
+              const actualIndex = isDragAndDropEnabled ? index : null;
+              
+              return (
               <React.Fragment key={chapter.id}>
-                <article className="chapter-row chapter-row-redesign">
+                <article 
+                  className={`chapter-row chapter-row-redesign ${draggedChapterIndex === actualIndex ? 'dragging' : ''}`}
+                  draggable={isDragAndDropEnabled}
+                  onDragStart={(e) => isDragAndDropEnabled && handleDragStart(e, actualIndex)}
+                  onDragOver={(e) => isDragAndDropEnabled && handleDragOver(e, actualIndex)}
+                  onDrop={(e) => isDragAndDropEnabled && handleDrop(e, actualIndex)}
+                  style={{ opacity: draggedChapterIndex === actualIndex ? 0.5 : 1 }}
+                >
                   <div className="chapter-order-cell">
-                    <button type="button" className="chapter-drag-btn" aria-label={`Move ${chapter.title}`}>
+                    <button type="button" className="chapter-drag-btn" aria-label={`Move ${chapter.title}`} style={{ cursor: isDragAndDropEnabled ? 'grab' : 'not-allowed', pointerEvents: isDragAndDropEnabled ? 'auto' : 'none' }}>
                       <svg viewBox="0 0 24 24" aria-hidden="true">
                         <circle cx="8" cy="7" r="1.5" />
                         <circle cx="16" cy="7" r="1.5" />
@@ -485,15 +631,23 @@ export function ChapterManagementPage() {
                         <circle cx="16" cy="17" r="1.5" />
                       </svg>
                     </button>
-                    <span className="chapter-order-number">{chapter.id}</span>
+                    <span className="chapter-order-number">{index + 1}</span>
                   </div>
 
                   <div className="chapter-main-cell chapter-main-cell-redesign">
-                    <div className="chapter-thumb" aria-hidden="true">
-                      <svg viewBox="0 0 24 24">
-                        <circle cx="8" cy="8" r="2" />
-                        <path d="m5 18 4.2-5.2a2 2 0 0 1 3 .1L14 15l1.3-1.5a2 2 0 0 1 3 .1L20 16v2H5Z" />
-                      </svg>
+                    <div className="chapter-thumb" aria-hidden="true" style={{ display: 'flex', overflow: 'hidden' }}>
+                      {chapter.thumbnail ? (
+                        <img 
+                          src={chapter.thumbnail} 
+                          alt={chapter.title} 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
+                      ) : (
+                        <svg viewBox="0 0 24 24">
+                          <circle cx="8" cy="8" r="2" />
+                          <path d="m5 18 4.2-5.2a2 2 0 0 1 3 .1L14 15l1.3-1.5a2 2 0 0 1 3 .1L20 16v2H5Z" />
+                        </svg>
+                      )}
                     </div>
                     <div className="chapter-copy">
                       <h3>{chapter.title}</h3>
@@ -537,7 +691,7 @@ export function ChapterManagementPage() {
                       type="button"
                       className="chapter-icon-btn"
                       aria-label={`Delete ${chapter.title}`}
-                      onClick={() => handleDeleteChapter(chapter.id)}
+                      onClick={() => openDeleteChapterModal(chapter.id)}
                     >
                       <svg viewBox="0 0 24 24" aria-hidden="true">
                         <polyline points="3 6 5 6 21 6" />
@@ -586,7 +740,7 @@ export function ChapterManagementPage() {
                               <button type="button" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #E2E8F0', borderRadius: '50%', background: '#FFF', color: '#718096', cursor: 'pointer' }} aria-label="Edit section">
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                               </button>
-                              <button type="button" onClick={() => handleDeleteSection(chapter, sec.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #E2E8F0', borderRadius: '50%', background: '#FFF', color: '#E53E3E', cursor: 'pointer' }} aria-label="Delete section">
+                              <button type="button" onClick={() => openDeleteSectionModal(chapter, sec.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #E2E8F0', borderRadius: '50%', background: '#FFF', color: '#E53E3E', cursor: 'pointer' }} aria-label="Delete section">
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
                               </button>
                             </div>
@@ -646,7 +800,7 @@ export function ChapterManagementPage() {
                   );
                 })()}
               </React.Fragment>
-            ))}
+            )})}
 
             {filteredChapterRows.length === 0 && (
               <div className="chapter-empty-state">
@@ -845,10 +999,10 @@ export function ChapterManagementPage() {
 
                       {/* Functional Rich Text Area */}
                       <div
+                        key={`editor-${chapterForm.sectionId || 'new'}-${editingChapter?.id || 'new'}`}
                         className="custom-rte-content"
                         contentEditable
                         suppressContentEditableWarning
-                        onBlur={(e) => setChapterForm(f => ({ ...f, sectionContent: e.target.innerHTML }))}
                         style={{ width: '100%', minHeight: '160px', border: 'none', padding: '16px', outline: 'none' }}
                         dangerouslySetInnerHTML={{ __html: chapterForm.sectionContent || '<p><br></p>' }}
                       />
@@ -1029,9 +1183,10 @@ export function ChapterManagementPage() {
 
                     <div style={{ marginBottom: '16px' }}>
                       <span style={{ display: 'block', fontSize: '13px', color: '#718096', marginBottom: '8px' }}>Section Content</span>
-                      <div style={{ padding: '16px', background: '#F7FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '14px', color: '#4A5568', lineHeight: '1.6', overflow: 'hidden' }}>
-                        <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{chapterForm.sectionContent || "-"}</p>
-                      </div>
+                      <div 
+                        style={{ padding: '16px', background: '#F7FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '14px', color: '#4A5568', lineHeight: '1.6', overflow: 'hidden' }}
+                        dangerouslySetInnerHTML={{ __html: chapterForm.sectionContent || "-" }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1060,12 +1215,19 @@ export function ChapterManagementPage() {
                 )}
               </button>
 
-              {chapterStep === 3 && !isEditMode ? (
+              {chapterStep === 3 ? (
                 <div style={{ display: 'flex', gap: '12px' }}>
-                  <button type="button" onClick={() => handleContinue("Drafted")} disabled={!canContinue || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF', border: '1px solid #EAE6F0', color: '#795289', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                    Save as Draft
-                  </button>
+                  {isEditMode ? (
+                    <button type="button" onClick={() => handleContinue(editingChapter?.status || "Drafted")} disabled={!canContinue || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF', border: '1px solid #EAE6F0', color: '#795289', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
+                      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                      Save Changes
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => handleContinue("Drafted")} disabled={!canContinue || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF', border: '1px solid #EAE6F0', color: '#795289', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
+                      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                      Save as Draft
+                    </button>
+                  )}
                   <button type="button" onClick={() => handleContinue("Published")} disabled={!canContinue || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#795289', border: 'none', color: '#FFF', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
                     {isSubmitting ? "Publishing..." : (
                       <>
@@ -1076,7 +1238,7 @@ export function ChapterManagementPage() {
                   </button>
                 </div>
               ) : (
-                <button type="button" onClick={handleContinue} disabled={!canContinue || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#795289', border: 'none', color: '#FFF', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
+                <button type="button" onClick={() => handleContinue()} disabled={!canContinue || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#795289', border: 'none', color: '#FFF', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
                   {isSubmitting ? "Saving..." : "Continue \u2192"}
                 </button>
               )}
@@ -1091,7 +1253,7 @@ export function ChapterManagementPage() {
         </div>
       )}
 
-      {showPublishedModal && (
+      {showPublishedModal.show && (
         <div style={{
           position: 'fixed',
           bottom: '32px',
@@ -1108,24 +1270,30 @@ export function ChapterManagementPage() {
           animation: 'slideInUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
         }}>
           <div style={{ flexShrink: 0, marginTop: '2px' }}>
-             <svg viewBox="0 0 24 24" width="24" height="24" fill="#10B981">
+             <svg viewBox="0 0 24 24" width="24" height="24" fill={showPublishedModal.status === "Published" ? "#10B981" : "#6366f1"}>
                 <circle cx="12" cy="12" r="12" />
                 <path d="M17 8l-7 8-3-3" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
              </svg>
           </div>
           <div style={{ flexGrow: 1 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-              <strong style={{ color: '#ffffff', fontSize: '15px', fontWeight: '600' }}>New Chapter Published</strong>
-              <button onClick={() => setShowPublishedModal(false)} style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 0 }} aria-label="Close">
+              <strong style={{ color: '#ffffff', fontSize: '15px', fontWeight: '600' }}>
+                {showPublishedModal.status === "Published" ? "New Chapter Published" : "Draft Saved Successfully"}
+              </strong>
+              <button onClick={() => setShowPublishedModal({ show: false, status: null })} style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 0 }} aria-label="Close">
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             </div>
-            <p style={{ color: '#94A3B8', fontSize: '13px', margin: '0 0 16px 0', lineHeight: '1.4' }}>You have successfully published a new chapter</p>
+            <p style={{ color: '#94A3B8', fontSize: '13px', margin: '0 0 16px 0', lineHeight: '1.4' }}>
+              {showPublishedModal.status === "Published" 
+                ? "You have successfully published a new chapter" 
+                : "Your chapter has been saved as a draft"}
+            </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowPublishedModal(false)} style={{ background: 'none', border: 'none', color: '#ffffff', fontSize: '14px', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontWeight: '500' }}>
+              <button onClick={() => setShowPublishedModal({ show: false, status: null })} style={{ background: 'none', border: 'none', color: '#ffffff', fontSize: '14px', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontWeight: '500' }}>
                 Dismiss
               </button>
             </div>
@@ -1139,6 +1307,86 @@ export function ChapterManagementPage() {
         </div>
       )}
 
+      {deleteModal.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '32px',
+            width: '400px',
+            maxWidth: '90%',
+            textAlign: 'center',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+          }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              background: '#FEE2E2',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 24px'
+            }}>
+              <svg viewBox="0 0 24 24" width="32" height="32" stroke="#DC2626" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </div>
+            <h3 style={{ margin: '0 0 16px 0', color: '#1A202C', fontSize: '20px', fontWeight: '600' }}>
+              Are you sure you want to delete this {deleteModal.type}?
+            </h3>
+            <p style={{ margin: '0 0 32px 0', color: '#718096', fontSize: '14px', lineHeight: '1.5' }}>
+              You are about to permanently delete this item.<br/>
+              All associated content and data will be removed.
+            </p>
+            <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+              <button 
+                onClick={() => setDeleteModal({ show: false, type: null, targetId: null, chapterId: null })}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '100px',
+                  border: '1px solid #E2E8F0',
+                  background: 'white',
+                  color: '#4A5568',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  flex: 1
+                }}
+              >
+                No, Keep It
+              </button>
+              <button 
+                onClick={confirmDeleteAction}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '100px',
+                  border: 'none',
+                  background: '#E53E3E',
+                  color: 'white',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  flex: 1
+                }}
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
