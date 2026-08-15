@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ActivityChart } from "../charts/ActivityChart";
 import { DonutChart } from "../charts/DonutChart";
 
@@ -8,6 +8,15 @@ export function DashboardOverview() {
   const year = currentDate.getFullYear();
 
   const [timeRange, setTimeRange] = useState("weekly");
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    fetch("/api/dashboard/stats")
+      .then((res) => res.json())
+      .then((data) => setStats(data))
+      .catch((err) => console.error("Failed to fetch dashboard stats", err));
+  }, []);
+
 
   const activityData = {
     weekly: {
@@ -40,23 +49,23 @@ export function DashboardOverview() {
           <h2 className="satyatech-section-title">KEY METRICS</h2>
           <div className="satyatech-cards-row">
             <article className="satyatech-card st-metric-card">
-              <p className="st-card-label">Weekly Active Users</p>
-              <h3 className="st-card-value">3,482 user</h3>
+              <p className="st-card-label">Total Users</p>
+              <h3 className="st-card-value">{stats?.metrics?.totalUsers || 0} user</h3>
               <div className="st-card-meta">
                 <span className="st-chip st-chip-positive">+ 12%</span>
                 <span className="st-note">compared to last week</span>
               </div>
             </article>
             <article className="satyatech-card st-metric-card">
-              <p className="st-card-label">Returning Users</p>
-              <h3 className="st-card-value">1,284 users</h3>
+              <p className="st-card-label">Active Users</p>
+              <h3 className="st-card-value">{stats?.metrics?.activeUsers || 0} users</h3>
               <div className="st-card-meta">
                 <span className="st-note">Users who came back and continued their reading journey</span>
               </div>
             </article>
             <article className="satyatech-card st-metric-card">
-              <p className="st-card-label">Notes Created (Last 30 Days)</p>
-              <h3 className="st-card-value">1,204 notes</h3>
+              <p className="st-card-label">Total Notes Created</p>
+              <h3 className="st-card-value">{stats?.metrics?.totalNotes || 0} notes</h3>
               <div className="st-card-meta">
                 <span className="st-chip st-chip-positive">+ 148</span>
                 <span className="st-note">notes added this month</span>
@@ -185,14 +194,14 @@ export function DashboardOverview() {
           <h2 className="satyatech-section-title">NOTES & BOOKMARKS</h2>
           <div className="satyatech-cards-row">
             <article className="satyatech-card">
-              <p className="st-card-label st-purple-text">Notes Created (7 Days)</p>
-              <h4 className="st-card-subtitle" style={{ fontSize: '1.25rem', marginTop: '0.5rem', marginBottom: '0.25rem' }}>120 notes</h4>
-              <p className="st-card-detail" style={{ fontSize: '0.85rem' }}><strong>+34</strong> notes since last week</p>
+              <p className="st-card-label st-purple-text">Total Notes Created</p>
+              <h4 className="st-card-subtitle" style={{ fontSize: '1.25rem', marginTop: '0.5rem', marginBottom: '0.25rem' }}>{stats?.metrics?.totalNotes || 0} notes</h4>
+              <p className="st-card-detail" style={{ fontSize: '0.85rem' }}>Total user notes in the system</p>
             </article>
             <article className="satyatech-card">
-              <p className="st-card-label st-purple-text">Bookmarks Created (7 Days)</p>
-              <h4 className="st-card-subtitle" style={{ fontSize: '1.25rem', marginTop: '0.5rem', marginBottom: '0.25rem' }}>358 bookmarks</h4>
-              <p className="st-card-detail" style={{ fontSize: '0.85rem' }}><strong>+14</strong> bookmarks this week</p>
+              <p className="st-card-label st-purple-text">Total Bookmarks Created</p>
+              <h4 className="st-card-subtitle" style={{ fontSize: '1.25rem', marginTop: '0.5rem', marginBottom: '0.25rem' }}>{stats?.metrics?.totalBookmarks || 0} bookmarks</h4>
+              <p className="st-card-detail" style={{ fontSize: '0.85rem' }}>Total user bookmarks in the system</p>
             </article>
             <article className="satyatech-card">
               <p className="st-card-label st-purple-text">Most Tagged Category</p>
@@ -240,19 +249,19 @@ export function DashboardOverview() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '130px', background: 'linear-gradient(135deg, #ffffff 0%, #f2fcf6 100%)', border: '1px solid #e9d8f4', padding: '1.5rem', borderRadius: '16px' }}>
                   <p className="st-card-label" style={{ margin: 0, color: '#6b7280', fontWeight: '400', fontSize: '1rem', textTransform: 'none', letterSpacing: 'normal' }}>Total Discussion</p>
-                  <h3 className="st-card-value" style={{ fontSize: '2rem', margin: 0, color: '#111827', fontWeight: '700' }}>1024</h3>
+                  <h3 className="st-card-value" style={{ fontSize: '2rem', margin: 0, color: '#111827', fontWeight: '700' }}>{stats?.metrics?.totalDiscussions || 0}</h3>
                 </div>
                 <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '130px', background: 'linear-gradient(135deg, #ffffff 0%, #f2fcf6 100%)', border: '1px solid #e9d8f4', padding: '1.5rem', borderRadius: '16px' }}>
-                  <p className="st-card-label" style={{ margin: 0, color: '#6b7280', fontWeight: '400', fontSize: '1rem', textTransform: 'none', letterSpacing: 'normal' }}>Reported & Pending</p>
-                  <h3 className="st-card-value" style={{ fontSize: '2rem', margin: 0, color: '#111827', fontWeight: '700' }}>7 <span style={{ fontSize: '1rem', fontWeight: '500' }}>pending</span></h3>
+                  <p className="st-card-label" style={{ margin: 0, color: '#6b7280', fontWeight: '400', fontSize: '1rem', textTransform: 'none', letterSpacing: 'normal' }}>Total Chapters</p>
+                  <h3 className="st-card-value" style={{ fontSize: '2rem', margin: 0, color: '#111827', fontWeight: '700' }}>{stats?.metrics?.totalChapters || 0}</h3>
                 </div>
                 <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '130px', background: 'linear-gradient(135deg, #ffffff 0%, #f2fcf6 100%)', border: '1px solid #e9d8f4', padding: '1.5rem', borderRadius: '16px' }}>
-                  <p className="st-card-label" style={{ margin: 0, color: '#6b7280', fontWeight: '400', fontSize: '1rem', textTransform: 'none', letterSpacing: 'normal' }}>Hidden Message</p>
-                  <h3 className="st-card-value" style={{ fontSize: '2rem', margin: 0, color: '#111827', fontWeight: '700' }}>23</h3>
+                  <p className="st-card-label" style={{ margin: 0, color: '#6b7280', fontWeight: '400', fontSize: '1rem', textTransform: 'none', letterSpacing: 'normal' }}>Total Practices</p>
+                  <h3 className="st-card-value" style={{ fontSize: '2rem', margin: 0, color: '#111827', fontWeight: '700' }}>{stats?.metrics?.totalPractices || 0}</h3>
                 </div>
                 <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '130px', background: 'linear-gradient(135deg, #ffffff 0%, #f2fcf6 100%)', border: '1px solid #e9d8f4', padding: '1.5rem', borderRadius: '16px' }}>
                   <p className="st-card-label" style={{ margin: 0, color: '#6b7280', fontWeight: '400', fontSize: '1rem', textTransform: 'none', letterSpacing: 'normal' }}>Active Categories</p>
-                  <h3 className="st-card-value" style={{ fontSize: '2rem', margin: 0, color: '#111827', fontWeight: '700' }}>9</h3>
+                  <h3 className="st-card-value" style={{ fontSize: '2rem', margin: 0, color: '#111827', fontWeight: '700' }}>{stats?.metrics?.activeDiscussionCategories || 0}</h3>
                 </div>
               </div>
             </article>
@@ -367,13 +376,7 @@ export function DashboardOverview() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: '400px' }}>
-                  {[
-                    { name: 'Adam Coles', date: '20 Jan 2026', amount: '$998.20' },
-                    { name: 'Ashley Williams', date: '19 Jan 2026', amount: '$825.40' },
-                    { name: 'Barry Allen', date: '18 Jan 2026', amount: '$748.50' },
-                    { name: 'Bella Thorne', date: '17 Jan 2026', amount: '$624.10' },
-                    { name: 'Camila Cabello', date: '16 Jan 2026', amount: '$535.87' },
-                  ].map((item, index, arr) => (
+                  {(stats?.donations?.recentSupporters || []).length > 0 ? (stats?.donations?.recentSupporters).map((item, index, arr) => (
                     <div key={index} style={{
                       display: 'grid',
                       gridTemplateColumns: '2fr 1.5fr 1fr',
@@ -386,10 +389,12 @@ export function DashboardOverview() {
                         <img src={`https://ui-avatars.com/api/?name=${item.name.replace(' ', '+')}&background=random&color=fff&size=32`} alt={item.name} style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
                         <span style={{ fontSize: '0.9rem', fontWeight: '500', color: '#111827' }}>{item.name}</span>
                       </div>
-                      <span style={{ fontSize: '0.9rem', color: '#4b5563' }}>{item.date}</span>
-                      <span style={{ fontSize: '0.9rem', color: '#111827', textAlign: 'right' }}>{item.amount}</span>
+                      <span style={{ fontSize: '0.9rem', color: '#4b5563' }}>{new Date(item.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      <span style={{ fontSize: '0.9rem', color: '#111827', textAlign: 'right' }}>Rp {item.amount.toLocaleString('id-ID')}</span>
                     </div>
-                  ))}
+                  )) : (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>No donations yet</div>
+                  )}
                 </div>
               </div>
             </article>
@@ -400,20 +405,16 @@ export function DashboardOverview() {
               <p className="st-card-detail" style={{ marginBottom: '1.5rem', color: '#6b7280' }}>Ranked by total contribution</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {[
-                  { name: 'Adam Coles', amount: '$998.20' },
-                  { name: 'Ashley Williams', amount: '$825.40' },
-                  { name: 'Barry Allen', amount: '$748.50' },
-                  { name: 'Bella Thorne', amount: '$624.10' },
-                  { name: 'Camila Cabello', amount: '$535.87' },
-                ].map((item, index) => (
+                {(stats?.donations?.topSupporters || []).length > 0 ? (stats?.donations?.topSupporters).map((item, index) => (
                   <div key={index} style={{ display: 'flex', alignItems: 'center', background: '#f8f5fa', border: '1px solid #eae6f0', borderRadius: '16px', padding: '0.875rem 1.25rem' }}>
                     <span style={{ width: '36px', color: '#8e6d9b', fontWeight: '500', fontSize: '1.1rem' }}>{index + 1}</span>
                     <img src={`https://ui-avatars.com/api/?name=${item.name.replace(' ', '+')}&background=random&color=fff&size=36`} alt={item.name} style={{ width: '36px', height: '36px', borderRadius: '50%', marginRight: '1rem' }} />
                     <span style={{ flex: 1, fontSize: '0.95rem', fontWeight: '500', color: '#111827' }}>{item.name}</span>
-                    <span style={{ fontSize: '0.95rem', color: '#111827' }}>{item.amount}</span>
+                    <span style={{ fontSize: '0.95rem', color: '#111827' }}>Rp {item.amount.toLocaleString('id-ID')}</span>
                   </div>
-                ))}
+                )) : (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>No donations yet</div>
+                )}
               </div>
             </article>
           </div>

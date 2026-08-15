@@ -1,45 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-const initialPracticeRows = [
-  {
-    id: 1,
-    title: "Morning Breath Awareness",
-    goal: "Focus",
-    duration: "5-20 mins",
-    sessions: 5,
-    category: "Breathwork",
-    status: "Published",
-  },
-  {
-    id: 2,
-    title: "Deep Diaphragm Reset",
-    goal: "Clean mind",
-    duration: "10-20 mins",
-    sessions: 3,
-    category: "Meditation",
-    status: "Published",
-  },
-  {
-    id: 3,
-    title: "Evening Wind-Down Breath",
-    goal: "Sleep",
-    duration: "15-30 mins",
-    sessions: 2,
-    category: "Sleep",
-    status: "Drafted",
-  },
-  {
-    id: 4,
-    title: "Mindful Moments",
-    goal: "Mindfulness",
-    duration: "5-20 mins",
-    sessions: 5,
-    category: "Focus",
-    status: "Published",
-  },
-];
-
-const initialCategories = [];
 
 const practiceStepItems = [
   { id: 1, label: "Practice Info" },
@@ -73,7 +33,7 @@ export function PracticeManagementPage() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showCategorySuccessToast, setShowCategorySuccessToast] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState(null);
-  const [addedCategories, setAddedCategories] = useState(initialCategories);
+  const [addedCategories, setAddedCategories] = useState([]);
   const [expandedPracticeId, setExpandedPracticeId] = useState(null);
   const [practiceStep, setPracticeStep] = useState(1);
   const [practiceForm, setPracticeForm] = useState(initialPracticeForm);
