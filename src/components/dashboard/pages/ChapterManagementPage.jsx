@@ -206,10 +206,48 @@ export function ChapterManagementPage() {
       exerciseInstructions: "",
       exerciseRequired: false,
       sectionType: firstSection?.type || "Text",
-      mediaList: [],
+      mediaList: (firstSection?.contents || []).map((m, idx) => ({
+        id: m.id || Date.now() + idx,
+        originalId: m.id,
+        type: (m.type || "image").toLowerCase(),
+        name: m.title || "Existing Media",
+        title: m.title || "",
+        url: m.url || "",
+        isRequired: m.is_required !== undefined ? m.is_required : true,
+      })),
       thumbnailPreview: chapter.thumbnail || "",
     });
     setChapterStep(1);
+    setIsDrawerOpen(true);
+  };
+
+  const handleEditSection = (chapter, section) => {
+    setEditingChapter(chapter);
+    setChapterForm({
+      title: chapter.title || "",
+      description: chapter.summary || "",
+      thumbnailName: chapter.thumbnail ? "existing-thumbnail.jpg" : "",
+      sectionId: section.id || null,
+      sectionName: section.title || "",
+      sectionCaption: section.description || "",
+      sectionContent: section.content || "",
+      exerciseTitle: "",
+      exerciseDuration: "2 Minutes",
+      exerciseInstructions: "",
+      exerciseRequired: false,
+      sectionType: section.type || "Text",
+      mediaList: (section.contents || []).map((m, idx) => ({
+        id: m.id || Date.now() + idx,
+        originalId: m.id,
+        type: (m.type || "image").toLowerCase(),
+        name: m.title || "Existing Media",
+        title: m.title || "",
+        url: m.url || "",
+        isRequired: m.is_required !== undefined ? m.is_required : true,
+      })),
+      thumbnailPreview: chapter.thumbnail || "",
+    });
+    setChapterStep(2);
     setIsDrawerOpen(true);
   };
 
@@ -297,11 +335,15 @@ export function ChapterManagementPage() {
         e.target.value = null;
         return;
       }
-      const url = URL.createObjectURL(file);
-      setChapterForm(f => ({
-        ...f,
-        mediaList: [...f.mediaList, { id: Date.now(), type, name: file.name, url, file }]
-      }));
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64Url = event.target.result;
+        setChapterForm(f => ({
+          ...f,
+          mediaList: [...f.mediaList, { id: Date.now(), type, name: file.name, url: base64Url, file }]
+        }));
+      };
+      reader.readAsDataURL(file);
     }
     e.target.value = null; // Reset
   };
@@ -309,9 +351,6 @@ export function ChapterManagementPage() {
   const removeMedia = (id) => {
     setChapterForm(f => {
       const updatedMedia = f.mediaList.filter(m => m.id !== id);
-      // Clean up object URLs
-      const removed = f.mediaList.find(m => m.id === id);
-      if (removed && removed.url) URL.revokeObjectURL(removed.url);
       return { ...f, mediaList: updatedMedia };
     });
   };
@@ -366,6 +405,13 @@ export function ChapterManagementPage() {
               description: chapterForm.sectionCaption.trim(),
               content: latestContent,
               type: chapterForm.sectionType,
+              contents: chapterForm.mediaList.map(m => ({
+                id: m.originalId || null,
+                title: m.title || "",
+                type: m.type,
+                url: m.url || "", // This should be base64 if newly uploaded!
+                is_required: m.isRequired
+              })),
             },
           ];
         }
@@ -419,6 +465,12 @@ export function ChapterManagementPage() {
             description: chapterForm.sectionCaption.trim(),
             content: latestContent,
             type: chapterForm.sectionType,
+            contents: chapterForm.mediaList.map(m => ({
+              title: m.title || "",
+              type: m.type,
+              url: m.url || "", // This should be base64 if newly uploaded
+              is_required: m.isRequired
+            })),
           },
         ],
       };
@@ -737,7 +789,7 @@ export function ChapterManagementPage() {
                             </span>
 
                             <div className="section-actions" style={{ display: 'flex', gap: '8px' }}>
-                              <button type="button" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #E2E8F0', borderRadius: '50%', background: '#FFF', color: '#718096', cursor: 'pointer' }} aria-label="Edit section">
+                              <button type="button" onClick={() => handleEditSection(chapter, sec)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #E2E8F0', borderRadius: '50%', background: '#FFF', color: '#718096', cursor: 'pointer' }} aria-label="Edit section">
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                               </button>
                               <button type="button" onClick={() => openDeleteSectionModal(chapter, sec.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #E2E8F0', borderRadius: '50%', background: '#FFF', color: '#E53E3E', cursor: 'pointer' }} aria-label="Delete section">
