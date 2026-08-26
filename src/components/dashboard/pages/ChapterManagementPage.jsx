@@ -1240,6 +1240,29 @@ export function ChapterManagementPage() {
                         dangerouslySetInnerHTML={{ __html: chapterForm.sectionContent || "-" }}
                       />
                     </div>
+
+                    {chapterForm.mediaList && chapterForm.mediaList.length > 0 && (
+                      <div style={{ marginBottom: '16px' }}>
+                        <span style={{ display: 'block', fontSize: '13px', color: '#718096', marginBottom: '8px' }}>Attached Media ({chapterForm.mediaList.length})</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {chapterForm.mediaList.map((media, idx) => (
+                            <div key={idx} style={{ padding: '12px', background: '#F7FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              {media.type === 'image' && media.url ? (
+                                <img src={media.url} alt={media.title || 'Media preview'} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
+                              ) : (
+                                <div style={{ width: '60px', height: '60px', background: '#EDF2F7', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A0AEC0' }}>
+                                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line></svg>
+                                </div>
+                              )}
+                              <div>
+                                <strong style={{ display: 'block', fontSize: '14px', color: '#2D3748' }}>{media.title || `Media ${idx + 1}`}</strong>
+                                <span style={{ fontSize: '12px', color: '#718096', textTransform: 'capitalize' }}>{media.type} Block {media.isRequired ? '(Required)' : ''}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

@@ -1,5 +1,5 @@
 const LOCAL_API_BASE_URL = import.meta.env.VITE_LOCAL_API_BASE_URL || "http://localhost:3001";
-const SERVER_API_BASE_URL = import.meta.env.VITE_SERVER_API_BASE_URL || "http://187.124.129.55";
+const SERVER_API_BASE_URL = import.meta.env.VITE_SERVER_API_BASE_URL || "https://satyatech.org";
 const USERS_API_PATH = import.meta.env.VITE_USERS_API_PATH || "/api/users";
 const CHAPTERS_API_PATH = import.meta.env.VITE_CHAPTERS_API_PATH || "/api/chapters";
 const ROLES_API_PATH = import.meta.env.VITE_ROLES_API_PATH || "/api/roles";

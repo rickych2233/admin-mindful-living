@@ -25,6 +25,7 @@ export function normalizeSection(item) {
     title: item.title || item.name || "-",
     description: item.description || "",
     content: item.content || "",
+    contents: Array.isArray(item.contents) ? item.contents : [],
     type,
     status,
     createdAt: item.createdAt || item.created_at || null,
