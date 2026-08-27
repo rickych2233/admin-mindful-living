@@ -264,7 +264,7 @@ export function useChaptersCollection() {
         for (const endpoint of CHAPTERS_API_FALLBACKS) {
           try {
             console.debug("[chapters] fetching endpoint:", endpoint);
-            const response = await fetch(endpoint, { signal: controller.signal });
+            const response = await fetch(endpoint, { signal: controller.signal, cache: "no-store" });
             console.debug("[chapters] response status:", response.status, "ok:", response.ok, "url:", response.url);
             if (!response.ok) {
               throw new Error(`HTTP ${response.status}`);

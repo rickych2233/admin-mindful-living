@@ -39,7 +39,7 @@ export async function fetchSectionsByChapter(chapterId) {
 
   for (const endpoint of endpoints) {
     try {
-      const response = await fetch(endpoint);
+      const response = await fetch(endpoint, { cache: "no-store" });
       const data = await parseJsonSafely(response);
 
       if (!response.ok) {
@@ -130,6 +130,38 @@ export async function toggleSectionStatus(chapterId, sectionId) {
     try {
       const response = await fetch(endpoint, { method: "PATCH" });
       const data = await parseJsonSafely(response);
+
+      if (!response.ok) {
+        lastError = `${response.status} ${data?.message || "Error"}`;
+        continue;
+      }
+
+      return data;
+    } catch (error) {
+      lastError = error.message || "Network error";
+    }
+  }
+
+  throw new Error(lastError);
+}
+
+export async function reorderSections(chapterId, sectionIds) {
+  const endpoints = getSectionsApiFallbacks(chapterId).map(
+    (ep) => `${ep}/reorder`
+  );
+
+  let lastError = "Gagal mengubah urutan section";
+  console.log("Sending reorder request to endpoints:", endpoints, "with sectionIds:", sectionIds);
+
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sectionIds }),
+      });
+      const data = await parseJsonSafely(response);
+      console.log("Reorder response from", endpoint, ":", response.status, data);
 
       if (!response.ok) {
         lastError = `${response.status} ${data?.message || "Error"}`;

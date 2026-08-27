@@ -38,6 +38,7 @@ function SidebarNavClean({
   onClose = () => {},
   onSelectItem = () => {},
   onLogout = () => {},
+  onProfileClick = () => {},
   userProfile = {
     name: "Adrian Halim",
     email: "adrianhalim@email.com",
@@ -78,7 +79,7 @@ function SidebarNavClean({
           </div>
 
           {/* User profile section */}
-          <div className="sidebar-profile">
+          <div className="sidebar-profile" onClick={onProfileClick} style={{ cursor: "pointer" }} role="button" tabIndex={0}>
             <div className="profile-avatar" aria-hidden="true">
               {userProfile.avatar ? (
                 <img src={userProfile.avatar} alt="" />

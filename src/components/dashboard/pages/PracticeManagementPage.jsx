@@ -46,8 +46,11 @@ export function PracticeManagementPage() {
   const [isCategoryDeleteModalOpen, setIsCategoryDeleteModalOpen] = useState(false);
   const [deletingCategory, setDeletingCategory] = useState(null);
   const [draggedPracticeIndex, setDraggedPracticeIndex] = useState(null);
-  const [draggedCategoryIndex, setDraggedCategoryIndex] = useState(null);
+  const [dragOverPracticeIndex, setDragOverPracticeIndex] = useState(null);
   const [draggedSessionData, setDraggedSessionData] = useState(null);
+  const [dragOverSessionData, setDragOverSessionData] = useState(null);
+  const [draggedCategoryIndex, setDraggedCategoryIndex] = useState(null);
+  const [dragOverCategoryIndex, setDragOverCategoryIndex] = useState(null);
   const [editingPractice, setEditingPractice] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [chapters, setChapters] = useState([]);
@@ -385,7 +388,16 @@ export function PracticeManagementPage() {
 
   const handlePracticeDragOver = (e, index) => {
     e.preventDefault();
+    if (draggedPracticeIndex !== null && draggedPracticeIndex !== index) {
+      setDragOverPracticeIndex(index);
+    }
     e.dataTransfer.dropEffect = "move";
+  };
+
+  const handlePracticeDragLeave = (e, index) => {
+    if (dragOverPracticeIndex === index) {
+      setDragOverPracticeIndex(null);
+    }
   };
 
   const handlePracticeDrop = async (e, targetIndex) => {
@@ -398,6 +410,7 @@ export function PracticeManagementPage() {
     
     setPracticeRows(newRows);
     setDraggedPracticeIndex(null);
+    setDragOverPracticeIndex(null);
 
     try {
       const practiceIds = newRows.map(p => p.id);
@@ -418,6 +431,20 @@ export function PracticeManagementPage() {
     e.dataTransfer.effectAllowed = "move";
   };
 
+  const handleCategoryDragOver = (e, index) => {
+    e.preventDefault();
+    if (draggedCategoryIndex !== null && draggedCategoryIndex !== index) {
+      setDragOverCategoryIndex(index);
+    }
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleCategoryDragLeave = (e, index) => {
+    if (dragOverCategoryIndex === index) {
+      setDragOverCategoryIndex(null);
+    }
+  };
+
   const handleCategoryDrop = async (e, targetIndex) => {
     e.preventDefault();
     if (draggedCategoryIndex === null || draggedCategoryIndex === targetIndex) return;
@@ -429,6 +456,7 @@ export function PracticeManagementPage() {
     // Optimistic UI update
     setAddedCategories(newRows);
     setDraggedCategoryIndex(null);
+    setDragOverCategoryIndex(null);
 
     try {
       const categoryIds = newRows.map(c => c.id).filter(id => typeof id === 'number');
@@ -445,19 +473,32 @@ export function PracticeManagementPage() {
   };
 
   const handleSessionDragStart = (e, practiceId, sessionIndex) => {
+    e.stopPropagation();
     setDraggedSessionData({ practiceId, sessionIndex });
     e.dataTransfer.effectAllowed = "move";
   };
 
   const handleSessionDragOver = (e, practiceId, sessionIndex) => {
     e.preventDefault();
+    e.stopPropagation();
     if (draggedSessionData?.practiceId === practiceId) {
+      if (draggedSessionData.sessionIndex !== sessionIndex) {
+        setDragOverSessionData({ practiceId, sessionIndex });
+      }
       e.dataTransfer.dropEffect = "move";
+    }
+  };
+
+  const handleSessionDragLeave = (e, practiceId, sessionIndex) => {
+    e.stopPropagation();
+    if (dragOverSessionData?.practiceId === practiceId && dragOverSessionData?.sessionIndex === sessionIndex) {
+      setDragOverSessionData(null);
     }
   };
 
   const handleSessionDrop = async (e, practiceId, targetIndex) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!draggedSessionData || draggedSessionData.practiceId !== practiceId || draggedSessionData.sessionIndex === targetIndex) {
       return;
     }
@@ -473,6 +514,7 @@ export function PracticeManagementPage() {
       current.map(p => p.id === practiceId ? { ...p, sessions: newSessions } : p)
     );
     setDraggedSessionData(null);
+    setDragOverSessionData(null);
 
     try {
       await fetch(`/api/practices/${practiceId}`, {
@@ -482,7 +524,6 @@ export function PracticeManagementPage() {
       });
     } catch (error) {
       console.error("Failed to reorder sessions:", error);
-      fetchPractices(); // revert
     }
   };
 
@@ -632,10 +673,16 @@ export function PracticeManagementPage() {
         }
       }
 
+      const existingSession = (isEditMode && editingSessionIndex !== null) 
+        ? editingPractice.sessions[editingSessionIndex] 
+        : null;
+
       const sessionPayload = {
+        ...(existingSession || {}),
         title: practiceForm.sessionTitle.trim(),
         type: practiceForm.sessionType.trim(),
-        contentFileName: finalContentFileName
+        contentFileName: finalContentFileName,
+        status: finalStatus
       };
       
       let finalSessionsData = [sessionPayload];
@@ -868,8 +915,14 @@ export function PracticeManagementPage() {
                   draggable={isDragAndDropEnabled}
                   onDragStart={(e) => isDragAndDropEnabled && handlePracticeDragStart(e, actualIndex)}
                   onDragOver={(e) => isDragAndDropEnabled && handlePracticeDragOver(e, actualIndex)}
+                  onDragLeave={(e) => isDragAndDropEnabled && handlePracticeDragLeave(e, actualIndex)}
                   onDrop={(e) => isDragAndDropEnabled && handlePracticeDrop(e, actualIndex)}
-                  style={{ opacity: draggedPracticeIndex === actualIndex ? 0.5 : 1 }}
+                  style={{ 
+                    opacity: draggedPracticeIndex === actualIndex ? 0.5 : 1,
+                    borderTop: dragOverPracticeIndex === actualIndex && actualIndex < draggedPracticeIndex ? '3px solid #795289' : undefined,
+                    borderBottom: dragOverPracticeIndex === actualIndex && actualIndex > draggedPracticeIndex ? '3px solid #795289' : undefined,
+                    transition: 'border 0.2s ease-in-out'
+                  }}
                 >
                   <div className="chapter-order-cell">
                     <button type="button" className="chapter-drag-btn" aria-label={`Move ${practice.title}`} style={{ cursor: isDragAndDropEnabled ? 'grab' : 'not-allowed', pointerEvents: isDragAndDropEnabled ? 'auto' : 'none' }}>
@@ -964,12 +1017,19 @@ export function PracticeManagementPage() {
                     {Array.isArray(practice.sessions) && practice.sessions.map((session, idx) => (
                       <div 
                         key={idx} 
-                        className="section-container" 
-                        style={{ marginBottom: "12px", border: "1px solid #E5E7EB", borderRadius: "12px", padding: "12px 16px", opacity: draggedSessionData?.practiceId === practice.id && draggedSessionData?.sessionIndex === idx ? 0.5 : 1 }}
+                        className="section-container"
                         draggable={true}
                         onDragStart={(e) => handleSessionDragStart(e, practice.id, idx)}
                         onDragOver={(e) => handleSessionDragOver(e, practice.id, idx)}
+                        onDragLeave={(e) => handleSessionDragLeave(e, practice.id, idx)}
                         onDrop={(e) => handleSessionDrop(e, practice.id, idx)}
+                        style={{ 
+                          marginBottom: "12px", border: "1px solid #E5E7EB", borderRadius: "12px", padding: "12px 16px", 
+                          opacity: draggedSessionData?.practiceId === practice.id && draggedSessionData?.sessionIndex === idx ? 0.5 : 1,
+                          borderTop: dragOverSessionData?.practiceId === practice.id && dragOverSessionData?.sessionIndex === idx && idx < draggedSessionData?.sessionIndex ? '3px solid #795289' : '1px solid #E5E7EB',
+                          borderBottom: dragOverSessionData?.practiceId === practice.id && dragOverSessionData?.sessionIndex === idx && idx > draggedSessionData?.sessionIndex ? '3px solid #795289' : '1px solid #E5E7EB',
+                          transition: 'border 0.2s ease-in-out'
+                        }}
                       >
                         <div className="section-row" style={{ display: "grid", gridTemplateColumns: "auto 1fr auto auto auto", alignItems: "center", gap: "16px" }}>
                           <div className="section-drag" style={{ color: "#A0AEC0", cursor: "grab" }}>
@@ -1079,11 +1139,14 @@ export function PracticeManagementPage() {
                 className="practice-category-row"
                 draggable
                 onDragStart={(e) => handleCategoryDragStart(e, index)}
-                onDragOver={(e) => e.preventDefault()}
+                onDragOver={(e) => handleCategoryDragOver(e, index)}
+                onDragLeave={(e) => handleCategoryDragLeave(e, index)}
                 onDrop={(e) => handleCategoryDrop(e, index)}
-                style={{
+                style={{ 
                   opacity: draggedCategoryIndex === index ? 0.5 : 1,
-                  transition: "all 0.2s ease"
+                  borderTop: dragOverCategoryIndex === index && index < draggedCategoryIndex ? '3px solid #795289' : undefined,
+                  borderBottom: dragOverCategoryIndex === index && index > draggedCategoryIndex ? '3px solid #795289' : undefined,
+                  transition: 'border 0.2s ease-in-out'
                 }}
               >
                 <div className="chapter-order-cell">
@@ -1459,7 +1522,32 @@ export function PracticeManagementPage() {
                   <div className="chapter-review-block">
                     <span>First Session</span>
                     <strong>{practiceForm.sessionTitle || "-"}</strong>
-                    <p>{practiceForm.sessionDescription || "-"}</p>
+                    <p style={{ marginBottom: "12px" }}>{practiceForm.sessionType} - {practiceForm.sessionContentFileName || "No file uploaded"}</p>
+                    {(() => {
+                      const mediaSrc = practiceForm.sessionContentFileObj
+                        ? URL.createObjectURL(practiceForm.sessionContentFileObj)
+                        : practiceForm.sessionContentFileName?.startsWith('http')
+                          ? practiceForm.sessionContentFileName
+                          : practiceForm.sessionContentFileName
+                            ? `/uploads/${practiceForm.sessionContentFileName}`
+                            : null;
+
+                      if (!mediaSrc) return null;
+
+                      return practiceForm.sessionType === "Video" ? (
+                        <video 
+                          controls 
+                          src={mediaSrc} 
+                          style={{ width: '100%', maxHeight: '240px', borderRadius: '8px', background: '#000', marginTop: '8px' }} 
+                        />
+                      ) : practiceForm.sessionType === "Audio" ? (
+                        <audio 
+                          controls 
+                          src={mediaSrc} 
+                          style={{ width: '100%', marginTop: '8px' }} 
+                        />
+                      ) : null;
+                    })()}
                   </div>
                 </div>
               )}

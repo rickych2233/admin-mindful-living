@@ -29,6 +29,7 @@ function SidebarNav({
   onClose = () => { },
   onSelectItem = () => { },
   onLogout = () => { },
+  onProfileClick = () => { },
 }) {
   return (
     <div className={`sidebar-wrapper${isOpen ? " is-open" : ""}`}>
@@ -51,7 +52,7 @@ function SidebarNav({
             </button>
           </div>
 
-          <div className="profile-row">
+          <div className="profile-row" onClick={onProfileClick} style={{ cursor: "pointer" }} role="button" tabIndex={0}>
             <div className="avatar-icon-img" aria-hidden="true" style={{ padding: 0, overflow: 'hidden', background: '#9C62FF' }}>
               <img src="https://i.pravatar.cc/150?img=11" alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>

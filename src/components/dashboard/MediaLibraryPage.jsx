@@ -278,10 +278,25 @@ function MediaLibraryPage() {
       const response = await fetch("/api/media");
       if (response.ok) {
         const data = await response.json();
-        const normalized = data.map((m) => ({
-          ...m,
-          dateAdded: m.date_added,
-        }));
+        const normalized = data.map((m) => {
+          let thumb = m.thumbnail;
+          if (thumb && typeof thumb === 'object') {
+             thumb = thumb.preview || null;
+          } else if (typeof thumb === 'string' && thumb.startsWith('"') && thumb.endsWith('"')) {
+             thumb = thumb.slice(1, -1);
+          }
+          let finalDate = m.date_added;
+          if (!finalDate && m.created_at) {
+            const d = new Date(m.created_at);
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            finalDate = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+          }
+          return {
+            ...m,
+            thumbnail: thumb,
+            dateAdded: finalDate,
+          };
+        });
         setMediaFiles(normalized);
       }
     } catch (error) {
@@ -516,7 +531,7 @@ function MediaLibraryPage() {
                     background: media.color === "red" ? "#FEE2E2" : media.color === "cyan" ? "#CFFAFE" : "",
                     color: media.color === "red" ? "#EF4444" : media.color === "cyan" ? "#06B6D4" : "",
                     border: "none",
-                    backgroundImage: !media.color && media.id < 5 ? "url('https://images.unsplash.com/photo-1528716321680-815a8cdb8cbe?w=100&q=80')" : media.id >= 5 && !media.color ? "url('https://images.unsplash.com/photo-1528716321680-815a8cdb8cbe?w=100&q=80')" : "none",
+                    backgroundImage: (media.thumbnail && typeof media.thumbnail === 'string' && (media.thumbnail.startsWith('data:') || media.thumbnail.startsWith('http'))) ? `url('${media.thumbnail}')` : (!media.color && media.id < 5 ? "url('https://images.unsplash.com/photo-1528716321680-815a8cdb8cbe?w=100&q=80')" : (media.id >= 5 && !media.color ? "url('https://images.unsplash.com/photo-1528716321680-815a8cdb8cbe?w=100&q=80')" : "none")),
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                   }}
@@ -667,10 +682,10 @@ function MediaLibraryPage() {
                    <div className="content-thumbnail-block">
                      <span className="content-label">Content Thumbnail</span>
                      <div className="content-file-card">
-                       <img src="https://images.unsplash.com/photo-1528716321680-815a8cdb8cbe?w=100&q=80" alt="Thumb" />
+                       <img src={(selectedMedia.thumbnail && typeof selectedMedia.thumbnail === 'string' && (selectedMedia.thumbnail.startsWith('data:') || selectedMedia.thumbnail.startsWith('http'))) ? selectedMedia.thumbnail : "https://images.unsplash.com/photo-1528716321680-815a8cdb8cbe?w=100&q=80"} alt="Thumb" style={{ objectFit: 'cover' }} />
                        <div>
-                         <strong>descartes'_error.jpg</strong>
-                         <span>59.7 KB</span>
+                         <strong>{selectedMedia.thumbnail ? "thumbnail.jpg" : "no-thumbnail.jpg"}</strong>
+                         <span>-</span>
                        </div>
                      </div>
                    </div>
@@ -719,7 +734,7 @@ function MediaLibraryPage() {
               ) : (
                 <>
                   {selectedMedia.format === "MP4" || selectedMedia.format === "MOV" || selectedMedia.format === "Video" ? (
-                    <div className="media-video-preview" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1528716321680-815a8cdb8cbe?w=600&q=80')" }}>
+                    <div className="media-video-preview" style={{ backgroundImage: (selectedMedia.thumbnail && typeof selectedMedia.thumbnail === 'string' && (selectedMedia.thumbnail.startsWith('data:') || selectedMedia.thumbnail.startsWith('http'))) ? `url('${selectedMedia.thumbnail}')` : "url('https://images.unsplash.com/photo-1528716321680-815a8cdb8cbe?w=600&q=80')" }}>
                        <div className="play-icon-circle">
                          <PlayCircleIcon />
                        </div>
@@ -925,82 +940,84 @@ function MediaLibraryPage() {
                   </div>
                 )}
 
-                <div className="chapter-form-field">
-                  <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Content Thumbnail <span style={{color: '#EF4444'}}>*</span></label>
-                  {selectedThumbnail ? (
-                    <div className="thumbnail-upload-box">
-                      <div className="thumbnail-upload-left">
-                        <img src={selectedThumbnail.preview} alt="Thumbnail" />
-                        <div className="thumbnail-upload-info">
-                          <strong>{selectedThumbnail.name}</strong>
-                          <span>{selectedThumbnail.size}</span>
+                {mediaForm.status === "Published" && (
+                  <div className="chapter-form-field">
+                    <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Content Thumbnail <span style={{color: '#EF4444'}}>*</span></label>
+                    {selectedThumbnail ? (
+                      <div className="thumbnail-upload-box">
+                        <div className="thumbnail-upload-left">
+                          <img src={typeof selectedThumbnail === 'string' ? selectedThumbnail : selectedThumbnail.preview} alt="Thumbnail" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8 }} />
+                          <div className="thumbnail-upload-info">
+                            <strong>{typeof selectedThumbnail === 'string' ? "existing-thumbnail.jpg" : selectedThumbnail.name}</strong>
+                            <span>{typeof selectedThumbnail === 'string' ? "..." : selectedThumbnail.size}</span>
+                          </div>
                         </div>
+                        <button type="button" className="thumbnail-delete-btn" onClick={() => setSelectedThumbnail(null)}>
+                          <TrashIcon />
+                        </button>
                       </div>
-                      <button type="button" className="thumbnail-delete-btn" onClick={() => setSelectedThumbnail(null)}>
-                        <TrashIcon />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="drag-drop-box" onClick={() => thumbnailInputRef.current?.click()}>
-                      <input type="file" ref={thumbnailInputRef} style={{ display: 'none' }} accept="image/png, image/jpeg" onChange={(e) => {
-                        if (e.target.files?.[0]) {
-                          const file = e.target.files[0];
-                          if (file.size > 2 * 1024 * 1024) {
-                            alert("File size exceeds 2MB. Please upload a smaller file.");
-                            e.target.value = null;
-                            return;
-                          }
-                          
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            const img = new Image();
-                            img.onload = () => {
-                              const canvas = document.createElement("canvas");
-                              let width = img.width;
-                              let height = img.height;
-                              
-                              const MAX_WIDTH = 800;
-                              const MAX_HEIGHT = 800;
-                              
-                              if (width > height) {
-                                if (width > MAX_WIDTH) {
-                                  height = Math.round((height *= MAX_WIDTH / width));
-                                  width = MAX_WIDTH;
+                    ) : (
+                      <div className="drag-drop-box" onClick={() => thumbnailInputRef.current?.click()}>
+                        <input type="file" ref={thumbnailInputRef} style={{ display: 'none' }} accept="image/png, image/jpeg" onChange={(e) => {
+                          if (e.target.files?.[0]) {
+                            const file = e.target.files[0];
+                            if (file.size > 2 * 1024 * 1024) {
+                              alert("File size exceeds 2MB. Please upload a smaller file.");
+                              e.target.value = null;
+                              return;
+                            }
+                            
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const img = new Image();
+                              img.onload = () => {
+                                const canvas = document.createElement("canvas");
+                                let width = img.width;
+                                let height = img.height;
+                                
+                                const MAX_WIDTH = 800;
+                                const MAX_HEIGHT = 800;
+                                
+                                if (width > height) {
+                                  if (width > MAX_WIDTH) {
+                                    height = Math.round((height *= MAX_WIDTH / width));
+                                    width = MAX_WIDTH;
+                                  }
+                                } else {
+                                  if (height > MAX_HEIGHT) {
+                                    width = Math.round((width *= MAX_HEIGHT / height));
+                                    height = MAX_HEIGHT;
+                                  }
                                 }
-                              } else {
-                                if (height > MAX_HEIGHT) {
-                                  width = Math.round((width *= MAX_HEIGHT / height));
-                                  height = MAX_HEIGHT;
-                                }
-                              }
-                              
-                              canvas.width = width;
-                              canvas.height = height;
-                              
-                              const ctx = canvas.getContext("2d");
-                              ctx.drawImage(img, 0, 0, width, height);
-                              
-                              const resizedBase64 = canvas.toDataURL("image/jpeg", 0.8);
-                              
-                              setSelectedThumbnail({
-                                name: file.name,
-                                size: (file.size / 1024).toFixed(1) + ' KB',
-                                preview: resizedBase64
-                              });
+                                
+                                canvas.width = width;
+                                canvas.height = height;
+                                
+                                const ctx = canvas.getContext("2d");
+                                ctx.drawImage(img, 0, 0, width, height);
+                                
+                                const resizedBase64 = canvas.toDataURL("image/jpeg", 0.8);
+                                
+                                setSelectedThumbnail({
+                                  name: file.name,
+                                  size: (file.size / 1024).toFixed(1) + ' KB',
+                                  preview: resizedBase64
+                                });
+                              };
+                              img.src = event.target.result;
                             };
-                            img.src = event.target.result;
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }} />
-                      <div className="drag-drop-icon">
-                        <ImageIcon />
+                            reader.readAsDataURL(file);
+                          }
+                        }} />
+                        <div className="drag-drop-icon">
+                          {(mediaForm.category === "Audio" || mediaForm.category === "Music") ? <MusicIcon /> : <ImageIcon />}
+                        </div>
+                        <div className="drag-drop-text">Drag &amp; Drop or <strong>Choose File</strong> to Upload</div>
+                        <div className="drag-drop-subtext">Supported file: PNG, JPG&nbsp;&nbsp;&nbsp;Max. size: 2 MB</div>
                       </div>
-                      <div className="drag-drop-text">Drag &amp; Drop or <strong>Choose File</strong> to Upload</div>
-                      <div className="drag-drop-subtext">Supported file: PNG, JPG&nbsp;&nbsp;&nbsp;Max. size: 2 MB</div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
               </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -1114,7 +1131,7 @@ function MediaLibraryPage() {
                       await fetch(editingMediaId ? `/api/media/${editingMediaId}` : "/api/media", {
                         method: editingMediaId ? "PUT" : "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ ...mediaForm, thumbnail: selectedThumbnail, contentFile: selectedMediaFile }),
+                        body: JSON.stringify({ ...mediaForm, thumbnail: typeof selectedThumbnail === 'string' ? selectedThumbnail : (selectedThumbnail?.preview || null), contentFile: selectedMediaFile }),
                       });
                       if (typeof fetchMediaFiles === "function") {
                         await fetchMediaFiles();

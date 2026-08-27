@@ -16,12 +16,14 @@ import { PlaceholderPage } from "./pages/PlaceholderPage";
 
 import { dashboardSegmentByItemId } from "./data/constants";
 import { LogoutModal } from "./LogoutModal";
+import { UserProfileModal } from "./UserProfileModal";
 
 function DashboardPage({ onLogout = () => {} }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const pathAfterDashboard = location.pathname.replace(/^\/dashboard\/?/, "");
   const activeSegment = pathAfterDashboard.split("/")[0];
   const activeItem = sidebarMainItems.find((item) => dashboardSegmentByItemId[item.id] === activeSegment)?.id ?? "dashboard";
@@ -57,12 +59,23 @@ function DashboardPage({ onLogout = () => {} }) {
         onClose={() => setIsSidebarOpen(false)}
         onSelectItem={handleSelectItem}
         onLogout={() => setIsLogoutModalOpen(true)}
+        onProfileClick={() => setIsProfileModalOpen(true)}
       />
 
       <LogoutModal
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
         onConfirm={onLogout}
+      />
+
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        userProfile={{
+          name: "Adrian Halim",
+          email: "adrianhalim@email.com",
+          avatar: "https://i.pravatar.cc/150?img=11"
+        }}
       />
 
       <div className="dashboard-main">

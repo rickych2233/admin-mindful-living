@@ -6,12 +6,14 @@ import React, { useState, useEffect } from "react";
 import SidebarNavClean from "./SidebarNavClean";
 import ThemeSwitcher from "./ThemeSwitcher";
 import { initializeTheme } from "../../styles/themes";
+import { UserProfileModal } from "./UserProfileModal";
 import "./DashboardClean.css";
 
 function DashboardClean() {
   const [activeItem, setActiveItem] = useState("dashboard");
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState("default");
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Initialize theme on mount
   useEffect(() => {
@@ -43,10 +45,21 @@ function DashboardClean() {
         onClose={() => setSidebarOpen(false)}
         onSelectItem={handleSelectItem}
         onLogout={handleLogout}
+        onProfileClick={() => setIsProfileModalOpen(true)}
         userProfile={{
           name: "Adrian Halim",
           email: "adrianhalim@email.com",
           avatar: null, // Add avatar URL if available
+        }}
+      />
+
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        userProfile={{
+          name: "Adrian Halim",
+          email: "adrianhalim@email.com",
+          avatar: null
         }}
       />
 

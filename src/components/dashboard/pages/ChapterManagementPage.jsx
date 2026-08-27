@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useChaptersCollection, createChapter, updateChapter, deleteChapter, toggleChapterStatus, reorderChapters } from "../utils/chapterUtils";
-import { fetchSectionsByChapter, createSection, deleteSection, toggleSectionStatus, normalizeSection } from "../utils/sectionUtils";
+import { fetchSectionsByChapter, createSection, deleteSection, toggleSectionStatus, normalizeSection, reorderSections } from "../utils/sectionUtils";
 
 const chapterStepItems = [
   { id: 1, label: "Chapter Info" },
@@ -44,6 +44,9 @@ export function ChapterManagementPage() {
   const [activeLanguageTab, setActiveLanguageTab] = useState("English 🇬🇧");
   const [showPublishedModal, setShowPublishedModal] = useState({ show: false, status: null });
   const [draggedChapterIndex, setDraggedChapterIndex] = useState(null);
+  const [dragOverChapterIndex, setDragOverChapterIndex] = useState(null);
+  const [draggedSectionData, setDraggedSectionData] = useState(null);
+  const [dragOverSectionData, setDragOverSectionData] = useState(null);
   const [deleteModal, setDeleteModal] = useState({ show: false, type: null, targetId: null, chapterId: null });
 
   const handleDragStart = (e, index) => {
@@ -53,7 +56,16 @@ export function ChapterManagementPage() {
 
   const handleDragOver = (e, index) => {
     e.preventDefault();
+    if (draggedChapterIndex !== null && draggedChapterIndex !== index) {
+      setDragOverChapterIndex(index);
+    }
     e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDragLeave = (e, index) => {
+    if (dragOverChapterIndex === index) {
+      setDragOverChapterIndex(null);
+    }
   };
 
   const handleDrop = async (e, targetIndex) => {
@@ -64,8 +76,10 @@ export function ChapterManagementPage() {
     const draggedItem = newRows.splice(draggedChapterIndex, 1)[0];
     newRows.splice(targetIndex, 0, draggedItem);
     
+    // Optimistic UI update
     setChapterRows(newRows);
     setDraggedChapterIndex(null);
+    setDragOverChapterIndex(null);
 
     try {
       const chapterIds = newRows.map(c => c.apiId || c.id);
@@ -74,6 +88,58 @@ export function ChapterManagementPage() {
       console.error("Failed to save reorder", err);
       alert("Failed to save new chapter order.");
       refetch();
+    }
+  };
+
+  const handleSectionDragStart = (e, chapterId, sectionIndex) => {
+    e.stopPropagation();
+    setDraggedSectionData({ chapterId, sectionIndex });
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleSectionDragOver = (e, chapterId, sectionIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedSectionData?.chapterId === chapterId) {
+      if (draggedSectionData.sectionIndex !== sectionIndex) {
+        setDragOverSectionData({ chapterId, sectionIndex });
+      }
+      e.dataTransfer.dropEffect = "move";
+    }
+  };
+
+  const handleSectionDragLeave = (e, chapterId, sectionIndex) => {
+    e.stopPropagation();
+    if (dragOverSectionData?.chapterId === chapterId && dragOverSectionData?.sectionIndex === sectionIndex) {
+      setDragOverSectionData(null);
+    }
+  };
+
+  const handleSectionDrop = async (e, chapterId, targetIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!draggedSectionData || draggedSectionData.chapterId !== chapterId || draggedSectionData.sectionIndex === targetIndex) {
+      return;
+    }
+
+    const sections = sectionsMap[chapterId] || [];
+    const newSections = [...sections];
+    const draggedItem = newSections.splice(draggedSectionData.sectionIndex, 1)[0];
+    newSections.splice(targetIndex, 0, draggedItem);
+
+    setSectionsMap(current => ({
+      ...current,
+      [chapterId]: newSections
+    }));
+    setDraggedSectionData(null);
+    setDragOverSectionData(null);
+
+    try {
+      const sectionIds = newSections.map(s => s.id);
+      await reorderSections(chapterId, sectionIds);
+    } catch (error) {
+      console.error("Failed to reorder sections:", error);
+      alert("Gagal menyimpan urutan: " + error.message);
     }
   };
 
@@ -433,6 +499,18 @@ export function ChapterManagementPage() {
         );
         closeChapterDrawer();
         refetch();
+
+        // Refetch sections if this chapter is currently expanded
+        if (expandedChapterId === apiId) {
+          const freshSections = await fetchSectionsByChapter(apiId);
+          setSectionsMap(p => ({ ...p, [apiId]: freshSections || [] }));
+        } else {
+          setSectionsMap(p => {
+            const newMap = { ...p };
+            delete newMap[apiId];
+            return newMap;
+          });
+        }
         
         if (finalStatus === "Published") {
           setShowPublishedModal(true);
@@ -585,7 +663,7 @@ export function ChapterManagementPage() {
   return (
     <div className="dashboard-content-wrapper">
       <header className="dashboard-header-satyatech">
-        <h1>Chapter Management</h1>
+        <h1>Chapter Management <span style={{ fontSize: '12px', color: '#718096', fontWeight: 'normal', backgroundColor: '#EDF2F7', padding: '2px 8px', borderRadius: '12px' }}>v1.1 (Reorder Fix)</span></h1>
         <p>Organize the chapters and sections of your book</p>
       </header>
 
@@ -669,8 +747,14 @@ export function ChapterManagementPage() {
                   draggable={isDragAndDropEnabled}
                   onDragStart={(e) => isDragAndDropEnabled && handleDragStart(e, actualIndex)}
                   onDragOver={(e) => isDragAndDropEnabled && handleDragOver(e, actualIndex)}
+                  onDragLeave={(e) => isDragAndDropEnabled && handleDragLeave(e, actualIndex)}
                   onDrop={(e) => isDragAndDropEnabled && handleDrop(e, actualIndex)}
-                  style={{ opacity: draggedChapterIndex === actualIndex ? 0.5 : 1 }}
+                  style={{ 
+                    opacity: draggedChapterIndex === actualIndex ? 0.5 : 1,
+                    borderTop: dragOverChapterIndex === actualIndex && actualIndex < draggedChapterIndex ? '3px solid #795289' : undefined,
+                    borderBottom: dragOverChapterIndex === actualIndex && actualIndex > draggedChapterIndex ? '3px solid #795289' : undefined,
+                    transition: 'border 0.2s ease-in-out'
+                  }}
                 >
                   <div className="chapter-order-cell">
                     <button type="button" className="chapter-drag-btn" aria-label={`Move ${chapter.title}`} style={{ cursor: isDragAndDropEnabled ? 'grab' : 'not-allowed', pointerEvents: isDragAndDropEnabled ? 'auto' : 'none' }}>
@@ -771,8 +855,23 @@ export function ChapterManagementPage() {
 
                       {loading && <div className="section-loading" style={{ color: '#718096', fontSize: '14px' }}>Loading sections...</div>}
 
-                      {!loading && sections.map((sec) => (
-                        <div key={sec.id} className="section-container" style={{ background: '#FFF', border: '1px solid #EAE6F0', borderRadius: '12px', padding: '16px', marginBottom: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                      {!loading && sections.map((sec, idx) => (
+                        <div 
+                          key={sec.id} 
+                          className="section-container" 
+                          draggable={true}
+                          onDragStart={(e) => handleSectionDragStart(e, cId, idx)}
+                          onDragOver={(e) => handleSectionDragOver(e, cId, idx)}
+                          onDragLeave={(e) => handleSectionDragLeave(e, cId, idx)}
+                          onDrop={(e) => handleSectionDrop(e, cId, idx)}
+                          style={{ 
+                            background: '#FFF', border: '1px solid #EAE6F0', borderRadius: '12px', padding: '16px', marginBottom: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                            opacity: draggedSectionData?.chapterId === cId && draggedSectionData?.sectionIndex === idx ? 0.5 : 1,
+                            borderTop: dragOverSectionData?.chapterId === cId && dragOverSectionData?.sectionIndex === idx && idx < draggedSectionData?.sectionIndex ? '3px solid #795289' : '1px solid #EAE6F0',
+                            borderBottom: dragOverSectionData?.chapterId === cId && dragOverSectionData?.sectionIndex === idx && idx > draggedSectionData?.sectionIndex ? '3px solid #795289' : '1px solid #EAE6F0',
+                            transition: 'border 0.2s ease-in-out'
+                          }}
+                        >
                           <div className="section-row" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div className="section-drag" style={{ color: '#CBD5E0', cursor: 'grab', display: 'flex', alignItems: 'center' }}>
                               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="8" cy="7" r="1.5" /><circle cx="16" cy="7" r="1.5" /><circle cx="8" cy="12" r="1.5" /><circle cx="16" cy="12" r="1.5" /><circle cx="8" cy="17" r="1.5" /><circle cx="16" cy="17" r="1.5" /></svg>
