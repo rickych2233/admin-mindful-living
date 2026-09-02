@@ -108,7 +108,7 @@ const MOCK_REPORTED = [
   }
 ];
 
-const MOCK_CATEGORIES = [
+const INITIAL_CATEGORIES = [
   { id: 1, name: "Awareness", color: "yellow", count: 2 },
   { id: 2, name: "Key Concept", color: "purple", count: 1 },
   { id: 3, name: "Personal Reflection", color: "green", count: 2 },
@@ -267,8 +267,9 @@ export function CommunityPage() {
   const [toast, setToast] = useState(null);
 
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [isDeleteCategoryModalOpen, setIsDeleteCategoryModalOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [editingCategory, setEditingCategory] = useState(null);
+  const [categories, setCategories] = useState(INITIAL_CATEGORIES);
   
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryColor, setNewCategoryColor] = useState("");
@@ -563,9 +564,12 @@ export function CommunityPage() {
               <span>Action</span>
             </div>
 
-            {MOCK_CATEGORIES.map((category) => (
+            {categories.map((category) => (
               <article key={category.id} className="community-row community-category-list-row">
-                <span className={`community-category-pill color-${category.color}`}>
+                <span 
+                  className={`community-category-pill ${['green', 'yellow', 'pink', 'purple', 'red'].includes(category.color) ? `color-${category.color}` : ''}`}
+                  style={!['green', 'yellow', 'pink', 'purple', 'red'].includes(category.color) ? { background: `${category.color}20`, color: category.color } : {}}
+                >
                   {category.name}
                 </span>
                 
@@ -578,7 +582,7 @@ export function CommunityPage() {
                     onClick={() => {
                       setEditingCategory(category);
                       setNewCategoryName(category.name);
-                      setNewCategoryColor(""); // Usually would map to hex
+                      setNewCategoryColor(category.color);
                       setIsCategoryModalOpen(true);
                     }}
                   >
@@ -587,7 +591,7 @@ export function CommunityPage() {
                   <button
                     type="button"
                     className="chapter-icon-btn"
-                    onClick={() => setIsDeleteCategoryModalOpen(true)}
+                    onClick={() => setCategoryToDelete(category)}
                   >
                     <TrashIcon />
                   </button>
@@ -750,12 +754,22 @@ export function CommunityPage() {
                 <button 
                   type="button" 
                   className="community-modal-save" 
-                  disabled={!newCategoryName.trim()}
+                  disabled={!newCategoryName.trim() || !newCategoryColor}
                   onClick={() => {
+                    if (editingCategory) {
+                      setCategories(categories.map(c => 
+                        c.id === editingCategory.id ? { ...c, name: newCategoryName, color: newCategoryColor } : c
+                      ));
+                    } else {
+                      setCategories([
+                        ...categories, 
+                        { id: Date.now(), name: newCategoryName, color: newCategoryColor, count: 0 }
+                      ]);
+                    }
                     setIsCategoryModalOpen(false);
                     showToast(
                       editingCategory ? "Category Updated" : "New Category Added", 
-                      `You have successfully ${editingCategory ? 'updated a' : 'added a new'} category`
+                      `You have successfully ${editingCategory ? 'updated' : 'added a new'} category`
                     );
                   }}
                 >
@@ -766,20 +780,21 @@ export function CommunityPage() {
           </div>
         )}
 
-        {isDeleteCategoryModalOpen && (
-          <div className="community-modal-overlay" onClick={() => setIsDeleteCategoryModalOpen(false)}>
+        {categoryToDelete && (
+          <div className="community-modal-overlay" onClick={() => setCategoryToDelete(null)}>
             <div className="practice-delete-modal" onClick={e => e.stopPropagation()}>
               <div className="practice-delete-icon">
                 <WarningIcon />
               </div>
-              <h3>Are you sure you want to delete this practice?</h3>
-              <p>All content inside this practice will be deleted.</p>
+              <h3>Are you sure you want to delete this category?</h3>
+              <p>All content inside this category will be deleted.</p>
               <div className="practice-delete-actions">
-                <button type="button" className="practice-cancel-btn" onClick={() => setIsDeleteCategoryModalOpen(false)}>
+                <button type="button" className="practice-cancel-btn" onClick={() => setCategoryToDelete(null)}>
                   Cancel
                 </button>
                 <button type="button" className="practice-confirm-btn" onClick={() => {
-                  setIsDeleteCategoryModalOpen(false);
+                  setCategories(categories.filter(c => c.id !== categoryToDelete.id));
+                  setCategoryToDelete(null);
                   showToast("Category Deleted", "You have successfully deleted a category");
                 }}>
                   Yes, Delete

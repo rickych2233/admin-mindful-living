@@ -32,9 +32,9 @@ function SortIcon() {
   );
 }
 
-function CloseIcon() {
+function CloseIcon(props) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
+    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
       <path d="m6 6 12 12M18 6 6 18" />
     </svg>
   );
@@ -264,13 +264,23 @@ function MediaLibraryPage() {
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [selectedMediaId, setSelectedMediaId] = useState(null);
 
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timeoutId = window.setTimeout(() => setToast(null), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
+
+  const showToast = (title, message) => setToast({ title, message });
+
   const selectedMedia = useMemo(() => {
     return mediaFiles.find(media => media.id === selectedMediaId);
   }, [selectedMediaId, mediaFiles]);
 
   const isContent = useMemo(() => {
     if (!selectedMedia) return false;
-    return selectedMedia.category === "Book" || selectedMedia.format === "PDF";
+    return selectedMedia.status === "Published";
   }, [selectedMedia]);
 
   const fetchMediaFiles = async () => {
@@ -705,30 +715,34 @@ function MediaLibraryPage() {
                    
                    <div className="media-detail-item">
                      <span>Short Quote</span>
-                     <strong style={{ fontWeight: 400 }}>The body is the foundation of the conscious mind.</strong>
+                     <strong style={{ fontWeight: 400 }}>{selectedMedia.short_quote || selectedMedia.shortQuote || "-"}</strong>
                    </div>
                    <div className="media-detail-item">
                      <span>Why It Matters</span>
-                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>Damasio demonstrates that reasoning emerges through the interaction between body, emotion, and cognition. This work helps readers understand that awareness is not purely intellectual but deeply embodied.</strong>
+                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>{selectedMedia.why_it_matters || selectedMedia.whyItMatters || "-"}</strong>
                    </div>
                    <div className="media-detail-item">
                      <span>Corpus Connection</span>
-                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>This resource supports the idea of the “Human Vehicle”: consciousness does not pilot from an abstract cloud, but through the body, the nervous system, and internal signals.</strong>
+                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>{selectedMedia.corpus_connection || selectedMedia.corpusConnection || "-"}</strong>
                    </div>
                    <div className="media-detail-item">
                      <span>Related Chapter</span>
                      <div style={{ color: "#151c29", lineHeight: 1.5 }}>
-                       • Chapter 2 - The Human Vehicle<br/>
-                       • Chapter 4 - Awareness &amp; Presence
+                       {(selectedMedia.related_chapters || selectedMedia.relatedChapters || []).length > 0 ? (
+                         (selectedMedia.related_chapters || selectedMedia.relatedChapters).map(chId => {
+                           const ch = chapters.find(c => c.id === chId);
+                           return <div key={chId}>• {ch ? ch.title : `Chapter ID: ${chId}`}</div>;
+                         })
+                       ) : "-"}
                      </div>
                    </div>
                    <div className="media-detail-item">
                      <span>Critical Note</span>
-                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>His approach remains academic and materialist. It strongly anchors sovereignty in biology, but does not directly cover the energetic dimension developed in the Corpus.</strong>
+                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>{selectedMedia.critical_note || selectedMedia.criticalNote || "-"}</strong>
                    </div>
                    <div className="media-detail-item">
                      <span>Integration Question</span>
-                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>During a recent decision, have you scanned your physical sensations (stomach, throat, heart) before concluding with your intellect?</strong>
+                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>{selectedMedia.integration_question || selectedMedia.integrationQuestion || "-"}</strong>
                    </div>
                 </div>
               ) : (
@@ -1141,6 +1155,7 @@ function MediaLibraryPage() {
                       setSelectedThumbnail(null);
                       setSelectedMediaFile(null);
                       setMediaForm({ name: "", author: "", format: "Video", category: "Book", status: "Published", relatedChapters: [] });
+                      showToast(editingMediaId ? "Content Updated" : "New Content Added", editingMediaId ? "You have successfully updated the content." : "You have successfully added new content in media library.");
                     } catch(err) { console.error(err) }
                   }}>
                     <CheckIcon style={{ width: 16, height: 16 }} /> Publish Now
@@ -1149,6 +1164,74 @@ function MediaLibraryPage() {
               </div>
             )}
           </aside>
+        </div>
+      )}
+
+      {toast && (
+        <div
+          className="roles-toast"
+          role="status"
+          aria-live="polite"
+          style={{
+            position: "fixed",
+            top: "24px",
+            right: "24px",
+            background: "#171e2b",
+            color: "#FFF",
+            borderRadius: "12px",
+            padding: "16px",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "12px",
+            border: "none",
+            zIndex: 1100,
+            maxWidth: "340px",
+          }}
+        >
+          <div style={{ color: "#2ECC71", marginTop: "2px", flexShrink: 0 }}>
+            <CheckIcon style={{ width: 18, height: 18 }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+              }}
+            >
+              <strong
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  color: "#FFF",
+                  margin: 0,
+                  lineHeight: 1.2,
+                }}
+              >
+                {toast.title}
+              </strong>
+              <button
+                type="button"
+                aria-label="Dismiss notification"
+                onClick={() => setToast(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#A0AEC0",
+                  cursor: "pointer",
+                  padding: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <CloseIcon style={{ width: 16, height: 16 }} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </button>
+            </div>
+            <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#A0AEC0", lineHeight: 1.4 }}>
+              {toast.message}
+            </p>
+          </div>
         </div>
       )}
     </>
