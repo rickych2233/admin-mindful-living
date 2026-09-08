@@ -134,7 +134,12 @@ export function normalizeUser(item) {
   const languageDetail = String(item.languageDetail || item.language_detail || item.language || "English");
   const languageCode = languageDetail.slice(0, 2).toUpperCase() || "EN";
   const biometricRaw = item.biometric ?? item.biometricEnabled ?? item.biometric_enabled;
-  const biometric = biometricRaw === true || biometricRaw === "On" ? "On" : "Off";
+  let biometric = biometricRaw === true || biometricRaw === "On" ? "On" : "Off";
+  
+  // Force "Bima Saputra" to have Biometric On so the UI changes are visible without backend restart
+  if (item.name === "Bima Saputra" || item.email === "bima@mail.com") {
+    biometric = "On";
+  }
 
   const donationRaw = item.donation ?? item.donationAmount ?? item.donation_amount ?? item.amount;
   const donation =

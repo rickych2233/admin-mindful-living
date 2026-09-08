@@ -154,7 +154,7 @@
 }
 
 .media-drawer {
-  width: min(100%, 470px);
+  width: min(100%, 750px);
   height: calc(100vh - 32px);
   margin: 16px;
   border-radius: 18px;

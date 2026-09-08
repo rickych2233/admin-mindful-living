@@ -253,8 +253,10 @@ function MediaLibraryPage() {
     format: "Video",
     category: "Book",
     status: "Published",
-    relatedChapters: []
+    relatedChapters: [],
+    textContent: ""
   });
+  const [textContentLanguage, setTextContentLanguage] = useState("English");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All Category");
@@ -1061,59 +1063,97 @@ function MediaLibraryPage() {
                     </div>
                   </div>
                   
-                  <div className="chapter-form-field">
-                    <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Upload File <span style={{color: '#EF4444'}}>*</span></label>
-                    {selectedMediaFile ? (
-                      <div className="thumbnail-upload-box">
-                        <div className="thumbnail-upload-left">
-                          <div className="media-uploader-avatar" style={{ background: '#795289', color: 'white', borderRadius: 8, width: 48, height: 48 }}>
+                  {mediaForm.format === "Text" ? (
+                    <div className="chapter-form-field">
+                      <div style={{ display: "flex", gap: "16px", marginBottom: "16px", borderBottom: "1px solid #E3E7ED", paddingBottom: "8px" }}>
+                        {[
+                          { lang: "English", icon: "🇬🇧" },
+                          { lang: "France", icon: "🇫🇷" },
+                          { lang: "Indonesian", icon: "🇮🇩" },
+                          { lang: "Russian", icon: "🇷🇺" },
+                          { lang: "Spanish", icon: "🇪🇸" },
+                        ].map(({ lang, icon }) => (
+                          <span
+                            key={lang}
+                            onClick={() => setTextContentLanguage(lang)}
+                            style={{
+                              fontSize: "13px",
+                              fontWeight: textContentLanguage === lang ? "600" : "500",
+                              color: textContentLanguage === lang ? "#171e2b" : "#A0AEC0",
+                              borderBottom: textContentLanguage === lang ? "2px solid #795289" : "2px solid transparent",
+                              paddingBottom: "8px",
+                              marginBottom: "-10px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            {lang} {icon}
+                          </span>
+                        ))}
+                      </div>
+                      <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Content ({textContentLanguage} - Primary) <span style={{color: '#EF4444'}}>*</span></label>
+                      <textarea
+                        rows="6"
+                        style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, resize: 'none', fontFamily: 'inherit' }}
+                        placeholder={`Write section content in ${textContentLanguage.toLowerCase()}...`}
+                        value={mediaForm.textContent || ""}
+                        onChange={(e) => setMediaForm({...mediaForm, textContent: e.target.value})}
+                      ></textarea>
+                    </div>
+                  ) : (
+                    <div className="chapter-form-field">
+                      <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Upload File <span style={{color: '#EF4444'}}>*</span></label>
+                      {selectedMediaFile ? (
+                        <div className="thumbnail-upload-box">
+                          <div className="thumbnail-upload-left">
+                            <div className="media-uploader-avatar" style={{ background: '#795289', color: 'white', borderRadius: 8, width: 48, height: 48 }}>
+                              {mediaForm.format === "Video" ? <VideoIcon /> : mediaForm.format === "Audio" ? <MusicIcon /> : mediaForm.format === "Image" ? <ImageIcon /> : <DocumentIcon />}
+                            </div>
+                            <div className="thumbnail-upload-info">
+                              <strong>{selectedMediaFile.name}</strong>
+                              <span>{selectedMediaFile.size}</span>
+                            </div>
+                          </div>
+                          <button type="button" className="thumbnail-delete-btn" onClick={() => setSelectedMediaFile(null)}>
+                            <TrashIcon />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="drag-drop-box" onClick={() => mediaInputRef.current?.click()}>
+                          <input type="file" ref={mediaInputRef} style={{ display: 'none' }} 
+                            accept={
+                              mediaForm.format === "Video" ? "video/mp4, video/quicktime" :
+                              mediaForm.format === "Audio" ? "audio/mpeg, audio/wav, audio/ogg" :
+                              mediaForm.format === "Image" ? "image/jpeg, image/png, image/webp" :
+                              ".pdf,.doc,.docx,.txt"
+                            } 
+                            onChange={(e) => {
+                            if (e.target.files?.[0]) {
+                              const file = e.target.files[0];
+                              if (file.size > 2 * 1024 * 1024) {
+                                alert("File size exceeds 2MB. Please upload a smaller file.");
+                                e.target.value = null;
+                                return;
+                              }
+                              setSelectedMediaFile({
+                                name: file.name,
+                                size: (file.size / (1024 * 1024)).toFixed(1) + ' MB'
+                              });
+                            }
+                          }} />
+                          <div className="drag-drop-icon">
                             {mediaForm.format === "Video" ? <VideoIcon /> : mediaForm.format === "Audio" ? <MusicIcon /> : mediaForm.format === "Image" ? <ImageIcon /> : <DocumentIcon />}
                           </div>
-                          <div className="thumbnail-upload-info">
-                            <strong>{selectedMediaFile.name}</strong>
-                            <span>{selectedMediaFile.size}</span>
+                          <div className="drag-drop-text">Drag &amp; Drop or <strong>Choose File</strong> to Upload</div>
+                          <div className="drag-drop-subtext">
+                            {mediaForm.format === "Video" ? "Supported file: MP4, MOV   Max. size: 2 MB" :
+                             mediaForm.format === "Audio" ? "Supported file: MP3, WAV, OGG   Max. size: 2 MB" :
+                             mediaForm.format === "Image" ? "Supported file: JPG, PNG, WEBP   Max. size: 2 MB" :
+                             "Supported file: PDF, DOC, DOCX, TXT   Max. size: 2 MB"}
                           </div>
                         </div>
-                        <button type="button" className="thumbnail-delete-btn" onClick={() => setSelectedMediaFile(null)}>
-                          <TrashIcon />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="drag-drop-box" onClick={() => mediaInputRef.current?.click()}>
-                        <input type="file" ref={mediaInputRef} style={{ display: 'none' }} 
-                          accept={
-                            mediaForm.format === "Video" ? "video/mp4, video/quicktime" :
-                            mediaForm.format === "Audio" ? "audio/mpeg, audio/wav, audio/ogg" :
-                            mediaForm.format === "Image" ? "image/jpeg, image/png, image/webp" :
-                            ".pdf,.doc,.docx,.txt"
-                          } 
-                          onChange={(e) => {
-                          if (e.target.files?.[0]) {
-                            const file = e.target.files[0];
-                            if (file.size > 2 * 1024 * 1024) {
-                              alert("File size exceeds 2MB. Please upload a smaller file.");
-                              e.target.value = null;
-                              return;
-                            }
-                            setSelectedMediaFile({
-                              name: file.name,
-                              size: (file.size / (1024 * 1024)).toFixed(1) + ' MB'
-                            });
-                          }
-                        }} />
-                        <div className="drag-drop-icon">
-                          {mediaForm.format === "Video" ? <VideoIcon /> : mediaForm.format === "Audio" ? <MusicIcon /> : mediaForm.format === "Image" ? <ImageIcon /> : <DocumentIcon />}
-                        </div>
-                        <div className="drag-drop-text">Drag &amp; Drop or <strong>Choose File</strong> to Upload</div>
-                        <div className="drag-drop-subtext">
-                          {mediaForm.format === "Video" ? "Supported file: MP4, MOV   Max. size: 2 MB" :
-                           mediaForm.format === "Audio" ? "Supported file: MP3, WAV, OGG   Max. size: 2 MB" :
-                           mediaForm.format === "Image" ? "Supported file: JPG, PNG, WEBP   Max. size: 2 MB" :
-                           "Supported file: PDF, DOC, DOCX, TXT   Max. size: 2 MB"}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

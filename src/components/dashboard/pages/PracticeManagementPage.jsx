@@ -55,6 +55,7 @@ export function PracticeManagementPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [chapters, setChapters] = useState([]);
   const [isRelatedChapterOpen, setIsRelatedChapterOpen] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
 
   useEffect(() => {
     if (!isDrawerOpen) {
@@ -558,6 +559,13 @@ export function PracticeManagementPage() {
       ...current,
       [field]: event.target.value,
     }));
+    if (formErrors[field]) {
+      setFormErrors((current) => {
+        const newErrors = { ...current };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
   };
 
   const handlePracticeThumbnailChange = (event) => {
@@ -625,20 +633,27 @@ export function PracticeManagementPage() {
 
   const isEditMode = editingPractice !== null;
 
-  const canContinue =
-    practiceStep === 1
-      ? ["name", "caption", "category", "durationRange"].every(
-        (field) => practiceForm[field].trim() !== ""
-      ) && practiceForm.relatedChapters.length > 0
-      : practiceStep === 2
-        ? ["sessionTitle", "sessionType"].every(
-          (field) => practiceForm[field].trim() !== ""
-        )
-        : true;
-
   const handlePracticeContinue = async (submitStatus = null) => {
-    if (!canContinue) {
+    let errors = {};
+    if (practiceStep === 1) {
+      ["name", "caption", "category", "durationRange"].forEach(field => {
+        if (!practiceForm[field] || practiceForm[field].trim() === "") {
+          errors[field] = "This field is required";
+        }
+      });
+    } else if (practiceStep === 2) {
+      ["sessionTitle", "sessionType"].forEach(field => {
+        if (!practiceForm[field] || practiceForm[field].trim() === "") {
+          errors[field] = "This field is required";
+        }
+      });
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return;
+    } else {
+      setFormErrors({});
     }
 
     if (practiceStep < 3 && editingSessionIndex === null && !isAddingSession) {
@@ -1260,7 +1275,9 @@ export function PracticeManagementPage() {
                       placeholder="Enter practice name"
                       value={practiceForm.name}
                       onChange={handlePracticeFieldChange("name")}
+                      style={formErrors.name ? { borderColor: '#E53E3E' } : {}}
                     />
+                    {formErrors.name && <span style={{ color: '#E53E3E', fontSize: '12px', marginTop: '4px' }}>{formErrors.name}</span>}
                   </div>
 
                   <div className="chapter-field">
@@ -1270,12 +1287,14 @@ export function PracticeManagementPage() {
                       placeholder="Enter practice caption or short explanation"
                       value={practiceForm.caption}
                       onChange={handlePracticeFieldChange("caption")}
+                      style={formErrors.caption ? { borderColor: '#E53E3E' } : {}}
                     />
+                    {formErrors.caption && <span style={{ color: '#E53E3E', fontSize: '12px', marginTop: '4px' }}>{formErrors.caption}</span>}
                   </div>
 
                   <div className="chapter-field">
                     <span>Category *</span>
-                    <label className="chapter-select chapter-select-shell chapter-step-select">
+                    <label className="chapter-select chapter-select-shell chapter-step-select" style={formErrors.category ? { borderColor: '#E53E3E' } : {}}>
                       <select value={practiceForm.category} onChange={handlePracticeFieldChange("category")}>
                         <option value="">Select category</option>
                         {categoryOptions
@@ -1289,11 +1308,12 @@ export function PracticeManagementPage() {
                         <path d="m7 10 5 5 5-5" />
                       </svg>
                     </label>
+                    {formErrors.category && <span style={{ color: '#E53E3E', fontSize: '12px', marginTop: '4px', display: 'block' }}>{formErrors.category}</span>}
                   </div>
 
                   <div className="chapter-field">
                     <span>Duration Range *</span>
-                    <label className="chapter-select chapter-select-shell chapter-step-select">
+                    <label className="chapter-select chapter-select-shell chapter-step-select" style={formErrors.durationRange ? { borderColor: '#E53E3E' } : {}}>
                       <select value={practiceForm.durationRange} onChange={handlePracticeFieldChange("durationRange")}>
                         <option value="">Select duration range</option>
                         <option>5-10 mins</option>
@@ -1305,10 +1325,11 @@ export function PracticeManagementPage() {
                         <path d="m7 10 5 5 5-5" />
                       </svg>
                     </label>
+                    {formErrors.durationRange && <span style={{ color: '#E53E3E', fontSize: '12px', marginTop: '4px', display: 'block' }}>{formErrors.durationRange}</span>}
                   </div>
 
                   <div className="chapter-field" style={{ position: 'relative' }}>
-                    <span>Related Chapters <span style={{ color: '#E53E3E' }}>*</span></span>
+                    <span>Related Chapters</span>
                     <div 
                       className="chapter-select chapter-select-shell chapter-step-select"
                       onClick={() => setIsRelatedChapterOpen(!isRelatedChapterOpen)}
@@ -1400,7 +1421,9 @@ export function PracticeManagementPage() {
                       placeholder="Enter session name"
                       value={practiceForm.sessionTitle}
                       onChange={handlePracticeFieldChange("sessionTitle")}
+                      style={formErrors.sessionTitle ? { borderColor: '#E53E3E' } : {}}
                     />
+                    {formErrors.sessionTitle && <span style={{ color: '#E53E3E', fontSize: '12px', marginTop: '4px' }}>{formErrors.sessionTitle}</span>}
                   </div>
 
                   <div className="chapter-field">
@@ -1408,11 +1431,20 @@ export function PracticeManagementPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                       <button
                         type="button"
-                        onClick={() => setPracticeForm(f => ({ ...f, sessionType: "Video" }))}
+                        onClick={() => {
+                          setPracticeForm(f => ({ ...f, sessionType: "Video" }));
+                          if (formErrors.sessionType) {
+                            setFormErrors(current => {
+                              const newErrors = { ...current };
+                              delete newErrors.sessionType;
+                              return newErrors;
+                            });
+                          }
+                        }}
                         style={{
                           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                           gap: '12px', padding: '24px', borderRadius: '12px', cursor: 'pointer',
-                          border: practiceForm.sessionType === "Video" ? '2px solid #795289' : '1px solid #E2E8F0',
+                          border: practiceForm.sessionType === "Video" ? '2px solid #795289' : (formErrors.sessionType ? '1px solid #E53E3E' : '1px solid #E2E8F0'),
                           background: practiceForm.sessionType === "Video" ? '#FAF5FF' : '#FFF',
                           color: practiceForm.sessionType === "Video" ? '#795289' : '#4A5568',
                           transition: 'all 0.2s'
@@ -1427,11 +1459,20 @@ export function PracticeManagementPage() {
                       
                       <button
                         type="button"
-                        onClick={() => setPracticeForm(f => ({ ...f, sessionType: "Audio" }))}
+                        onClick={() => {
+                          setPracticeForm(f => ({ ...f, sessionType: "Audio" }));
+                          if (formErrors.sessionType) {
+                            setFormErrors(current => {
+                              const newErrors = { ...current };
+                              delete newErrors.sessionType;
+                              return newErrors;
+                            });
+                          }
+                        }}
                         style={{
                           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                           gap: '12px', padding: '24px', borderRadius: '12px', cursor: 'pointer',
-                          border: practiceForm.sessionType === "Audio" ? '2px solid #795289' : '1px solid #E2E8F0',
+                          border: practiceForm.sessionType === "Audio" ? '2px solid #795289' : (formErrors.sessionType ? '1px solid #E53E3E' : '1px solid #E2E8F0'),
                           background: practiceForm.sessionType === "Audio" ? '#FAF5FF' : '#FFF',
                           color: practiceForm.sessionType === "Audio" ? '#795289' : '#4A5568',
                           transition: 'all 0.2s'
@@ -1443,6 +1484,7 @@ export function PracticeManagementPage() {
                         <span style={{ fontWeight: '500', fontSize: '15px' }}>Audio</span>
                       </button>
                     </div>
+                    {formErrors.sessionType && <span style={{ color: '#E53E3E', fontSize: '12px', marginTop: '4px', display: 'block' }}>{formErrors.sessionType}</span>}
                   </div>
 
                   <div className="chapter-field">
@@ -1571,12 +1613,12 @@ export function PracticeManagementPage() {
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 {(practiceStep === 3 || editingSessionIndex !== null) && (
-                  <button type="button" onClick={() => handlePracticeContinue("Drafted")} disabled={!canContinue || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF', border: '1px solid #EAE6F0', color: '#795289', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
+                  <button type="button" onClick={() => handlePracticeContinue("Drafted")} disabled={isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF', border: '1px solid #EAE6F0', color: '#795289', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
                     Save Draft
                   </button>
                 )}
 
-                <button type="button" onClick={() => handlePracticeContinue("Published")} disabled={!canContinue || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#795289', border: 'none', color: '#FFF', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
+                <button type="button" onClick={() => handlePracticeContinue("Published")} disabled={isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#795289', border: 'none', color: '#FFF', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
                   {(practiceStep === 3 || editingSessionIndex !== null) ? "Publish" : "Continue"}
                   <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 12h14m-5-5 5 5-5 5" />

@@ -186,6 +186,7 @@ function RolesPermissionsPage() {
   const [toast, setToast] = useState(null);
   const [saving, setSaving] = useState(false);
   const [isAssignUserOpen, setIsAssignUserOpen] = useState(false);
+  const [isRoleActionOpen, setIsRoleActionOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   // Keep selection valid as roles load/change.
@@ -206,6 +207,8 @@ function RolesPermissionsPage() {
     if (selectedRole) {
       setDraftPermissionKeys([...(selectedRole.permissionKeys || [])]);
       setDraftName(selectedRole.name || "");
+      setIsRoleActionOpen(false);
+      setIsAssignUserOpen(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRoleId]);
@@ -393,10 +396,73 @@ function RolesPermissionsPage() {
           <section className="roles-detail-card" style={{ flex: 1, position: "relative" }}>
             {selectedRole ? (
               <div style={{ padding: "32px", height: "100%", display: "flex", flexDirection: "column" }}>
-                <div className="roles-detail-header" style={{ marginBottom: "24px" }}>
+                <div className="roles-detail-header" style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative" }}>
                   <h2 style={{ fontSize: "20px", fontWeight: "600", color: "#171e2b", margin: 0 }}>
                     {selectedRole.name}
                   </h2>
+                  {!selectedRole.isSystem && (
+                    <div style={{ position: "relative" }}>
+                      <button
+                        type="button"
+                        onClick={() => setIsRoleActionOpen((v) => !v)}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: "8px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#718096"
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                          <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                        </svg>
+                      </button>
+                      
+                      {isRoleActionOpen && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            right: 0,
+                            marginTop: "8px",
+                            background: "#FFF",
+                            border: "1px solid #E3E7ED",
+                            borderRadius: "8px",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                            minWidth: "160px",
+                            zIndex: 10,
+                            padding: "4px"
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsRoleActionOpen(false);
+                              setConfirmDelete(selectedRole);
+                            }}
+                            style={{
+                              width: "100%",
+                              background: "transparent",
+                              border: "none",
+                              color: "#171e2b",
+                              padding: "10px 16px",
+                              fontSize: "14px",
+                              textAlign: "left",
+                              cursor: "pointer",
+                              borderRadius: "6px"
+                            }}
+                            onMouseOver={(e) => e.target.style.background = "#F9FAFB"}
+                            onMouseOut={(e) => e.target.style.background = "transparent"}
+                          >
+                            Delete Role
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div
@@ -742,31 +808,6 @@ function RolesPermissionsPage() {
                         </div>
                       )}
                     </div>
-
-                    {!selectedRole.isSystem && (
-                      <div style={{ marginTop: "24px" }}>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDelete(selectedRole)}
-                          style={{
-                            background: "transparent",
-                            border: "1px solid #FED7D7",
-                            color: "#E53E3E",
-                            borderRadius: "999px",
-                            padding: "8px 16px",
-                            fontSize: "13px",
-                            fontWeight: "500",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <TrashIcon style={{ width: "14px", height: "14px" }} />
-                          Delete Role
-                        </button>
-                      </div>
-                    )}
                   </div>
                 )}
 

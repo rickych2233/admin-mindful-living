@@ -3894,6 +3894,15 @@ body,
   cursor: pointer;
 }
 
+.user-row-redesign .user-name-cell { order: 1; }
+.user-row-redesign .user-email { order: 2; }
+.user-row-redesign .user-language-pill { order: 3; }
+.user-row-redesign .user-biometric-pill { order: 4; }
+.user-row-redesign .user-donation { order: 5; }
+.user-row-redesign .user-last-login { order: 6; }
+.user-row-redesign .user-status-pill { order: 7; }
+.user-row-redesign .user-view-btn { order: 8; }
+
 .user-row-redesign:hover {
   background: #fbfcfd;
 }
@@ -3946,12 +3955,18 @@ body,
   stroke-linejoin: round;
 }
 
+.user-biometric-pill.is-on {
+  color: #2B9367;
+  background: #EAF4EF;
+}
+
 .user-biometric-pill.is-off {
   color: #8b93a3;
 }
 
 .user-status-pill.is-active {
-  color: #7c8596;
+  color: #2B9367;
+  background: #EAF4EF;
 }
 
 .user-status-pill.is-inactive {
