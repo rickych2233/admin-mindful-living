@@ -14,14 +14,65 @@ const initialChapterForm = {
   thumbnailName: "",
   sectionName: "",
   sectionCaption: "",
-  sectionContent: "",
+  editorBlocks: [{ id: 'init', type: 'text', content: '<p><br></p>' }],
   exerciseTitle: "",
   exerciseDuration: "2 Minutes",
   exerciseInstructions: "",
   exerciseRequired: false,
   sectionType: "Text",
-  mediaList: [],
   thumbnailPreview: "",
+};
+
+const parseBlocks = (contentStr, mediaArr) => {
+  const parsedBlocks = [];
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(contentStr || "", 'text/html');
+  
+  let currentHtml = "";
+  Array.from(doc.body.childNodes).forEach(node => {
+    if (node.nodeType === 1 && node.classList.contains('media-embed')) {
+      if (currentHtml) {
+        parsedBlocks.push({ id: 'text_' + Math.random(), type: 'text', content: currentHtml });
+        currentHtml = "";
+      }
+      const idx = parseInt(node.getAttribute('data-index'), 10);
+      const m = mediaArr[idx];
+      if (m) {
+        parsedBlocks.push({
+          id: m.id || 'media_' + Math.random(),
+          originalId: m.id,
+          type: (m.type || "image").toLowerCase(),
+          title: m.title || "",
+          url: m.url || "",
+          isRequired: m.is_required !== undefined ? m.is_required : true,
+          duration: m.duration || "2 Minutes",
+          instructions: m.instructions || "",
+        });
+      }
+    } else {
+      if (node.nodeType === 1) currentHtml += node.outerHTML;
+      else if (node.nodeType === 3) currentHtml += node.textContent;
+    }
+  });
+  
+  if (currentHtml) {
+    parsedBlocks.push({ id: 'text_' + Math.random(), type: 'text', content: currentHtml });
+  }
+  
+  if (parsedBlocks.length === 0 && mediaArr && mediaArr.length > 0) {
+     parsedBlocks.push({ id: 'text_' + Math.random(), type: 'text', content: contentStr });
+     mediaArr.forEach(m => parsedBlocks.push({
+          id: m.id || 'media_' + Math.random(),
+          originalId: m.id,
+          type: (m.type || "image").toLowerCase(),
+          title: m.title || "",
+          url: m.url || "",
+          isRequired: m.is_required !== undefined ? m.is_required : true,
+     }));
+  } else if (parsedBlocks.length === 0) {
+     parsedBlocks.push({ id: 'text_' + Math.random(), type: 'text', content: contentStr || '<p><br></p>' });
+  }
+  return parsedBlocks;
 };
 
 export function ChapterManagementPage() {
@@ -266,21 +317,12 @@ export function ChapterManagementPage() {
       sectionId: firstSection?.id || null,
       sectionName: firstSection?.title || "",
       sectionCaption: firstSection?.description || "",
-      sectionContent: firstSection?.content || "",
+      editorBlocks: parseBlocks(firstSection?.content, firstSection?.contents || []),
       exerciseTitle: "",
       exerciseDuration: "2 Minutes",
       exerciseInstructions: "",
       exerciseRequired: false,
       sectionType: firstSection?.type || "Text",
-      mediaList: (firstSection?.contents || []).map((m, idx) => ({
-        id: m.id || Date.now() + idx,
-        originalId: m.id,
-        type: (m.type || "image").toLowerCase(),
-        name: m.title || "Existing Media",
-        title: m.title || "",
-        url: m.url || "",
-        isRequired: m.is_required !== undefined ? m.is_required : true,
-      })),
       thumbnailPreview: chapter.thumbnail || "",
     });
     setChapterStep(1);
@@ -296,21 +338,12 @@ export function ChapterManagementPage() {
       sectionId: section.id || null,
       sectionName: section.title || "",
       sectionCaption: section.description || "",
-      sectionContent: section.content || "",
+      editorBlocks: parseBlocks(section.content, section.contents || []),
       exerciseTitle: "",
       exerciseDuration: "2 Minutes",
       exerciseInstructions: "",
       exerciseRequired: false,
       sectionType: section.type || "Text",
-      mediaList: (section.contents || []).map((m, idx) => ({
-        id: m.id || Date.now() + idx,
-        originalId: m.id,
-        type: (m.type || "image").toLowerCase(),
-        name: m.title || "Existing Media",
-        title: m.title || "",
-        url: m.url || "",
-        isRequired: m.is_required !== undefined ? m.is_required : true,
-      })),
       thumbnailPreview: chapter.thumbnail || "",
     });
     setChapterStep(2);
@@ -404,21 +437,60 @@ export function ChapterManagementPage() {
       const reader = new FileReader();
       reader.onload = (event) => {
         const base64Url = event.target.result;
-        setChapterForm(f => ({
-          ...f,
-          mediaList: [...f.mediaList, { id: Date.now(), type, name: file.name, url: base64Url, file }]
-        }));
+        setChapterForm(f => {
+          const newMediaBlock = {
+            id: 'media_' + Date.now(),
+            type,
+            name: file.name,
+            url: base64Url,
+            file,
+            isRequired: true,
+            title: "",
+            duration: "2 Minutes",
+            instructions: ""
+          };
+          const newTextBlock = { id: 'text_' + Date.now() + Math.random(), type: 'text', content: '<p><br></p>' };
+          return {
+            ...f,
+            editorBlocks: [...f.editorBlocks, newMediaBlock, newTextBlock]
+          };
+        });
       };
       reader.readAsDataURL(file);
     }
     e.target.value = null; // Reset
   };
 
-  const removeMedia = (id) => {
+  const handleInsertGuidedExercise = () => {
     setChapterForm(f => {
-      const updatedMedia = f.mediaList.filter(m => m.id !== id);
-      return { ...f, mediaList: updatedMedia };
+      const newExerciseBlock = {
+        id: 'media_' + Date.now(),
+        type: 'exercise',
+        isRequired: true,
+        title: "",
+        duration: "2 Minutes",
+        instructions: ""
+      };
+      const newTextBlock = { id: 'text_' + Date.now() + Math.random(), type: 'text', content: '<p><br></p>' };
+      return {
+        ...f,
+        editorBlocks: [...f.editorBlocks, newExerciseBlock, newTextBlock]
+      };
     });
+  };
+
+  const removeBlock = (id) => {
+    setChapterForm(f => ({
+      ...f,
+      editorBlocks: f.editorBlocks.filter(b => b.id !== id)
+    }));
+  };
+
+  const handleBlockChange = (id, newProps) => {
+    setChapterForm(f => ({
+      ...f,
+      editorBlocks: f.editorBlocks.map(b => b.id === id ? { ...b, ...newProps } : b)
+    }));
   };
 
   const handleFormat = (command, value = null) => {
@@ -426,7 +498,6 @@ export function ChapterManagementPage() {
   };
 
   const handleContinue = async (submitStatus) => {
-    // If an event object is accidentally passed, default to "Drafted"
     let finalStatus = "Drafted";
     if (typeof submitStatus === "string") {
       finalStatus = submitStatus;
@@ -437,19 +508,29 @@ export function ChapterManagementPage() {
     }
 
     if (chapterStep < 3) {
-      if (chapterStep === 2) {
-        // Explicitly capture content Editable value before moving to Step 3
-        const editor = document.querySelector('.custom-rte-content');
-        if (editor) {
-          setChapterForm(f => ({ ...f, sectionContent: editor.innerHTML }));
-        }
-      }
       setChapterStep((current) => current + 1);
       return;
     }
 
     setIsSubmitting(true);
     setSubmitError("");
+
+    const serializeBlocks = (blocks) => {
+      let contentHtml = "";
+      const mediaList = [];
+      blocks.forEach((b) => {
+        if (b.type === 'text') {
+           const domNode = document.getElementById(b.id);
+           contentHtml += domNode ? domNode.innerHTML : b.content;
+        } else {
+           mediaList.push(b);
+           contentHtml += `<div class="media-embed" data-type="${b.type}" data-index="${mediaList.length - 1}"></div>`;
+        }
+      });
+      return { contentHtml, mediaList };
+    };
+
+    const { contentHtml, mediaList } = serializeBlocks(chapterForm.editorBlocks);
 
     if (isEditMode) {
       try {
@@ -462,21 +543,21 @@ export function ChapterManagementPage() {
         };
 
         if (chapterForm.sectionName && chapterForm.sectionName.trim()) {
-          // Fallback to reading DOM directly in case onBlur hasn't updated state yet during the click event
-          const latestContent = document.querySelector('.custom-rte-content')?.innerHTML || chapterForm.sectionContent;
           chapterData.sections = [
             {
               id: chapterForm.sectionId,
               title: chapterForm.sectionName.trim(),
               description: chapterForm.sectionCaption.trim(),
-              content: latestContent,
+              content: contentHtml,
               type: chapterForm.sectionType,
-              contents: chapterForm.mediaList.map(m => ({
+              contents: mediaList.map((m) => ({
                 id: m.originalId || null,
                 title: m.title || "",
                 type: m.type,
-                url: m.url || "", // This should be base64 if newly uploaded!
-                is_required: m.isRequired
+                url: m.url || "",
+                is_required: m.isRequired,
+                duration: m.duration || "2 Minutes",
+                instructions: m.instructions || ""
               })),
             },
           ];
@@ -500,7 +581,6 @@ export function ChapterManagementPage() {
         closeChapterDrawer();
         refetch();
 
-        // Refetch sections if this chapter is currently expanded
         if (expandedChapterId === apiId) {
           const freshSections = await fetchSectionsByChapter(apiId);
           setSectionsMap(p => ({ ...p, [apiId]: freshSections || [] }));
@@ -513,8 +593,8 @@ export function ChapterManagementPage() {
         }
         
         if (finalStatus === "Published") {
-          setShowPublishedModal(true);
-          setTimeout(() => setShowPublishedModal(false), 5000);
+          setShowPublishedModal({ show: true, status: finalStatus });
+          setTimeout(() => setShowPublishedModal({ show: false, status: null }), 5000);
         }
       } catch (err) {
         setSubmitError(err.message || "Gagal mengupdate chapter. Silakan coba lagi.");
@@ -529,8 +609,6 @@ export function ChapterManagementPage() {
 
     try {
       const normalizedTitle = chapterForm.title.trim();
-      // Fallback to reading DOM directly in case onBlur hasn't updated state yet during the click event
-      const latestContent = document.querySelector('.custom-rte-content')?.innerHTML || chapterForm.sectionContent;
       
       const chapterData = {
         title: normalizedTitle,
@@ -541,13 +619,15 @@ export function ChapterManagementPage() {
           {
             title: chapterForm.sectionName.trim(),
             description: chapterForm.sectionCaption.trim(),
-            content: latestContent,
+            content: contentHtml,
             type: chapterForm.sectionType,
-            contents: chapterForm.mediaList.map(m => ({
+            contents: mediaList.map(m => ({
               title: m.title || "",
               type: m.type,
-              url: m.url || "", // This should be base64 if newly uploaded
-              is_required: m.isRequired
+              url: m.url || "",
+              is_required: m.isRequired,
+              duration: m.duration || "2 Minutes",
+              instructions: m.instructions || ""
             })),
           },
         ],
@@ -876,7 +956,7 @@ export function ChapterManagementPage() {
                             <div className="section-drag" style={{ color: '#CBD5E0', cursor: 'grab', display: 'flex', alignItems: 'center' }}>
                               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="8" cy="7" r="1.5" /><circle cx="16" cy="7" r="1.5" /><circle cx="8" cy="12" r="1.5" /><circle cx="16" cy="12" r="1.5" /><circle cx="8" cy="17" r="1.5" /><circle cx="16" cy="17" r="1.5" /></svg>
                             </div>
-                            <span className="section-title" style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{sec.title}</span>
+                            <span className="section-title" style={{ fontSize: '14px', fontWeight: '600', color: '#111827', textTransform: 'none' }}>{sec.title}</span>
                             
                             <span className="section-status-pill" onClick={() => handleToggleSectionStatus(chapter, sec.id)} style={{ cursor: "pointer", marginLeft: "auto", marginRight: "12px", display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '100px', fontSize: '12px', fontWeight: '500', background: sec.status === 'Published' ? '#E6F4EA' : '#F1F3F5', color: sec.status === 'Published' ? '#1E7E34' : '#495057' }} title="Click to toggle status">
                               {sec.status === "Published" ? (
@@ -1145,131 +1225,103 @@ export function ChapterManagementPage() {
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
                             <input type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'document')} />
                           </label>
+                          <button type="button" onClick={handleInsertGuidedExercise} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4A5568', padding: '6px' }} title="Insert Guided Exercise">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+                          </button>
                         </div>
                       </div>
 
-                      {/* Functional Rich Text Area */}
-                      <div
-                        key={`editor-${chapterForm.sectionId || 'new'}-${editingChapter?.id || 'new'}`}
-                        className="custom-rte-content"
-                        contentEditable
-                        suppressContentEditableWarning
-                        style={{ width: '100%', minHeight: '160px', border: 'none', padding: '16px', outline: 'none' }}
-                        dangerouslySetInnerHTML={{ __html: chapterForm.sectionContent || '<p><br></p>' }}
-                      />
+                      {/* Blocks Rendering */}
+                      {chapterForm.editorBlocks.map((block) => {
+                        if (block.type === 'text') {
+                          return (
+                            <div
+                              key={block.id}
+                              id={block.id}
+                              className="custom-rte-content"
+                              contentEditable
+                              suppressContentEditableWarning
+                              onBlur={(e) => handleBlockChange(block.id, { content: e.target.innerHTML })}
+                              style={{ width: '100%', minHeight: '80px', border: 'none', padding: '16px', outline: 'none' }}
+                              dangerouslySetInnerHTML={{ __html: block.content || '<p><br></p>' }}
+                            />
+                          );
+                        }
 
-                      {/* Media Preview Block */}
-                      {chapterForm.mediaList.length > 0 && (
-                        <div style={{ padding: '0 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                          {chapterForm.mediaList.map((media) => (
-                            <div key={media.id} style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', background: '#FFF' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F7FAFC', padding: '12px 16px', borderBottom: '1px solid #E2E8F0' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '600', color: '#2D3748', textTransform: 'capitalize' }}>
-                                  <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" strokeWidth="2">
-                                    {media.type === 'video' ? <><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" /><line x1="7" y1="2" x2="7" y2="22" /><line x1="17" y1="2" x2="17" y2="22" /><line x1="2" y1="12" x2="22" y2="12" /></>
-                                    : media.type === 'audio' ? <><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></>
-                                    : <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></>}
-                                  </svg>
-                                  {media.type} Block
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => removeMedia(media.id)}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E53E3E', fontSize: '13px', fontWeight: '500' }}
-                                >
-                                  Remove
-                                </button>
+                        // Media Blocks
+                        return (
+                          <div key={block.id} style={{ margin: '0', padding: '0 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {block.type === 'image' && (
+                              <div style={{ width: '100%', height: '400px', background: '#F7FAFC', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid #E2E8F0' }}>
+                                <img src={block.url} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                               </div>
-
-                              <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            )}
+                            {block.type === 'video' && (
+                              <div style={{ width: '100%', height: '400px', background: '#1A202C', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                <video src={block.url} controls style={{ maxWidth: '100%', maxHeight: '100%', outline: 'none' }} />
+                              </div>
+                            )}
+                            {block.type === 'audio' && (
+                              <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', background: '#F7FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                                <span style={{ fontSize: '14px', fontWeight: '500', color: '#2D3748' }}>{block.name || block.title || 'Audio Block'}</span>
+                                <audio src={block.url} controls style={{ width: '100%', maxWidth: '400px' }} />
+                              </div>
+                            )}
+                            {block.type === 'document' && (
+                              <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px', background: '#F7FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                                <span style={{ fontSize: '14px', fontWeight: '500', color: '#2D3748' }}>{block.name || block.title || 'Document Block'}</span>
+                              </div>
+                            )}
+                            {block.type === 'exercise' && (
+                              <div className="guided-exercise-block" style={{ border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', background: '#FFF' }}>
+                                <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#2D3748' }}>Guided Exercise</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                                  <div className="chapter-field" style={{ margin: 0 }}>
+                                    <span style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>Exercise Title <span style={{ color: '#E53E3E' }}>*</span></span>
+                                    <input type="text" value={block.title} onChange={(e) => handleBlockChange(block.id, { title: e.target.value })} placeholder="Pause and Observe" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #E2E8F0' }} />
+                                  </div>
+                                  <div className="chapter-field" style={{ margin: 0 }}>
+                                    <span style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>Duration <span style={{ color: '#E53E3E' }}>*</span></span>
+                                    <select value={block.duration} onChange={(e) => handleBlockChange(block.id, { duration: e.target.value })} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', background: 'transparent' }}>
+                                      <option>2 Minutes</option>
+                                      <option>5 Minutes</option>
+                                      <option>10 Minutes</option>
+                                    </select>
+                                  </div>
+                                </div>
                                 <div className="chapter-field" style={{ margin: 0 }}>
-                                  <span style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>Content Title <span style={{ color: '#E53E3E' }}>*</span></span>
-                                  <input 
-                                    type="text" 
-                                    placeholder={`Enter ${media.type} title`} 
-                                    value={media.title || ''} 
-                                    onChange={(e) => {
-                                      const val = e.target.value;
-                                      setChapterForm(f => ({ ...f, mediaList: f.mediaList.map(m => m.id === media.id ? { ...m, title: val } : m) }));
-                                    }}
-                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #E2E8F0' }} 
-                                  />
-                                </div>
-
-                                {media.type === 'image' && (
-                                  <img src={media.url} alt="Preview" style={{ width: '100%', maxHeight: '300px', objectFit: 'contain', display: 'block', background: '#EDF2F7', borderRadius: '8px' }} />
-                                )}
-                                {media.type === 'video' && (
-                                  <video src={media.url} controls style={{ width: '100%', maxHeight: '300px', display: 'block', background: '#1A202C', borderRadius: '8px' }} />
-                                )}
-                                {media.type === 'audio' && (
-                                  <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', background: '#F7FAFC', borderRadius: '8px' }}>
-                                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#2D3748' }}>{media.name}</span>
-                                    <audio src={media.url} controls style={{ width: '100%', maxWidth: '400px' }} />
-                                  </div>
-                                )}
-                                {media.type === 'document' && (
-                                  <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px', background: '#F7FAFC', borderRadius: '8px' }}>
-                                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#2D3748' }}>{media.name}</span>
-                                  </div>
-                                )}
-
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#718096', cursor: 'pointer' }}>
-                                    <div style={{ width: '36px', height: '20px', background: media.isRequired ? '#5A4B81' : '#CBD5E0', borderRadius: '20px', position: 'relative', transition: 'background 0.2s', display: 'flex', alignItems: 'center', padding: '2px' }}>
-                                      <div style={{ width: '16px', height: '16px', background: '#FFF', borderRadius: '50%', transform: media.isRequired ? 'translateX(16px)' : 'translateX(0)', transition: 'transform 0.2s' }}></div>
-                                    </div>
-                                    <input 
-                                      type="checkbox" 
-                                      checked={media.isRequired || false} 
-                                      onChange={(e) => {
-                                        const checked = e.target.checked;
-                                        setChapterForm(f => ({ ...f, mediaList: f.mediaList.map(m => m.id === media.id ? { ...m, isRequired: checked } : m) }));
-                                      }}
-                                      style={{ display: 'none' }} 
-                                    />
-                                    Require to Continue
-                                  </label>
+                                  <span style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>Instructions <span style={{ color: '#E53E3E' }}>*</span></span>
+                                  <textarea rows="4" value={block.instructions} onChange={(e) => handleBlockChange(block.id, { instructions: e.target.value })} placeholder="1. Sit comfortably.&#10;2. Close your eyes if comfortable." style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #E2E8F0', resize: 'vertical' }} />
                                 </div>
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                            )}
 
-                      {/* <div className="guided-exercise-block" style={{ margin: '16px', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '16px' }}>
-                        <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#2D3748' }}>Guided Exercise 1</h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                          <div className="chapter-field" style={{ margin: 0 }}>
-                            <span style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>Exercise Title <span style={{ color: '#E53E3E' }}>*</span></span>
-                            <input type="text" value={chapterForm.exerciseTitle} onChange={handleChapterFieldChange("exerciseTitle")} placeholder="Pause and Observe" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #E2E8F0' }} />
-                          </div>
-                          <div className="chapter-field" style={{ margin: 0 }}>
-                            <span style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>Duration <span style={{ color: '#E53E3E' }}>*</span></span>
-                            <select value={chapterForm.exerciseDuration} onChange={handleChapterFieldChange("exerciseDuration")} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', background: 'transparent' }}>
-                              <option>2 Minutes</option>
-                              <option>5 Minutes</option>
-                              <option>10 Minutes</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div className="chapter-field" style={{ margin: 0 }}>
-                          <span style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>Instructions <span style={{ color: '#E53E3E' }}>*</span></span>
-                          <textarea rows="6" value={chapterForm.exerciseInstructions} onChange={handleChapterFieldChange("exerciseInstructions")} placeholder="1. Sit comfortably.&#10;2. Close your eyes if comfortable." style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #E2E8F0', resize: 'vertical' }} />
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#718096', cursor: 'pointer' }}>
-                            <div style={{ width: '36px', height: '20px', background: chapterForm.exerciseRequired ? '#5A4B81' : '#CBD5E0', borderRadius: '20px', position: 'relative', transition: 'background 0.2s', display: 'flex', alignItems: 'center', padding: '2px' }}>
-                              <div style={{ width: '16px', height: '16px', background: '#FFF', borderRadius: '50%', transform: chapterForm.exerciseRequired ? 'translateX(16px)' : 'translateX(0)', transition: 'transform 0.2s' }}></div>
+                            {/* Toggle and Trash for Media Blocks */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#718096', cursor: 'pointer' }}>
+                                <div style={{ width: '36px', height: '20px', background: block.isRequired ? '#5A4B81' : '#CBD5E0', borderRadius: '20px', position: 'relative', transition: 'background 0.2s', display: 'flex', alignItems: 'center', padding: '2px' }}>
+                                  <div style={{ width: '16px', height: '16px', background: '#FFF', borderRadius: '50%', transform: block.isRequired ? 'translateX(16px)' : 'translateX(0)', transition: 'transform 0.2s' }}></div>
+                                </div>
+                                <input 
+                                  type="checkbox" 
+                                  checked={block.isRequired || false} 
+                                  onChange={(e) => handleBlockChange(block.id, { isRequired: e.target.checked })}
+                                  style={{ display: 'none' }} 
+                                />
+                                Require Completion
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => removeBlock(block.id)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E53E3E' }}
+                                title="Remove Block"
+                              >
+                                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+                              </button>
                             </div>
-                            <input type="checkbox" checked={chapterForm.exerciseRequired} onChange={(e) => setChapterForm(f => ({ ...f, exerciseRequired: e.target.checked }))} style={{ display: 'none' }} />
-                            Require Completion
-                          </label>
-                          <button type="button" style={{ background: 'none', border: 'none', color: '#E53E3E', cursor: 'pointer' }}>
-                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
-                          </button>
-                        </div>
-                      </div> */}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -1333,35 +1385,36 @@ export function ChapterManagementPage() {
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>
-                      <span style={{ display: 'block', fontSize: '13px', color: '#718096', marginBottom: '8px' }}>Section Content</span>
-                      <div 
-                        style={{ padding: '16px', background: '#F7FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '14px', color: '#4A5568', lineHeight: '1.6', overflow: 'hidden' }}
-                        dangerouslySetInnerHTML={{ __html: chapterForm.sectionContent || "-" }}
-                      />
-                    </div>
-
-                    {chapterForm.mediaList && chapterForm.mediaList.length > 0 && (
-                      <div style={{ marginBottom: '16px' }}>
-                        <span style={{ display: 'block', fontSize: '13px', color: '#718096', marginBottom: '8px' }}>Attached Media ({chapterForm.mediaList.length})</span>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          {chapterForm.mediaList.map((media, idx) => (
-                            <div key={idx} style={{ padding: '12px', background: '#F7FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                              {media.type === 'image' && media.url ? (
-                                <img src={media.url} alt={media.title || 'Media preview'} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
+                      <span style={{ display: 'block', fontSize: '13px', color: '#718096', marginBottom: '8px' }}>Section Content Preview</span>
+                      <div style={{ padding: '16px', background: '#F7FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {chapterForm.editorBlocks && chapterForm.editorBlocks.map((block, idx) => {
+                          if (block.type === 'text') {
+                            return (
+                              <div 
+                                key={block.id}
+                                style={{ fontSize: '14px', color: '#4A5568', lineHeight: '1.6' }}
+                                dangerouslySetInnerHTML={{ __html: block.content || "-" }}
+                              />
+                            );
+                          }
+                          return (
+                            <div key={block.id} style={{ padding: '12px', background: '#FFF', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              {block.type === 'image' && block.url ? (
+                                <img src={block.url} alt={block.title || 'Preview'} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
                               ) : (
                                 <div style={{ width: '60px', height: '60px', background: '#EDF2F7', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A0AEC0' }}>
-                                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line></svg>
+                                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect></svg>
                                 </div>
                               )}
                               <div>
-                                <strong style={{ display: 'block', fontSize: '14px', color: '#2D3748' }}>{media.title || `Media ${idx + 1}`}</strong>
-                                <span style={{ fontSize: '12px', color: '#718096', textTransform: 'capitalize' }}>{media.type} Block {media.isRequired ? '(Required)' : ''}</span>
+                                <strong style={{ display: 'block', fontSize: '14px', color: '#2D3748' }}>{block.title || `Media Block ${idx}`}</strong>
+                                <span style={{ fontSize: '12px', color: '#718096', textTransform: 'capitalize' }}>{block.type} Block {block.isRequired ? '(Required)' : ''}</span>
                               </div>
                             </div>
-                          ))}
-                        </div>
+                          );
+                        })}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               )}

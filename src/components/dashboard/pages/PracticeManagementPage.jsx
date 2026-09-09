@@ -29,6 +29,7 @@ export function PracticeManagementPage() {
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [practiceRows, setPracticeRows] = useState([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [showSessionSuccessToast, setShowSessionSuccessToast] = useState(false);
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showCategorySuccessToast, setShowCategorySuccessToast] = useState(false);
@@ -747,7 +748,12 @@ export function PracticeManagementPage() {
         });
       }
       await fetchPractices();
+      const wasAddingSession = isAddingSession;
       closePracticeDrawer();
+      if (wasAddingSession) {
+        setShowSessionSuccessToast(true);
+        setTimeout(() => setShowSessionSuccessToast(false), 5000);
+      }
     } catch (error) {
       console.error("Failed to save practice:", error);
     } finally {
@@ -1058,7 +1064,7 @@ export function PracticeManagementPage() {
                             </svg>
                           </div>
                           
-                          <span className="section-title" style={{ fontSize: "14px", fontWeight: "500", color: "#171e2b" }}>
+                          <span className="section-title" style={{ fontSize: "14px", fontWeight: "500", color: "#171e2b", textTransform: "none" }}>
                             {session.title}
                           </span>
 
@@ -1237,8 +1243,8 @@ export function PracticeManagementPage() {
           <aside className="chapter-drawer practice-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
             <div className="chapter-drawer-header">
               <div>
-                <h2>{isEditMode ? "Edit Practice" : "Add Practice"}</h2>
-                <p>{isEditMode ? "Update practice and section details" : "Step through to set up practice and first session"}</p>
+                <h2>{isAddingSession ? "Add Session" : isEditMode ? "Edit Practice" : "Add Practice"}</h2>
+                <p>{isAddingSession ? `Practice - ${editingPractice?.title}` : isEditMode ? "Update practice and section details" : "Step through to set up practice and first session"}</p>
               </div>
 
               <button type="button" className="chapter-drawer-close" aria-label="Close add practice form" onClick={closePracticeDrawer}>
@@ -1248,22 +1254,24 @@ export function PracticeManagementPage() {
               </button>
             </div>
 
-            <div className="chapter-stepper">
-              {practiceStepItems.map((step) => {
-                const isActive = practiceStep === step.id;
-                const isComplete = practiceStep > step.id;
+            {(!isAddingSession && editingSessionIndex === null && practiceStep === 1) && (
+              <div className="chapter-stepper">
+                {practiceStepItems.map((step) => {
+                  const isActive = practiceStep === step.id;
+                  const isComplete = practiceStep > step.id;
 
-                return (
-                  <div
-                    key={step.id}
-                    className={`chapter-step${isActive ? " is-active" : ""}${isComplete ? " is-complete" : ""}`}
-                  >
-                    <div className="chapter-step-circle">{step.id}</div>
-                    <span>{step.label}</span>
-                  </div>
-                );
-              })}
-            </div>
+                  return (
+                    <div
+                      key={step.id}
+                      className={`chapter-step${isActive ? " is-active" : ""}${isComplete ? " is-complete" : ""}`}
+                    >
+                      <div className="chapter-step-circle">{step.id}</div>
+                      <span>{step.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="chapter-drawer-body">
               {practiceStep === 1 && (
@@ -1528,19 +1536,21 @@ export function PracticeManagementPage() {
                     )}
                   </div>
                   
-                  <div style={{
-                    display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '16px',
-                    background: '#FEFCBF', borderRadius: '8px', border: '1px solid #F6E05E'
-                  }}>
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#D69E2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="12" y1="8" x2="12" y2="12"></line>
-                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
-                    <span style={{ fontSize: '14px', color: '#B7791F' }}>
-                      You can add more sessions once you finish adding the chapter.
-                    </span>
-                  </div>
+                  {(!isAddingSession && editingSessionIndex === null) && (
+                    <div style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '16px',
+                      background: '#FEFCBF', borderRadius: '8px', border: '1px solid #F6E05E'
+                    }}>
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#D69E2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                      </svg>
+                      <span style={{ fontSize: '14px', color: '#B7791F' }}>
+                        You can add more sessions once you finish adding the chapter.
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1600,7 +1610,7 @@ export function PracticeManagementPage() {
                 type="button"
                 className="chapter-secondary-btn"
                 onClick={() => {
-                  if (practiceStep === 1) {
+                  if (practiceStep === 1 || ((isAddingSession || editingSessionIndex !== null) && practiceStep === 2)) {
                     closePracticeDrawer();
                     return;
                   }
@@ -1608,21 +1618,23 @@ export function PracticeManagementPage() {
                   setPracticeStep((current) => current - 1);
                 }}
               >
-                {practiceStep === 1 ? "Cancel" : "Back"}
+                {practiceStep === 1 || ((isAddingSession || editingSessionIndex !== null) && practiceStep === 2) ? "Cancel" : "Back"}
               </button>
 
               <div style={{ display: 'flex', gap: '12px' }}>
-                {(practiceStep === 3 || editingSessionIndex !== null) && (
+                {(practiceStep === 3 || editingSessionIndex !== null || isAddingSession) && (
                   <button type="button" onClick={() => handlePracticeContinue("Drafted")} disabled={isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF', border: '1px solid #EAE6F0', color: '#795289', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
-                    Save Draft
+                    Save as Draft
                   </button>
                 )}
 
                 <button type="button" onClick={() => handlePracticeContinue("Published")} disabled={isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#795289', border: 'none', color: '#FFF', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
-                  {(practiceStep === 3 || editingSessionIndex !== null) ? "Publish" : "Continue"}
-                  <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14m-5-5 5 5-5 5" />
-                  </svg>
+                  {(practiceStep === 3 || editingSessionIndex !== null || isAddingSession) ? "Publish Now" : "Continue"}
+                  {!(practiceStep === 3 || editingSessionIndex !== null || isAddingSession) && (
+                    <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14m-5-5 5 5-5 5" />
+                    </svg>
+                  )}
                 </button>
               </div>
             </div>
@@ -1712,6 +1724,43 @@ export function PracticeManagementPage() {
               to { transform: translateY(0); opacity: 1; }
             }
           `}</style>
+        </div>
+      )}
+
+      {showSessionSuccessToast && (
+        <div style={{
+          position: 'fixed',
+          top: '32px',
+          right: '32px',
+          width: '340px',
+          background: '#161d29',
+          borderRadius: '12px',
+          padding: '20px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          zIndex: 9999,
+          display: 'flex',
+          gap: '12px',
+          border: '1px solid #222a40',
+          animation: 'slideInDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        }}>
+          <div style={{ flexShrink: 0, marginTop: '2px' }}>
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="#10B981">
+              <circle cx="12" cy="12" r="12" />
+              <path d="M17 8l-7 8-3-3" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </svg>
+          </div>
+          <div style={{ flexGrow: 1 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+              <strong style={{ color: '#ffffff', fontSize: '15px', fontWeight: '600' }}>New Session Added</strong>
+              <button type="button" onClick={() => setShowSessionSuccessToast(false)} style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 0 }} aria-label="Close">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <p style={{ color: '#94A3B8', fontSize: '13px', margin: '0', lineHeight: '1.4' }}>You have successfully added a new Session</p>
+          </div>
         </div>
       )}
 
