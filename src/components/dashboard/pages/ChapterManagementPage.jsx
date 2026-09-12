@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useChaptersCollection, createChapter, updateChapter, deleteChapter, toggleChapterStatus, reorderChapters } from "../utils/chapterUtils";
 import { fetchSectionsByChapter, createSection, deleteSection, toggleSectionStatus, normalizeSection, reorderSections } from "../utils/sectionUtils";
+import { useTranslations, LANG_CODES } from "../utils/translateUtils";
+import { renderTranslated } from "../utils/renderTranslated";
 
 const chapterStepItems = [
   { id: 1, label: "Chapter Info" },
@@ -23,18 +25,76 @@ const initialChapterForm = {
   thumbnailPreview: "",
 };
 
-const parseBlocks = (contentStr, mediaArr) => {
+const parseBlocks = (contentObjOrStr, mediaArr, initialTranslations = {}) => {
+  let contentObj = {};
+  if (typeof contentObjOrStr === 'string') {
+    try {
+      if (contentObjOrStr.startsWith('{') && contentObjOrStr.endsWith('}')) {
+        contentObj = JSON.parse(contentObjOrStr);
+      } else {
+        contentObj = { en: contentObjOrStr };
+      }
+    } catch (e) {
+      contentObj = { en: contentObjOrStr };
+    }
+  } else if (contentObjOrStr && typeof contentObjOrStr === 'object') {
+    contentObj = contentObjOrStr;
+  } else {
+    contentObj = { en: "" };
+  }
+
+  const englishHtml = contentObj.en || contentObj['English 🇬🇧'] || "";
+  
   const parsedBlocks = [];
   const parser = new DOMParser();
-  const doc = parser.parseFromString(contentStr || "", 'text/html');
+  const doc = parser.parseFromString(englishHtml, 'text/html');
   
+  const langDocs = {};
+  Object.keys(contentObj).forEach(lang => {
+     if (lang !== 'en') langDocs[lang] = parser.parseFromString(contentObj[lang] || "", 'text/html');
+  });
+
+  const extractNthTextChunk = (docNode, targetIndex) => {
+     if (!docNode) return "";
+     let chunkIdx = 0;
+     let html = "";
+     for (let node of Array.from(docNode.body.childNodes)) {
+        if (node.nodeType === 1 && node.classList.contains('media-embed')) {
+           if (html || chunkIdx >= 0) {
+              if (chunkIdx === targetIndex) return html;
+              chunkIdx++;
+              html = "";
+           }
+        } else {
+           if (node.nodeType === 1) html += node.outerHTML;
+           else if (node.nodeType === 3) html += node.textContent;
+        }
+     }
+     if (chunkIdx === targetIndex) return html;
+     return "";
+  };
+
   let currentHtml = "";
+  let textBlockIndex = 0;
+
+  const flushText = () => {
+      const id = 'text_' + Math.random();
+      parsedBlocks.push({ id, type: 'text', content: currentHtml });
+      
+      initialTranslations[`content_${id}`] = {};
+      Object.keys(contentObj).forEach(lang => {
+         if (lang !== 'en') {
+            initialTranslations[`content_${id}`][lang] = extractNthTextChunk(langDocs[lang], textBlockIndex) || currentHtml;
+         }
+      });
+      
+      textBlockIndex++;
+      currentHtml = "";
+  };
+
   Array.from(doc.body.childNodes).forEach(node => {
     if (node.nodeType === 1 && node.classList.contains('media-embed')) {
-      if (currentHtml) {
-        parsedBlocks.push({ id: 'text_' + Math.random(), type: 'text', content: currentHtml });
-        currentHtml = "";
-      }
+      if (currentHtml) flushText();
       const idx = parseInt(node.getAttribute('data-index'), 10);
       const m = mediaArr[idx];
       if (m) {
@@ -55,12 +115,11 @@ const parseBlocks = (contentStr, mediaArr) => {
     }
   });
   
-  if (currentHtml) {
-    parsedBlocks.push({ id: 'text_' + Math.random(), type: 'text', content: currentHtml });
-  }
+  if (currentHtml) flushText();
   
   if (parsedBlocks.length === 0 && mediaArr && mediaArr.length > 0) {
-     parsedBlocks.push({ id: 'text_' + Math.random(), type: 'text', content: contentStr });
+     currentHtml = englishHtml;
+     flushText();
      mediaArr.forEach(m => parsedBlocks.push({
           id: m.id || 'media_' + Math.random(),
           originalId: m.id,
@@ -70,7 +129,8 @@ const parseBlocks = (contentStr, mediaArr) => {
           isRequired: m.is_required !== undefined ? m.is_required : true,
      }));
   } else if (parsedBlocks.length === 0) {
-     parsedBlocks.push({ id: 'text_' + Math.random(), type: 'text', content: contentStr || '<p><br></p>' });
+     currentHtml = englishHtml || '<p><br></p>';
+     flushText();
   }
   return parsedBlocks;
 };
@@ -93,6 +153,7 @@ export function ChapterManagementPage() {
   const [sectionForm, setSectionForm] = useState({ title: "", description: "", type: "Text" });
   const [sectionSubmitting, setSectionSubmitting] = useState(false);
   const [activeLanguageTab, setActiveLanguageTab] = useState("English 🇬🇧");
+  const { translations, setTranslations, getVal, setVal, handleTranslate, merge, isTranslating } = useTranslations();
   const [showPublishedModal, setShowPublishedModal] = useState({ show: false, status: null });
   const [draggedChapterIndex, setDraggedChapterIndex] = useState(null);
   const [dragOverChapterIndex, setDragOverChapterIndex] = useState(null);
@@ -280,7 +341,7 @@ export function ChapterManagementPage() {
     return chapterRows.filter((chapter) => {
       const matchesQuery =
         normalizedQuery === "" ||
-        chapter.title.toLowerCase().includes(normalizedQuery) ||
+        (renderTranslated(chapter.title, "en") || "").toLowerCase().includes(normalizedQuery) ||
         chapter.summary.toLowerCase().includes(normalizedQuery);
       const matchesStatus = statusFilter === "All Status" || chapter.status === statusFilter;
 
@@ -310,14 +371,24 @@ export function ChapterManagementPage() {
       console.error("Error fetching sections for edit chapter:", err);
     }
     
+    const initialTrans = {
+      title: chapter.title || {},
+      description: chapter.summary || {},
+      sectionName: firstSection?.title || {},
+      sectionCaption: firstSection?.description || {},
+    };
+    
+    const editorBlocks = parseBlocks(firstSection?.content, firstSection?.contents || [], initialTrans);
+    setTranslations(initialTrans);
+    
     setChapterForm({
-      title: chapter.title || "",
-      description: chapter.summary || "",
+      title: renderTranslated(chapter.title, "en") || "",
+      description: renderTranslated(chapter.summary, "en") || "",
       thumbnailName: chapter.thumbnail ? "existing-thumbnail.jpg" : "",
       sectionId: firstSection?.id || null,
-      sectionName: firstSection?.title || "",
-      sectionCaption: firstSection?.description || "",
-      editorBlocks: parseBlocks(firstSection?.content, firstSection?.contents || []),
+      sectionName: renderTranslated(firstSection?.title, "en") || "",
+      sectionCaption: renderTranslated(firstSection?.description, "en") || "",
+      editorBlocks,
       exerciseTitle: "",
       exerciseDuration: "2 Minutes",
       exerciseInstructions: "",
@@ -331,14 +402,24 @@ export function ChapterManagementPage() {
 
   const handleEditSection = (chapter, section) => {
     setEditingChapter(chapter);
+    const initialTrans = {
+      title: chapter.title || {},
+      description: chapter.summary || {},
+      sectionName: section.title || {},
+      sectionCaption: section.description || {},
+    };
+
+    const editorBlocks = parseBlocks(section.content, section.contents || [], initialTrans);
+    setTranslations(initialTrans);
+    
     setChapterForm({
-      title: chapter.title || "",
-      description: chapter.summary || "",
+      title: renderTranslated(chapter.title, "en") || "",
+      description: renderTranslated(chapter.summary, "en") || "",
       thumbnailName: chapter.thumbnail ? "existing-thumbnail.jpg" : "",
       sectionId: section.id || null,
-      sectionName: section.title || "",
-      sectionCaption: section.description || "",
-      editorBlocks: parseBlocks(section.content, section.contents || []),
+      sectionName: renderTranslated(section.title, "en") || "",
+      sectionCaption: renderTranslated(section.description, "en") || "",
+      editorBlocks,
       exerciseTitle: "",
       exerciseDuration: "2 Minutes",
       exerciseInstructions: "",
@@ -516,18 +597,45 @@ export function ChapterManagementPage() {
     setSubmitError("");
 
     const serializeBlocks = (blocks) => {
-      let contentHtml = "";
+      const contentHtml = { en: "" };
+      Object.values(LANG_CODES).forEach(lang => {
+        if (lang !== 'en') contentHtml[lang] = "";
+      });
+      
       const mediaList = [];
+      
       blocks.forEach((b) => {
         if (b.type === 'text') {
            const domNode = document.getElementById(b.id);
-           contentHtml += domNode ? domNode.innerHTML : b.content;
+           
+           let enContent = b.content;
+           if (activeLanguageTab === 'English 🇬🇧' && domNode) {
+               enContent = domNode.innerHTML;
+           }
+           contentHtml.en += enContent;
+           
+           Object.keys(LANG_CODES).forEach(tab => {
+               const lang = LANG_CODES[tab];
+               if (lang === 'en') return;
+               
+               let langContent = translations[`content_${b.id}`]?.[lang] || "";
+               if (activeLanguageTab === tab && domNode) {
+                   langContent = domNode.innerHTML;
+               }
+               contentHtml[lang] += (langContent || enContent);
+           });
         } else {
            mediaList.push(b);
-           contentHtml += `<div class="media-embed" data-type="${b.type}" data-index="${mediaList.length - 1}"></div>`;
+           const placeholder = `<div class="media-embed" data-type="${b.type}" data-index="${mediaList.length - 1}"></div>`;
+           contentHtml.en += placeholder;
+           Object.keys(LANG_CODES).forEach(tab => {
+               const lang = LANG_CODES[tab];
+               if (lang !== 'en') contentHtml[lang] += placeholder;
+           });
         }
       });
-      return { contentHtml, mediaList };
+      
+      return { contentHtml: JSON.stringify(contentHtml), mediaList };
     };
 
     const { contentHtml, mediaList } = serializeBlocks(chapterForm.editorBlocks);
@@ -536,8 +644,8 @@ export function ChapterManagementPage() {
       try {
         const apiId = editingChapter.apiId ?? editingChapter.id;
         const chapterData = {
-          title: chapterForm.title.trim(),
-          description: chapterForm.description.trim(),
+          title: merge(chapterForm.title, 'title'),
+          description: merge(chapterForm.description, 'description'),
           status: finalStatus !== "Drafted" ? finalStatus : (editingChapter.status || "Drafted"),
           thumbnail: chapterForm.thumbnailPreview || null,
         };
@@ -546,8 +654,8 @@ export function ChapterManagementPage() {
           chapterData.sections = [
             {
               id: chapterForm.sectionId,
-              title: chapterForm.sectionName.trim(),
-              description: chapterForm.sectionCaption.trim(),
+              title: merge(chapterForm.sectionName, 'sectionName'),
+              description: merge(chapterForm.sectionCaption, 'sectionCaption'),
               content: contentHtml,
               type: chapterForm.sectionType,
               contents: mediaList.map((m) => ({
@@ -611,14 +719,14 @@ export function ChapterManagementPage() {
       const normalizedTitle = chapterForm.title.trim();
       
       const chapterData = {
-        title: normalizedTitle,
-        description: chapterForm.description.trim(),
+        title: merge(chapterForm.title, 'title'),
+        description: merge(chapterForm.description, 'description'),
         status: finalStatus,
         thumbnail: chapterForm.thumbnailPreview || null,
         sections: [
           {
-            title: chapterForm.sectionName.trim(),
-            description: chapterForm.sectionCaption.trim(),
+            title: merge(chapterForm.sectionName, 'sectionName'),
+            description: merge(chapterForm.sectionCaption, 'sectionCaption'),
             content: contentHtml,
             type: chapterForm.sectionType,
             contents: mediaList.map(m => ({
@@ -837,7 +945,7 @@ export function ChapterManagementPage() {
                   }}
                 >
                   <div className="chapter-order-cell">
-                    <button type="button" className="chapter-drag-btn" aria-label={`Move ${chapter.title}`} style={{ cursor: isDragAndDropEnabled ? 'grab' : 'not-allowed', pointerEvents: isDragAndDropEnabled ? 'auto' : 'none' }}>
+                    <button type="button" className="chapter-drag-btn" aria-label={`Move ${renderTranslated(chapter.title, LANG_CODES[activeLanguageTab])}`} style={{ cursor: isDragAndDropEnabled ? 'grab' : 'not-allowed', pointerEvents: isDragAndDropEnabled ? 'auto' : 'none' }}>
                       <svg viewBox="0 0 24 24" aria-hidden="true">
                         <circle cx="8" cy="7" r="1.5" />
                         <circle cx="16" cy="7" r="1.5" />
@@ -855,7 +963,7 @@ export function ChapterManagementPage() {
                       {chapter.thumbnail ? (
                         <img 
                           src={chapter.thumbnail} 
-                          alt={chapter.title} 
+                          alt={renderTranslated(chapter.title, LANG_CODES[activeLanguageTab])} 
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                         />
                       ) : (
@@ -866,9 +974,9 @@ export function ChapterManagementPage() {
                       )}
                     </div>
                     <div className="chapter-copy">
-                      <h3>{chapter.title}</h3>
+                      <h3>{renderTranslated(chapter.title, LANG_CODES[activeLanguageTab])}</h3>
                       <p>
-                        {chapter.summary} {"\u2022"} {chapter.sections} sections
+                        {renderTranslated(chapter.summary, LANG_CODES[activeLanguageTab])} {"\u2022"} {chapter.sections} sections
                       </p>
                     </div>
                   </div>
@@ -896,7 +1004,7 @@ export function ChapterManagementPage() {
                       View Sections
                     </button>
 
-                    <button type="button" className="chapter-icon-btn" aria-label={`Edit ${chapter.title}`} onClick={() => handleEditChapter(chapter)}>
+                    <button type="button" className="chapter-icon-btn" aria-label={`Edit ${renderTranslated(chapter.title, LANG_CODES[activeLanguageTab])}`} onClick={() => handleEditChapter(chapter)}>
                       <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                         <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -906,7 +1014,7 @@ export function ChapterManagementPage() {
                     <button
                       type="button"
                       className="chapter-icon-btn"
-                      aria-label={`Delete ${chapter.title}`}
+                      aria-label={`Delete ${renderTranslated(chapter.title, LANG_CODES[activeLanguageTab])}`}
                       onClick={() => openDeleteChapterModal(chapter.id)}
                     >
                       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -926,7 +1034,7 @@ export function ChapterManagementPage() {
                   return (
                     <div className="section-panel" style={{ padding: '24px', background: '#FAFAFC', borderTop: '1px solid #F1F3F5' }}>
                       <div className="section-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                        <span style={{ fontSize: '14px', color: '#718096', fontWeight: '500' }}>Sections in {chapter.title}</span>
+                        <span style={{ fontSize: '14px', color: '#718096', fontWeight: '500' }}>Sections in {renderTranslated(chapter.title, LANG_CODES[activeLanguageTab])}</span>
                         <button type="button" onClick={() => { setAddSectionFor(cId); setSectionForm({ title: "", description: "", type: "Text" }); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#795289', color: '#FFF', border: 'none', padding: '6px 16px', borderRadius: '100px', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>
                           <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
                           Add Section
@@ -956,7 +1064,7 @@ export function ChapterManagementPage() {
                             <div className="section-drag" style={{ color: '#CBD5E0', cursor: 'grab', display: 'flex', alignItems: 'center' }}>
                               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="8" cy="7" r="1.5" /><circle cx="16" cy="7" r="1.5" /><circle cx="8" cy="12" r="1.5" /><circle cx="16" cy="12" r="1.5" /><circle cx="8" cy="17" r="1.5" /><circle cx="16" cy="17" r="1.5" /></svg>
                             </div>
-                            <span className="section-title" style={{ fontSize: '14px', fontWeight: '600', color: '#111827', textTransform: 'none' }}>{sec.title}</span>
+                            <span className="section-title" style={{ fontSize: '14px', fontWeight: '600', color: '#111827', textTransform: 'none' }}>{renderTranslated(sec.title, LANG_CODES[activeLanguageTab])}</span>
                             
                             <span className="section-status-pill" onClick={() => handleToggleSectionStatus(chapter, sec.id)} style={{ cursor: "pointer", marginLeft: "auto", marginRight: "12px", display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '100px', fontSize: '12px', fontWeight: '500', background: sec.status === 'Published' ? '#E6F4EA' : '#F1F3F5', color: sec.status === 'Published' ? '#1E7E34' : '#495057' }} title="Click to toggle status">
                               {sec.status === "Published" ? (
@@ -998,7 +1106,7 @@ export function ChapterManagementPage() {
                                       </svg>
                                     </span>
                                     <span className="content-title" style={{ fontSize: '13px', color: '#2D3748' }}>
-                                      {content.title} {content.is_required && <span style={{ color: '#E53E3E', marginLeft: '2px' }}>*</span>}
+                                      {renderTranslated(content.title, LANG_CODES[activeLanguageTab])} {content.is_required && <span style={{ color: '#E53E3E', marginLeft: '2px' }}>*</span>}
                                     </span>
                                   </div>
                                 ))}
@@ -1076,25 +1184,84 @@ export function ChapterManagementPage() {
             </div>
 
             <div className="chapter-drawer-body">
+              <div className="language-tabs" style={{ display: 'flex', gap: '24px', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px', marginBottom: '24px' }}>
+                {['English 🇬🇧', 'France 🇫🇷', 'Indonesian 🇮🇩', 'Russian 🇷🇺', 'Spanish 🇪🇸'].map(lang => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => {
+                      setActiveLanguageTab(lang);
+                      if (lang !== 'English 🇬🇧') {
+                        const targetLang = LANG_CODES[lang];
+                        if (chapterForm.title && !translations.title?.[targetLang] && !isTranslating['title']) handleTranslate(chapterForm.title, 'title');
+                        if (chapterForm.description && !translations.description?.[targetLang] && !isTranslating['description']) handleTranslate(chapterForm.description, 'description');
+                        if (chapterForm.sectionName && !translations.sectionName?.[targetLang] && !isTranslating['sectionName']) handleTranslate(chapterForm.sectionName, 'sectionName');
+                        if (chapterForm.sectionCaption && !translations.sectionCaption?.[targetLang] && !isTranslating['sectionCaption']) handleTranslate(chapterForm.sectionCaption, 'sectionCaption');
+                        if (chapterForm.editorBlocks) {
+                           chapterForm.editorBlocks.forEach(b => {
+                             if (b.type === 'text') {
+                               const field = `content_${b.id}`;
+                               if (b.content && !translations[field]?.[targetLang] && !isTranslating[field]) {
+                                 handleTranslate(b.content, field);
+                               }
+                             }
+                           });
+                        }
+                      }
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      borderBottom: activeLanguageTab === lang ? '2px solid #5A4B81' : '2px solid transparent',
+                      color: activeLanguageTab === lang ? '#2D3748' : '#718096',
+                      fontWeight: activeLanguageTab === lang ? '600' : '400',
+                      paddingBottom: '12px',
+                      marginBottom: '-13px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {lang}
+                  </button>
+                ))}
+              </div>
+
               {chapterStep === 1 && (
                 <div className="chapter-form-grid">
                   <div className="chapter-field">
-                    <span>Chapter Title <span style={{ color: '#E53E3E' }}>*</span></span>
+                    <span>Chapter Title <span style={{ color: '#E53E3E' }}>*</span> {activeLanguageTab !== 'English 🇬🇧' && isTranslating['title'] && <span style={{ fontSize: '12px', color: '#805AD5', marginLeft: '8px', fontWeight: '500' }}>Translating...</span>}</span>
                     <input
                       type="text"
                       placeholder="Chapter 8 - The Inner Still"
-                      value={chapterForm.title}
-                      onChange={handleChapterFieldChange("title")}
+                      value={activeLanguageTab === 'English 🇬🇧' ? chapterForm.title : getVal(chapterForm.title, 'title', activeLanguageTab)}
+                      onChange={(e) => {
+                        if (activeLanguageTab === 'English 🇬🇧') {
+                          setChapterForm((f) => ({ ...f, title: e.target.value }));
+                        } else {
+                          setVal('title', activeLanguageTab, e.target.value);
+                        }
+                      }}
+                      onBlur={() => {
+                         if (activeLanguageTab === 'English 🇬🇧') handleTranslate(chapterForm.title, 'title');
+                      }}
                     />
                   </div>
 
                   <div className="chapter-field">
-                    <span>Short Description <span style={{ color: '#E53E3E' }}>*</span></span>
+                    <span>Short Description <span style={{ color: '#E53E3E' }}>*</span> {activeLanguageTab !== 'English 🇬🇧' && isTranslating['description'] && <span style={{ fontSize: '12px', color: '#805AD5', marginLeft: '8px', fontWeight: '500' }}>Translating...</span>}</span>
                     <input
                       type="text"
                       placeholder="Learning about inner still to achieve inner peace"
-                      value={chapterForm.description}
-                      onChange={handleChapterFieldChange("description")}
+                      value={activeLanguageTab === 'English 🇬🇧' ? chapterForm.description : getVal(chapterForm.description, 'description', activeLanguageTab)}
+                      onChange={(e) => {
+                        if (activeLanguageTab === 'English 🇬🇧') {
+                          setChapterForm((f) => ({ ...f, description: e.target.value }));
+                        } else {
+                          setVal('description', activeLanguageTab, e.target.value);
+                        }
+                      }}
+                      onBlur={() => {
+                         if (activeLanguageTab === 'English 🇬🇧') handleTranslate(chapterForm.description, 'description');
+                      }}
                     />
                   </div>
 
@@ -1132,45 +1299,41 @@ export function ChapterManagementPage() {
 
               {chapterStep === 2 && (
                 <div className="chapter-form-grid" style={{ gap: '20px' }}>
-                  <div className="language-tabs" style={{ display: 'flex', gap: '24px', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px', marginBottom: '8px' }}>
-                    {['English 🇬🇧', 'France 🇫🇷', 'Indonesian 🇮🇩', 'Russian 🇷🇺', 'Spanish 🇪🇸'].map(lang => (
-                      <button
-                        key={lang}
-                        type="button"
-                        onClick={() => setActiveLanguageTab(lang)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          borderBottom: activeLanguageTab === lang ? '2px solid #5A4B81' : '2px solid transparent',
-                          color: activeLanguageTab === lang ? '#2D3748' : '#718096',
-                          fontWeight: activeLanguageTab === lang ? '600' : '400',
-                          paddingBottom: '12px',
-                          marginBottom: '-13px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {lang}
-                      </button>
-                    ))}
-                  </div>
-
                   <div className="chapter-field">
-                    <span>Section Name <span style={{ color: '#E53E3E' }}>*</span></span>
+                    <span>Section Name <span style={{ color: '#E53E3E' }}>*</span> {activeLanguageTab !== 'English 🇬🇧' && isTranslating['sectionName'] && <span style={{ fontSize: '12px', color: '#805AD5', marginLeft: '8px', fontWeight: '500' }}>Translating...</span>}</span>
                     <input
                       type="text"
                       placeholder="Enter section name"
-                      value={chapterForm.sectionName}
-                      onChange={handleChapterFieldChange("sectionName")}
+                      value={activeLanguageTab === 'English 🇬🇧' ? chapterForm.sectionName : getVal(chapterForm.sectionName, 'sectionName', activeLanguageTab)}
+                      onChange={(e) => {
+                        if (activeLanguageTab === 'English 🇬🇧') {
+                          setChapterForm((f) => ({ ...f, sectionName: e.target.value }));
+                        } else {
+                          setVal('sectionName', activeLanguageTab, e.target.value);
+                        }
+                      }}
+                      onBlur={() => {
+                         if (activeLanguageTab === 'English 🇬🇧') handleTranslate(chapterForm.sectionName, 'sectionName');
+                      }}
                     />
                   </div>
 
                   <div className="chapter-field">
-                    <span>Section Caption <span style={{ color: '#E53E3E' }}>*</span></span>
+                    <span>Section Caption <span style={{ color: '#E53E3E' }}>*</span> {activeLanguageTab !== 'English 🇬🇧' && isTranslating['sectionCaption'] && <span style={{ fontSize: '12px', color: '#805AD5', marginLeft: '8px', fontWeight: '500' }}>Translating...</span>}</span>
                     <input
                       type="text"
                       placeholder="Enter section caption"
-                      value={chapterForm.sectionCaption}
-                      onChange={handleChapterFieldChange("sectionCaption")}
+                      value={activeLanguageTab === 'English 🇬🇧' ? chapterForm.sectionCaption : getVal(chapterForm.sectionCaption, 'sectionCaption', activeLanguageTab)}
+                      onChange={(e) => {
+                        if (activeLanguageTab === 'English 🇬🇧') {
+                          setChapterForm((f) => ({ ...f, sectionCaption: e.target.value }));
+                        } else {
+                          setVal('sectionCaption', activeLanguageTab, e.target.value);
+                        }
+                      }}
+                      onBlur={() => {
+                         if (activeLanguageTab === 'English 🇬🇧') handleTranslate(chapterForm.sectionCaption, 'sectionCaption');
+                      }}
                     />
                   </div>
 
@@ -1180,7 +1343,12 @@ export function ChapterManagementPage() {
                   </div>
 
                   <div className="chapter-field chapter-field-wide">
-                    <span>Content (English - Primary) <span style={{ color: '#E53E3E' }}>*</span></span>
+                    <span>
+                      Content ({activeLanguageTab === 'English 🇬🇧' ? 'English - Primary' : activeLanguageTab.split(' ')[0]}) <span style={{ color: '#E53E3E' }}>*</span>
+                      {activeLanguageTab !== 'English 🇬🇧' && chapterForm.editorBlocks.some(b => b.type === 'text' && isTranslating[`content_${b.id}`]) && (
+                        <span style={{ fontSize: '12px', color: '#805AD5', marginLeft: '8px', fontWeight: '500' }}>Translating...</span>
+                      )}
+                    </span>
                     <div className="rich-text-editor" style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
                       <div className="rte-toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '12px', borderBottom: '1px solid #E2E8F0', background: '#F7FAFC', alignItems: 'center' }}>
                         {/* Text Formatting */}
@@ -1234,16 +1402,27 @@ export function ChapterManagementPage() {
                       {/* Blocks Rendering */}
                       {chapterForm.editorBlocks.map((block) => {
                         if (block.type === 'text') {
+                          const isEnglish = activeLanguageTab === 'English 🇬🇧';
+                          const textContent = isEnglish ? block.content : getVal(block.content, `content_${block.id}`, activeLanguageTab);
+                          
                           return (
                             <div
-                              key={block.id}
+                              key={`${block.id}-${activeLanguageTab}`}
                               id={block.id}
                               className="custom-rte-content"
                               contentEditable
                               suppressContentEditableWarning
-                              onBlur={(e) => handleBlockChange(block.id, { content: e.target.innerHTML })}
+                              onBlur={(e) => {
+                                const newHtml = e.target.innerHTML;
+                                if (isEnglish) {
+                                  handleBlockChange(block.id, { content: newHtml });
+                                  handleTranslate(newHtml, `content_${block.id}`);
+                                } else {
+                                  setVal(`content_${block.id}`, activeLanguageTab, newHtml);
+                                }
+                              }}
                               style={{ width: '100%', minHeight: '80px', border: 'none', padding: '16px', outline: 'none' }}
-                              dangerouslySetInnerHTML={{ __html: block.content || '<p><br></p>' }}
+                              dangerouslySetInnerHTML={{ __html: textContent || '<p><br></p>' }}
                             />
                           );
                         }
@@ -1334,12 +1513,12 @@ export function ChapterManagementPage() {
 
                     <div style={{ marginBottom: '16px' }}>
                       <span style={{ display: 'block', fontSize: '13px', color: '#718096', marginBottom: '4px' }}>Chapter Title</span>
-                      <strong style={{ fontSize: '15px', color: '#2D3748', fontWeight: '500' }}>{chapterForm.title || "-"}</strong>
+                      <strong style={{ fontSize: '15px', color: '#2D3748', fontWeight: '500' }}>{renderTranslated(merge(chapterForm.title, 'title'), LANG_CODES[activeLanguageTab]) || "-"}</strong>
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>
                       <span style={{ display: 'block', fontSize: '13px', color: '#718096', marginBottom: '4px' }}>Short Description</span>
-                      <strong style={{ fontSize: '15px', color: '#2D3748', fontWeight: '500' }}>{chapterForm.description || "-"}</strong>
+                      <strong style={{ fontSize: '15px', color: '#2D3748', fontWeight: '500' }}>{renderTranslated(merge(chapterForm.description, 'description'), LANG_CODES[activeLanguageTab]) || "-"}</strong>
                     </div>
 
                     <div>
@@ -1358,10 +1537,6 @@ export function ChapterManagementPage() {
                   <div className="review-section">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                       <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#2D3748', margin: 0 }}>Initial Section Summary</h3>
-                      <button type="button" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: '1px solid #E2E8F0', padding: '6px 12px', borderRadius: '20px', fontSize: '13px', color: '#4A5568', cursor: 'pointer' }}>
-                        Open Preview
-                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                      </button>
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>
@@ -1376,12 +1551,12 @@ export function ChapterManagementPage() {
 
                     <div style={{ marginBottom: '16px' }}>
                       <span style={{ display: 'block', fontSize: '13px', color: '#718096', marginBottom: '4px' }}>Section Name</span>
-                      <strong style={{ fontSize: '15px', color: '#2D3748', fontWeight: '500' }}>{chapterForm.sectionName || "-"}</strong>
+                      <strong style={{ fontSize: '15px', color: '#2D3748', fontWeight: '500' }}>{renderTranslated(merge(chapterForm.sectionName, 'sectionName'), LANG_CODES[activeLanguageTab]) || "-"}</strong>
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>
                       <span style={{ display: 'block', fontSize: '13px', color: '#718096', marginBottom: '4px' }}>Section Caption</span>
-                      <strong style={{ fontSize: '15px', color: '#2D3748', fontWeight: '500' }}>{chapterForm.sectionCaption || "-"}</strong>
+                      <strong style={{ fontSize: '15px', color: '#2D3748', fontWeight: '500' }}>{renderTranslated(merge(chapterForm.sectionCaption, 'sectionCaption'), LANG_CODES[activeLanguageTab]) || "-"}</strong>
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>

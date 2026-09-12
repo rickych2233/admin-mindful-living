@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
+import { renderTranslated } from "./utils/renderTranslated";
+import { useTranslations, LANG_CODES } from "./utils/translateUtils";
 import "./media.css";
 import "./media-add.css";
 
@@ -238,6 +240,8 @@ const MOCK_USER_SUGGESTIONS = [
 
 function MediaLibraryPage() {
   const [activeTab, setActiveTab] = useState("Content List");
+  const [activeLanguageTab, setActiveLanguageTab] = useState("English 🇬🇧");
+  const { translations, setTranslations, getVal, setVal, handleTranslate, merge, isTranslating } = useTranslations();
   const [mediaFiles, setMediaFiles] = useState([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [addStep, setAddStep] = useState(1);
@@ -256,7 +260,7 @@ function MediaLibraryPage() {
     relatedChapters: [],
     textContent: ""
   });
-  const [textContentLanguage, setTextContentLanguage] = useState("English");
+
 
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All Category");
@@ -386,6 +390,13 @@ function MediaLibraryPage() {
 
   const openEditModal = (media) => {
     setEditingMediaId(media.id);
+    setTranslations({
+      shortQuote: media.short_quote || media.shortQuote || {},
+      whyItMatters: media.why_it_matters || media.whyItMatters || {},
+      corpusConnection: media.corpus_connection || media.corpusConnection || {},
+      criticalNote: media.critical_note || media.criticalNote || {},
+      integrationQuestion: media.integration_question || media.integrationQuestion || {},
+    });
     setMediaForm({
       name: media.name || "",
       author: media.author || "",
@@ -393,11 +404,11 @@ function MediaLibraryPage() {
       category: media.category || "Book",
       status: media.status || "Published",
       relatedChapters: media.related_chapters || media.relatedChapters || [],
-      shortQuote: media.short_quote || media.shortQuote || "",
-      whyItMatters: media.why_it_matters || media.whyItMatters || "",
-      corpusConnection: media.corpus_connection || media.corpusConnection || "",
-      criticalNote: media.critical_note || media.criticalNote || "",
-      integrationQuestion: media.integration_question || media.integrationQuestion || ""
+      shortQuote: renderTranslated(media.short_quote || media.shortQuote, "en") || "",
+      whyItMatters: renderTranslated(media.why_it_matters || media.whyItMatters, "en") || "",
+      corpusConnection: renderTranslated(media.corpus_connection || media.corpusConnection, "en") || "",
+      criticalNote: renderTranslated(media.critical_note || media.criticalNote, "en") || "",
+      integrationQuestion: renderTranslated(media.integration_question || media.integrationQuestion, "en") || ""
     });
     setSelectedThumbnail(media.thumbnail || null);
     setSelectedMediaFile(media.content_file || media.contentFile || null);
@@ -717,15 +728,15 @@ function MediaLibraryPage() {
                    
                    <div className="media-detail-item">
                      <span>Short Quote</span>
-                     <strong style={{ fontWeight: 400 }}>{selectedMedia.short_quote || selectedMedia.shortQuote || "-"}</strong>
+                     <strong style={{ fontWeight: 400 }}>{renderTranslated(selectedMedia.short_quote || selectedMedia.shortQuote, "en") || "-"}</strong>
                    </div>
                    <div className="media-detail-item">
                      <span>Why It Matters</span>
-                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>{selectedMedia.why_it_matters || selectedMedia.whyItMatters || "-"}</strong>
+                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>{renderTranslated(selectedMedia.why_it_matters || selectedMedia.whyItMatters, "en") || "-"}</strong>
                    </div>
                    <div className="media-detail-item">
                      <span>Corpus Connection</span>
-                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>{selectedMedia.corpus_connection || selectedMedia.corpusConnection || "-"}</strong>
+                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>{renderTranslated(selectedMedia.corpus_connection || selectedMedia.corpusConnection, "en") || "-"}</strong>
                    </div>
                    <div className="media-detail-item">
                      <span>Related Chapter</span>
@@ -733,18 +744,18 @@ function MediaLibraryPage() {
                        {(selectedMedia.related_chapters || selectedMedia.relatedChapters || []).length > 0 ? (
                          (selectedMedia.related_chapters || selectedMedia.relatedChapters).map(chId => {
                            const ch = chapters.find(c => c.id === chId);
-                           return <div key={chId}>• {ch ? ch.title : `Chapter ID: ${chId}`}</div>;
+                           return <div key={chId}>• {ch ? renderTranslated(ch.title, LANG_CODES[activeLanguageTab]) : `Chapter ID: ${chId}`}</div>;
                          })
                        ) : "-"}
                      </div>
                    </div>
                    <div className="media-detail-item">
                      <span>Critical Note</span>
-                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>{selectedMedia.critical_note || selectedMedia.criticalNote || "-"}</strong>
+                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>{renderTranslated(selectedMedia.critical_note || selectedMedia.criticalNote, "en") || "-"}</strong>
                    </div>
                    <div className="media-detail-item">
                      <span>Integration Question</span>
-                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>{selectedMedia.integration_question || selectedMedia.integrationQuestion || "-"}</strong>
+                     <strong style={{ fontWeight: 400, lineHeight: 1.5 }}>{renderTranslated(selectedMedia.integration_question || selectedMedia.integrationQuestion, "en") || "-"}</strong>
                    </div>
                 </div>
               ) : (
@@ -818,7 +829,7 @@ function MediaLibraryPage() {
             </div>
 
             <div className="media-drawer-body">
-              <div className="add-content-stepper">
+              <div className="add-content-stepper" style={{ marginBottom: '24px' }}>
                 <div className="add-content-stepper-line"></div>
                 <div className={`add-content-step ${addStep >= 1 ? "active" : ""}`}>
                   <div className="add-content-step-circle">
@@ -831,6 +842,8 @@ function MediaLibraryPage() {
                   <span className="add-content-step-label">Add Content</span>
                 </div>
               </div>
+
+
 
               {addStep === 1 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -874,17 +887,41 @@ function MediaLibraryPage() {
                     
                     <div className="chapter-form-field">
                       <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Short Quote <span style={{color: '#EF4444'}}>*</span></label>
-                      <input type="text" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8 }} placeholder="e.g. The body is the foundation of the conscious mind." value={mediaForm.shortQuote || ""} onChange={(e) => setMediaForm({...mediaForm, shortQuote: e.target.value})} />
+                      <input type="text" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8 }} placeholder="e.g. The body is the foundation of the conscious mind." value={activeLanguageTab === 'English 🇬🇧' ? (mediaForm.shortQuote || "") : getVal(mediaForm.shortQuote, 'shortQuote', activeLanguageTab)} onChange={(e) => {
+    if (activeLanguageTab === 'English 🇬🇧') {
+      setMediaForm({...mediaForm, shortQuote: e.target.value});
+    } else {
+      setVal('shortQuote', activeLanguageTab, e.target.value);
+    }
+  }} onBlur={() => {
+    if (activeLanguageTab === 'English 🇬🇧') handleTranslate(mediaForm.shortQuote, 'shortQuote');
+  }} />
                     </div>
 
                     <div className="chapter-form-field">
                       <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Why It Matters <span style={{color: '#EF4444'}}>*</span></label>
-                      <textarea rows="3" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, resize: 'none', fontFamily: 'inherit' }} placeholder="Describe the key insight or benefit of this resource..." value={mediaForm.whyItMatters || ""} onChange={(e) => setMediaForm({...mediaForm, whyItMatters: e.target.value})}></textarea>
+                      <textarea rows="3" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, resize: 'none', fontFamily: 'inherit' }} placeholder="Describe the key insight or benefit of this resource..." value={activeLanguageTab === 'English 🇬🇧' ? (mediaForm.whyItMatters || "") : getVal(mediaForm.whyItMatters, 'whyItMatters', activeLanguageTab)} onChange={(e) => {
+    if (activeLanguageTab === 'English 🇬🇧') {
+      setMediaForm({...mediaForm, whyItMatters: e.target.value});
+    } else {
+      setVal('whyItMatters', activeLanguageTab, e.target.value);
+    }
+  }} onBlur={() => {
+    if (activeLanguageTab === 'English 🇬🇧') handleTranslate(mediaForm.whyItMatters, 'whyItMatters');
+  }}></textarea>
                     </div>
 
                     <div className="chapter-form-field">
                       <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Corpus Connection <span style={{color: '#EF4444'}}>*</span></label>
-                      <textarea rows="3" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, resize: 'none', fontFamily: 'inherit' }} placeholder="Describe the relationship between this resource and the Corpus..." value={mediaForm.corpusConnection || ""} onChange={(e) => setMediaForm({...mediaForm, corpusConnection: e.target.value})}></textarea>
+                      <textarea rows="3" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, resize: 'none', fontFamily: 'inherit' }} placeholder="Describe the relationship between this resource and the Corpus..." value={activeLanguageTab === 'English 🇬🇧' ? (mediaForm.corpusConnection || "") : getVal(mediaForm.corpusConnection, 'corpusConnection', activeLanguageTab)} onChange={(e) => {
+    if (activeLanguageTab === 'English 🇬🇧') {
+      setMediaForm({...mediaForm, corpusConnection: e.target.value});
+    } else {
+      setVal('corpusConnection', activeLanguageTab, e.target.value);
+    }
+  }} onBlur={() => {
+    if (activeLanguageTab === 'English 🇬🇧') handleTranslate(mediaForm.corpusConnection, 'corpusConnection');
+  }}></textarea>
                     </div>
 
                     <div className="chapter-form-field">
@@ -919,7 +956,7 @@ function MediaLibraryPage() {
                                     }
                                   }}
                                 />
-                                <span style={{ fontSize: 13, color: '#151c29' }}>{ch.title}</span>
+                                <span style={{ fontSize: 13, color: '#151c29' }}>{renderTranslated(ch.title, LANG_CODES[activeLanguageTab])}</span>
                               </label>
                             ))}
                             {(!Array.isArray(chapters) || chapters.length === 0) && (
@@ -932,12 +969,28 @@ function MediaLibraryPage() {
 
                     <div className="chapter-form-field">
                       <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Critical Note <span style={{color: '#EF4444'}}>*</span></label>
-                      <textarea rows="3" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, resize: 'none', fontFamily: 'inherit' }} placeholder="Provide critical context about this resource..." value={mediaForm.criticalNote || ""} onChange={(e) => setMediaForm({...mediaForm, criticalNote: e.target.value})}></textarea>
+                      <textarea rows="3" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, resize: 'none', fontFamily: 'inherit' }} placeholder="Provide critical context about this resource..." value={activeLanguageTab === 'English 🇬🇧' ? (mediaForm.criticalNote || "") : getVal(mediaForm.criticalNote, 'criticalNote', activeLanguageTab)} onChange={(e) => {
+    if (activeLanguageTab === 'English 🇬🇧') {
+      setMediaForm({...mediaForm, criticalNote: e.target.value});
+    } else {
+      setVal('criticalNote', activeLanguageTab, e.target.value);
+    }
+  }} onBlur={() => {
+    if (activeLanguageTab === 'English 🇬🇧') handleTranslate(mediaForm.criticalNote, 'criticalNote');
+  }}></textarea>
                     </div>
 
                     <div className="chapter-form-field">
                       <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Integration Question <span style={{color: '#EF4444'}}>*</span></label>
-                      <textarea rows="3" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, resize: 'none', fontFamily: 'inherit' }} placeholder="Ask a question that encourages personal reflection..." value={mediaForm.integrationQuestion || ""} onChange={(e) => setMediaForm({...mediaForm, integrationQuestion: e.target.value})}></textarea>
+                      <textarea rows="3" style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, resize: 'none', fontFamily: 'inherit' }} placeholder="Ask a question that encourages personal reflection..." value={activeLanguageTab === 'English 🇬🇧' ? (mediaForm.integrationQuestion || "") : getVal(mediaForm.integrationQuestion, 'integrationQuestion', activeLanguageTab)} onChange={(e) => {
+    if (activeLanguageTab === 'English 🇬🇧') {
+      setMediaForm({...mediaForm, integrationQuestion: e.target.value});
+    } else {
+      setVal('integrationQuestion', activeLanguageTab, e.target.value);
+    }
+  }} onBlur={() => {
+    if (activeLanguageTab === 'English 🇬🇧') handleTranslate(mediaForm.integrationQuestion, 'integrationQuestion');
+  }}></textarea>
                     </div>
                   </>
                 )}
@@ -1065,38 +1118,53 @@ function MediaLibraryPage() {
                   
                   {mediaForm.format === "Text" ? (
                     <div className="chapter-form-field">
-                      <div style={{ display: "flex", gap: "16px", marginBottom: "16px", borderBottom: "1px solid #E3E7ED", paddingBottom: "8px" }}>
-                        {[
-                          { lang: "English", icon: "🇬🇧" },
-                          { lang: "France", icon: "🇫🇷" },
-                          { lang: "Indonesian", icon: "🇮🇩" },
-                          { lang: "Russian", icon: "🇷🇺" },
-                          { lang: "Spanish", icon: "🇪🇸" },
-                        ].map(({ lang, icon }) => (
-                          <span
+                      <div className="language-tabs" style={{ display: "flex", gap: "24px", marginBottom: "16px", borderBottom: "1px solid #E3E7ED", paddingBottom: "12px" }}>
+                        {['English 🇬🇧', 'France 🇫🇷', 'Indonesian 🇮🇩', 'Russian 🇷🇺', 'Spanish 🇪🇸'].map(lang => (
+                          <button
                             key={lang}
-                            onClick={() => setTextContentLanguage(lang)}
+                            type="button"
+                            onClick={() => {
+                              setActiveLanguageTab(lang);
+                              if (lang !== 'English 🇬🇧') {
+                                const targetLang = LANG_CODES[lang];
+                                if (mediaForm.textContent && !translations.textContent?.[targetLang] && !isTranslating['textContent']) handleTranslate(mediaForm.textContent, 'textContent');
+                              }
+                            }}
                             style={{
-                              fontSize: "13px",
-                              fontWeight: textContentLanguage === lang ? "600" : "500",
-                              color: textContentLanguage === lang ? "#171e2b" : "#A0AEC0",
-                              borderBottom: textContentLanguage === lang ? "2px solid #795289" : "2px solid transparent",
-                              paddingBottom: "8px",
-                              marginBottom: "-10px",
-                              cursor: "pointer",
+                              background: 'none',
+                              border: 'none',
+                              borderBottom: activeLanguageTab === lang ? '2px solid #5A4B81' : '2px solid transparent',
+                              color: activeLanguageTab === lang ? '#2D3748' : '#718096',
+                              fontWeight: activeLanguageTab === lang ? '600' : '500',
+                              paddingBottom: '12px',
+                              marginBottom: '-13px',
+                              cursor: 'pointer',
+                              fontSize: "13px"
                             }}
                           >
-                            {lang} {icon}
-                          </span>
+                            {lang}
+                          </button>
                         ))}
                       </div>
-                      <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Content ({textContentLanguage} - Primary) <span style={{color: '#EF4444'}}>*</span></label>
+                      <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#151c29' }}>
+                        Content ({activeLanguageTab === 'English 🇬🇧' ? 'English - Primary' : activeLanguageTab.split(' ')[0]}) <span style={{color: '#EF4444'}}>*</span>
+                        {activeLanguageTab !== 'English 🇬🇧' && isTranslating?.['textContent'] && <span style={{ fontSize: '12px', color: '#805AD5', marginLeft: '8px', fontWeight: '500' }}>Translating...</span>}
+                      </label>
                       <textarea
                         rows="6"
                         style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: 8, resize: 'none', fontFamily: 'inherit' }}
-                        placeholder={`Write section content in ${textContentLanguage.toLowerCase()}...`}
-                        value={mediaForm.textContent || ""}
-                        onChange={(e) => setMediaForm({...mediaForm, textContent: e.target.value})}
+                        placeholder={`Write section content in ${activeLanguageTab === 'English 🇬🇧' ? 'english' : activeLanguageTab.split(' ')[0].toLowerCase()}...`}
+                        value={activeLanguageTab === 'English 🇬🇧' ? (mediaForm.textContent || "") : getVal(mediaForm.textContent, 'textContent', activeLanguageTab)}
+                        onChange={(e) => {
+                          if (activeLanguageTab === 'English 🇬🇧') {
+                            setMediaForm({...mediaForm, textContent: e.target.value});
+                          } else {
+                            setVal('textContent', activeLanguageTab, e.target.value);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (activeLanguageTab === 'English 🇬🇧') handleTranslate(mediaForm.textContent, 'textContent');
+                        }}
                       ></textarea>
                     </div>
                   ) : (
@@ -1185,7 +1253,7 @@ function MediaLibraryPage() {
                       await fetch(editingMediaId ? `/api/media/${editingMediaId}` : "/api/media", {
                         method: editingMediaId ? "PUT" : "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ ...mediaForm, thumbnail: typeof selectedThumbnail === 'string' ? selectedThumbnail : (selectedThumbnail?.preview || null), contentFile: selectedMediaFile }),
+                        body: JSON.stringify({ ...mediaForm, shortQuote: merge(mediaForm.shortQuote, "shortQuote"), whyItMatters: merge(mediaForm.whyItMatters, "whyItMatters"), corpusConnection: merge(mediaForm.corpusConnection, "corpusConnection"), criticalNote: merge(mediaForm.criticalNote, "criticalNote"), integrationQuestion: merge(mediaForm.integrationQuestion, "integrationQuestion"), textContent: merge(mediaForm.textContent, "textContent"), thumbnail: typeof selectedThumbnail === 'string' ? selectedThumbnail : (selectedThumbnail?.preview || null), contentFile: selectedMediaFile }),
                       });
                       if (typeof fetchMediaFiles === "function") {
                         await fetchMediaFiles();

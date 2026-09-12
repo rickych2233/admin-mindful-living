@@ -95,7 +95,7 @@ const permissionSections = [
 
 function CloseIcon(props) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="m6 6 12 12M18 6 6 18" />
     </svg>
   );
@@ -103,7 +103,7 @@ function CloseIcon(props) {
 
 function TrashIcon(props) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M5 7h14M10 4h4m-7 3 1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9L17 7M10 11v5M14 11v5" />
     </svg>
   );
@@ -111,7 +111,7 @@ function TrashIcon(props) {
 
 function CheckIcon(props) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <circle cx="12" cy="12" r="8" />
       <path d="m9 12 2 2 4-4" />
     </svg>
@@ -120,7 +120,7 @@ function CheckIcon(props) {
 
 function UserIcon(props) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <circle cx="12" cy="8" r="3.1" />
       <path d="M6.5 18a5.5 5.5 0 0 1 11 0" />
     </svg>
@@ -129,7 +129,7 @@ function UserIcon(props) {
 
 function SortIcon(props) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="m8 10 4-4 4 4" />
       <path d="m16 14-4 4-4-4" />
     </svg>
@@ -138,7 +138,7 @@ function SortIcon(props) {
 
 function RemoveIcon(props) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <circle cx="12" cy="12" r="8" />
       <path d="m9.5 9.5 5 5M14.5 9.5l-5 5" />
     </svg>
@@ -147,7 +147,7 @@ function RemoveIcon(props) {
 
 function AlertIcon(props) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <circle cx="12" cy="12" r="8.5" />
       <path d="M12 8v5" />
       <circle cx="12" cy="16.5" r=".8" />

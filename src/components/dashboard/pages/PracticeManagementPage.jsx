@@ -961,7 +961,7 @@ export function PracticeManagementPage() {
 
                   <div className="practice-main-cell" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                     <img
-                      src={practice.thumbnail || "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=120&q=80"}
+                      src={(practice.thumbnail && (practice.thumbnail.startsWith('http') || practice.thumbnail.startsWith('data:'))) ? practice.thumbnail : "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=120&q=80"}
                       alt={practice.title}
                       className="chapter-thumb"
                       style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
@@ -1394,7 +1394,7 @@ export function PracticeManagementPage() {
                       <div className="chapter-thumbnail-preview" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#F7FAFC' }}>
                         <div className="chapter-thumbnail-info" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <div className="thumb-img-placeholder" style={{ width: '40px', height: '40px', borderRadius: '6px', background: '#CBD5E0', overflow: 'hidden' }}>
-                            <img src={practiceForm.thumbnailPreview || "/placeholder-thumb.jpg"} alt="Thumbnail Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => e.target.style.display = 'none'} />
+                            <img src={(practiceForm.thumbnailPreview && (practiceForm.thumbnailPreview.startsWith('http') || practiceForm.thumbnailPreview.startsWith('data:'))) ? practiceForm.thumbnailPreview : "/placeholder-thumb.jpg"} alt="Thumbnail Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => e.target.style.display = 'none'} />
                           </div>
                           <div className="thumb-details" style={{ display: 'flex', flexDirection: 'column' }}>
                             <span className="file-name" style={{ fontSize: '14px', fontWeight: '500', color: '#2D3748' }}>{practiceForm.thumbnailName}</span>
