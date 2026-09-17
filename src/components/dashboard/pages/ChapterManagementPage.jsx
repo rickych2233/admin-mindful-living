@@ -342,7 +342,7 @@ export function ChapterManagementPage() {
       const matchesQuery =
         normalizedQuery === "" ||
         (renderTranslated(chapter.title, "en") || "").toLowerCase().includes(normalizedQuery) ||
-        chapter.summary.toLowerCase().includes(normalizedQuery);
+        (renderTranslated(chapter.summary, "en") || "").toLowerCase().includes(normalizedQuery);
       const matchesStatus = statusFilter === "All Status" || chapter.status === statusFilter;
 
       return matchesQuery && matchesStatus;
@@ -938,9 +938,9 @@ export function ChapterManagementPage() {
                   onDragLeave={(e) => isDragAndDropEnabled && handleDragLeave(e, actualIndex)}
                   onDrop={(e) => isDragAndDropEnabled && handleDrop(e, actualIndex)}
                   style={{ 
-                    opacity: draggedChapterIndex === actualIndex ? 0.5 : 1,
-                    borderTop: dragOverChapterIndex === actualIndex && actualIndex < draggedChapterIndex ? '3px solid #795289' : undefined,
-                    borderBottom: dragOverChapterIndex === actualIndex && actualIndex > draggedChapterIndex ? '3px solid #795289' : undefined,
+                    opacity: draggedChapterIndex !== null && draggedChapterIndex === actualIndex ? 0.5 : 1,
+                    borderTop: dragOverChapterIndex !== null && dragOverChapterIndex === actualIndex && actualIndex < draggedChapterIndex ? '3px solid #795289' : undefined,
+                    borderBottom: dragOverChapterIndex !== null && dragOverChapterIndex === actualIndex && actualIndex > draggedChapterIndex ? '3px solid #795289' : undefined,
                     transition: 'border 0.2s ease-in-out'
                   }}
                 >
@@ -1176,7 +1176,11 @@ export function ChapterManagementPage() {
                     key={step.id}
                     className={`chapter-step${isActive ? " is-active" : ""}${isComplete ? " is-complete" : ""}`}
                   >
-                    <div className="chapter-step-circle">{step.id}</div>
+                    <div className="chapter-step-circle">
+                      {isComplete ? (
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      ) : step.id}
+                    </div>
                     <span>{step.label}</span>
                   </div>
                 );
@@ -1537,6 +1541,10 @@ export function ChapterManagementPage() {
                   <div className="review-section">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                       <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#2D3748', margin: 0 }}>Initial Section Summary</h3>
+                      <button type="button" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#4A5568', background: '#FFF', border: '1px solid #E2E8F0', padding: '6px 12px', borderRadius: '100px', cursor: 'pointer' }}>
+                        Open Preview
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                      </button>
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>
@@ -1559,20 +1567,28 @@ export function ChapterManagementPage() {
                       <strong style={{ fontSize: '15px', color: '#2D3748', fontWeight: '500' }}>{renderTranslated(merge(chapterForm.sectionCaption, 'sectionCaption'), LANG_CODES[activeLanguageTab]) || "-"}</strong>
                     </div>
 
-                    <div style={{ marginBottom: '16px' }}>
-                      <span style={{ display: 'block', fontSize: '13px', color: '#718096', marginBottom: '8px' }}>Section Content Preview</span>
+                    <div style={{ marginBottom: '24px' }}>
+                      <span style={{ display: 'block', fontSize: '13px', color: '#718096', marginBottom: '8px' }}>Section Content</span>
                       <div style={{ padding: '16px', background: '#F7FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        {chapterForm.editorBlocks && chapterForm.editorBlocks.map((block, idx) => {
-                          if (block.type === 'text') {
-                            return (
-                              <div 
-                                key={block.id}
-                                style={{ fontSize: '14px', color: '#4A5568', lineHeight: '1.6' }}
-                                dangerouslySetInnerHTML={{ __html: block.content || "-" }}
-                              />
-                            );
-                          }
+                        {chapterForm.editorBlocks && chapterForm.editorBlocks.filter(b => b.type === 'text').map((block) => {
+                          const isEnglish = activeLanguageTab === 'English 🇬🇧';
+                          const textContent = isEnglish ? block.content : getVal(block.content, `content_${block.id}`, activeLanguageTab);
                           return (
+                            <div 
+                              key={block.id}
+                              style={{ fontSize: '14px', color: '#4A5568', lineHeight: '1.6' }}
+                              dangerouslySetInnerHTML={{ __html: textContent || "-" }}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {chapterForm.editorBlocks && chapterForm.editorBlocks.filter(b => b.type !== 'text').length > 0 && (
+                      <div style={{ marginBottom: '16px' }}>
+                        <span style={{ display: 'block', fontSize: '13px', color: '#718096', marginBottom: '8px', fontWeight: '600' }}>Attached Media ({chapterForm.editorBlocks.filter(b => b.type !== 'text').length})</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {chapterForm.editorBlocks.filter(b => b.type !== 'text').map((block, idx) => (
                             <div key={block.id} style={{ padding: '12px', background: '#FFF', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '12px' }}>
                               {block.type === 'image' && block.url ? (
                                 <img src={block.url} alt={block.title || 'Preview'} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
@@ -1582,14 +1598,14 @@ export function ChapterManagementPage() {
                                 </div>
                               )}
                               <div>
-                                <strong style={{ display: 'block', fontSize: '14px', color: '#2D3748' }}>{block.title || `Media Block ${idx}`}</strong>
+                                <strong style={{ display: 'block', fontSize: '14px', color: '#2D3748' }}>{block.title || `Media Block ${idx + 1}`}</strong>
                                 <span style={{ fontSize: '12px', color: '#718096', textTransform: 'capitalize' }}>{block.type} Block {block.isRequired ? '(Required)' : ''}</span>
                               </div>
                             </div>
-                          );
-                        })}
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1619,23 +1635,39 @@ export function ChapterManagementPage() {
 
               {chapterStep === 3 ? (
                 <div style={{ display: 'flex', gap: '12px' }}>
-                  {isEditMode ? (
-                    <button type="button" onClick={() => handleContinue(editingChapter?.status || "Drafted")} disabled={!canContinue || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF', border: '1px solid #EAE6F0', color: '#795289', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
-                      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                      Save Changes
-                    </button>
-                  ) : (
-                    <button type="button" onClick={() => handleContinue("Drafted")} disabled={!canContinue || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF', border: '1px solid #EAE6F0', color: '#795289', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
-                      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                      Save as Draft
-                    </button>
-                  )}
-                  <button type="button" onClick={() => handleContinue("Published")} disabled={!canContinue || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#795289', border: 'none', color: '#FFF', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
-                    {isSubmitting ? "Publishing..." : (
-                      <>
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                        Publish Now
-                      </>
+                  <button type="button" onClick={() => handleContinue("Drafted")} disabled={!canContinue || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF', border: '1px solid #EAE6F0', color: '#795289', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                    Save as Draft
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => handleContinue(isEditMode ? (editingChapter?.status || "Drafted") : "Published")} 
+                    disabled={!canContinue || isSubmitting} 
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      background: '#795289', 
+                      border: 'none', 
+                      color: '#FFF', 
+                      padding: '10px 24px', 
+                      borderRadius: '100px', 
+                      fontWeight: '500', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    {isSubmitting ? (isEditMode ? "Saving..." : "Publishing...") : (
+                      isEditMode ? (
+                        <>
+                          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                          Save Changes
+                        </>
+                      ) : (
+                        <>
+                          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                          Publish Now
+                        </>
+                      )
                     )}
                   </button>
                 </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import "./notesBookmarks.css";
 
 // SVG Icons (Reusing standard styles)
@@ -207,6 +207,35 @@ export default function NotesBookmarksPage() {
   const [notesData, setNotesData] = useState([]);
   const [bookmarksData, setBookmarksData] = useState([]);
   const [categoriesList, setCategoriesList] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredNotes = useMemo(() => {
+    return notesData.filter((note) => {
+      const matchChapter = chapterFilter === "All Chapter" || note.chapter === chapterFilter;
+      const matchCategory = categoryFilter === "All Category" || note.categories?.some((c) => c.name === categoryFilter);
+      const matchSearch =
+        note.note?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        note.highlightedPassage?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        note.name?.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchChapter && matchCategory && matchSearch;
+    });
+  }, [notesData, chapterFilter, categoryFilter, searchQuery]);
+
+  const filteredBookmarks = useMemo(() => {
+    return bookmarksData.filter((bookmark) => {
+      const matchChapter = chapterFilter === "All Chapter" || bookmark.chapter === chapterFilter;
+      const matchSearch =
+        bookmark.sentence?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        bookmark.chapter?.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchChapter && matchSearch;
+    });
+  }, [bookmarksData, chapterFilter, searchQuery]);
+
+  const filteredCategories = useMemo(() => {
+    return categoriesList.filter((cat) =>
+      cat.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [categoriesList, searchQuery]);
 
   const fetchNotesData = async () => {
     try {
@@ -323,10 +352,10 @@ export default function NotesBookmarksPage() {
 
       <div className="chapter-content-area">
         {activeTab !== "Category List" ? (
-          <div className="resources-toolbar">
-            <label className="chapter-search resources-search" aria-label={`Search ${activeTab.toLowerCase()}`}>
+          <div className="resources-toolbar" style={{ display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'flex-start' }}>
+            <label className="chapter-search resources-search" aria-label={`Search ${activeTab.toLowerCase()}`} style={{ width: 'min(100%, 300px)', margin: 0 }}>
               <SearchIcon />
-              <input type="text" placeholder="Search notes..." />
+              <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%' }} />
             </label>
 
             <div className="chapter-filters" style={{ display: 'flex', gap: 12 }}>
@@ -393,7 +422,7 @@ export default function NotesBookmarksPage() {
           <div className="resources-toolbar">
             <label className="chapter-search resources-search" aria-label="Search category">
               <SearchIcon />
-              <input type="text" placeholder="Search discussion..." />
+              <input type="text" placeholder="Search category..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </label>
             <button className="chapter-primary-btn" onClick={() => {
               setEditingCategory(null);
@@ -410,18 +439,24 @@ export default function NotesBookmarksPage() {
           <div className="notes-table-card">
             <div className="notes-table-head notes-list-head">
               <span className="sortable-head">User Note <SortIcon /></span>
+              <span className="sortable-head">Highlighted Passage <SortIcon /></span>
               <span className="sortable-head">Category <SortIcon /></span>
               <span style={{ textAlign: 'right' }}>Action</span>
             </div>
 
-            {notesData.map((note) => (
+            {filteredNotes.map((note) => (
               <article key={note.id} className="notes-row notes-list-row">
                 <div className="notes-user-cell">
                   <img src={note.avatar} alt={note.name} className="notes-avatar" />
                   <div className="notes-user-copy">
-                    <h3>{note.note}</h3>
-                    <p>{note.name} &bull; {note.date} &bull; {note.chapter}, {note.section}</p>
+                    <h3>"{note.note}"</h3>
+                    <p>{note.name} &bull; {note.date}</p>
                   </div>
+                </div>
+
+                <div className="notes-user-copy">
+                  <h3>{note.highlightedPassage}</h3>
+                  <p>{note.chapter}, {note.section}</p>
                 </div>
 
                 <div className="notes-category-cell">
@@ -454,7 +489,7 @@ export default function NotesBookmarksPage() {
               <span style={{ textAlign: 'right' }}>Action</span>
             </div>
 
-            {bookmarksData.map((bookmark) => (
+            {filteredBookmarks.map((bookmark) => (
               <article key={bookmark.id} className="notes-row bookmarks-list-row">
                 <div className="notes-bookmark-cell">
                   <h3>{bookmark.sentence}</h3>
@@ -487,7 +522,7 @@ export default function NotesBookmarksPage() {
               <span style={{ textAlign: 'right' }}>Action</span>
             </div>
 
-            {categoriesList.map((cat) => (
+            {filteredCategories.map((cat) => (
               <article key={cat.id} className="notes-row category-list-row">
                 <div>
                   <span className={`community-category-pill color-${cat.color}`} style={{ color: cat.customColor }}>
@@ -733,18 +768,24 @@ export default function NotesBookmarksPage() {
 
       {/* Delete Category Modal */}
       {isDeleteCategoryModalOpen && (
-        <div className="community-modal-overlay" onClick={() => setIsDeleteCategoryModalOpen(false)}>
-          <div className="practice-delete-modal" onClick={e => e.stopPropagation()}>
-            <div className="practice-delete-icon">
-              <WarningIcon />
+        <div className="chapter-delete-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setIsDeleteCategoryModalOpen(false)}>
+          <div className="chapter-delete-modal-content" style={{ background: '#FFF', borderRadius: '16px', padding: '32px', width: '400px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <svg viewBox="0 0 24 24" width="24" height="24" stroke="#DC2626" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
             </div>
-            <h3>Are you sure you want to delete this category?</h3>
-            <p>All content inside this category will be deleted.</p>
-            <div className="practice-delete-actions">
-              <button type="button" className="practice-cancel-btn" onClick={() => setIsDeleteCategoryModalOpen(false)}>
-                Cancel
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: '0 0 8px 0' }}>Are you sure you want to delete this category?</h3>
+            <p style={{ fontSize: '14px', color: '#6B7280', margin: '0 0 24px 0', lineHeight: '1.5' }}>
+              You are about to permanently delete this item.<br />All associated content and data will be removed.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button type="button" onClick={() => setIsDeleteCategoryModalOpen(false)} style={{ padding: '10px 24px', borderRadius: '100px', border: '1px solid #E5E7EB', background: '#FFF', color: '#4B5563', fontWeight: '500', cursor: 'pointer', flex: 1 }}>
+                No, Keep It
               </button>
-              <button type="button" className="practice-confirm-btn" onClick={async () => {
+              <button type="button" style={{ padding: '10px 24px', borderRadius: '100px', border: 'none', background: '#DC2626', color: '#FFF', fontWeight: '500', cursor: 'pointer', flex: 1 }} onClick={async () => {
                 if (categoryToDelete) {
                   try {
                     const res = await fetch(`/api/note-categories/${categoryToDelete.id}`, { method: 'DELETE' });

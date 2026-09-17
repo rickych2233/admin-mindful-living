@@ -25,7 +25,7 @@
 
 .notes-list-head,
 .notes-list-row {
-  grid-template-columns: 2fr 1.5fr 100px;
+  grid-template-columns: 2fr 2fr 1.5fr 100px;
 }
 
 .bookmarks-list-head,
@@ -41,6 +41,7 @@
   display: flex;
   align-items: flex-start;
   gap: 16px;
+  min-width: 0;
 }
 
 .notes-avatar {
@@ -49,6 +50,10 @@
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+}
+
+.notes-user-copy {
+  min-width: 0;
 }
 
 .notes-user-copy h3 {
@@ -60,6 +65,7 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-break: break-word;
 }
 
 .notes-user-copy p {
@@ -165,8 +171,8 @@
 }
 
 .notes-action-icon-btn {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 1.5px solid rgba(121, 82, 137, 0.2);
   background: #FCFAFE;
@@ -182,8 +188,8 @@
   border-color: #795289;
 }
 .notes-action-icon-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
 }
 
 /* Category Modal Styles */

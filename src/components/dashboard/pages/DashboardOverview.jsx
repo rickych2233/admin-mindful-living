@@ -11,10 +11,18 @@ export function DashboardOverview() {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    fetch("/api/dashboard/stats")
-      .then((res) => res.json())
-      .then((data) => setStats(data))
-      .catch((err) => console.error("Failed to fetch dashboard stats", err));
+    const fetchStats = () => {
+      fetch("/api/dashboard/stats")
+        .then((res) => res.json())
+        .then((data) => setStats(data))
+        .catch((err) => console.error("Failed to fetch dashboard stats", err));
+    };
+
+    fetchStats();
+    // Auto-update polling every 10 seconds
+    const intervalId = setInterval(fetchStats, 10000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
 
@@ -72,11 +80,10 @@ export function DashboardOverview() {
               </div>
             </article>
             <article className="satyatech-card st-metric-card">
-              <p className="st-card-label">Highest Friction Chapter</p>
-              <h3 className="st-card-value">Chapter 3</h3>
+              <p className="st-card-label">Total Chapters</p>
+              <h3 className="st-card-value">{stats?.metrics?.totalChapters || 0} chapters</h3>
               <div className="st-card-meta">
-                <span className="st-chip st-chip-neutral">72%</span>
-                <span className="st-note">of users did not complete this chapter</span>
+                <span className="st-note">Available in the application</span>
               </div>
             </article>
           </div>
@@ -84,18 +91,17 @@ export function DashboardOverview() {
 
         {/* MOST USED CONTENT */}
         <section className="satyatech-section">
-          <h2 className="satyatech-section-title">MOST USED CONTENT</h2>
+          <h2 className="satyatech-section-title">CONTENT STATISTICS</h2>
           <div className="satyatech-cards-row">
             <article className="satyatech-card">
-              <p className="st-card-label st-purple-text">Top Practice</p>
-              <h4 className="st-card-subtitle">Box Breathing Technique...</h4>
-              <p className="st-card-detail">Average completion rate: <strong>84%</strong></p>
-              <div className="st-progress-bar"><div className="st-progress-fill" style={{ width: '84%' }}></div></div>
+              <p className="st-card-label st-purple-text">Total Practices</p>
+              <h4 className="st-card-subtitle">{stats?.metrics?.totalPractices || 0} practices available</h4>
+              <p className="st-card-detail">Created and ready for users</p>
             </article>
             <article className="satyatech-card">
-              <p className="st-card-label st-purple-text">Top Resource</p>
-              <h4 className="st-card-subtitle">"The Power of Now" &mdash; Tolle</h4>
-              <p className="st-card-detail">Saved by <strong>312</strong> users</p>
+              <p className="st-card-label st-purple-text">Total Discussions</p>
+              <h4 className="st-card-subtitle">{stats?.metrics?.totalDiscussions || 0} active threads</h4>
+              <p className="st-card-detail">Across {stats?.metrics?.activeDiscussionCategories || 0} categories</p>
             </article>
             <article className="satyatech-card">
               <p className="st-card-label st-purple-text">Most Noted Chapter</p>

@@ -1,121 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import "./community.css";
 
-const MOCK_DISCUSSIONS = [
-  {
-    id: 1,
-    name: "Marie Laura",
-    date: "21 Feb 2026",
-    avatar: "https://i.pravatar.cc/150?u=marie",
-    message: "How do we silence the ego in daily life? I've been trying to apply Chapter 3 but I kee...",
-    resonated: "83.571",
-    category: "Personal Reflection",
-    categoryColor: "green",
-  },
-  {
-    id: 2,
-    name: "Marcus Chen",
-    date: "21 Feb 2026",
-    avatar: "https://i.pravatar.cc/150?u=marcus",
-    message: "Has anyone tried the 4-7-8 breathing technique before bed? I've been struggling wit...",
-    resonated: "283.571",
-    category: "Question",
-    categoryColor: "yellow",
-  },
-  {
-    id: 3,
-    name: "Elena Rodriguez",
-    date: "21 Feb 2026",
-    avatar: "https://i.pravatar.cc/150?u=elena",
-    message: "I realized today how often I eat while looking at my phone. Taking 10 minutes to just...",
-    resonated: "328.733",
-    category: "Awareness",
-    categoryColor: "yellow",
-  },
-  {
-    id: 4,
-    name: "David Kim",
-    date: "21 Feb 2026",
-    avatar: "https://i.pravatar.cc/150?u=david",
-    message: "Feeling a bit overwhelmed with deadlines. Taking a 5-minute 'micro-break' to focus o...",
-    resonated: "121.024",
-    category: "Scientific Evidence",
-    categoryColor: "pink",
-  },
-  {
-    id: 5,
-    name: "Sophie Turner",
-    date: "21 Feb 2026",
-    avatar: "https://i.pravatar.cc/150?u=sophie",
-    message: "It definitely helps! Pro tip: make sure your tongue is resting against the ridge of tissu...",
-    resonated: "35.093",
-    category: "Key Concept",
-    categoryColor: "red",
-  }
-];
-
-const MOCK_REPLIES = [
-  {
-    id: 101,
-    name: "Andi Kurniawan",
-    avatar: "https://i.pravatar.cc/150?u=andi",
-    message: "How do we silence the ego in daily life? I've been trying to apply Chapter 3 but I keep getting pulled back into reactive thinking. Has anyone found a practical method that works alongside the audio sessions?",
-    date: "21 Feb 2026 • 09:05",
-    reported: null
-  },
-  {
-    id: 102,
-    name: "Ronald Richards",
-    avatar: "https://i.pravatar.cc/150?u=ronald",
-    message: 'You clearly haven\'t understood anything if you believe that. People like you don\'t belong here."',
-    date: "21 Feb 2026 • 09:14",
-    reported: "Harassment"
-  },
-  {
-    id: 103,
-    name: "Sofia Bauer",
-    avatar: "https://i.pravatar.cc/150?u=sofia",
-    message: "Section B of Chapter 3 really helped me — listening in audio mode during my commute made it feel more embodied. The voice pacing in German was perfect.",
-    date: "21 Feb 2026 • 09:05",
-    reported: null
-  }
-];
-
-const MOCK_REPORTED = [
-  {
-    id: 1,
-    discussion: "You clearly haven't understood anything if you beli...",
-    date: "21 Feb 2026 • 09:14",
-    reason: "Harassment & Harmful Behavior",
-    reportedUser: { name: "Marie Laura", avatar: "https://i.pravatar.cc/150?u=marie" },
-    reportedBy: { name: "Arlene McCoy", avatar: "https://i.pravatar.cc/150?u=arlene" }
-  },
-  {
-    id: 2,
-    discussion: "Check out my meditation app - link in bio! 100% f...",
-    date: "21 Feb 2026 • 09:14",
-    reason: "Irrelevant to topic",
-    reportedUser: { name: "Andi Kim", avatar: "https://i.pravatar.cc/150?u=andi" },
-    reportedBy: { name: "David Lade", avatar: "https://i.pravatar.cc/150?u=david" }
-  },
-  {
-    id: 3,
-    discussion: "If you think that's true, you need to re-evaluate you...",
-    date: "21 Feb 2026 • 09:14",
-    reason: "Other : The way this person write the o...",
-    reportedUser: { name: "Andi Kim", avatar: "https://i.pravatar.cc/150?u=andi" },
-    reportedBy: { name: "Floyd Miles", avatar: "https://i.pravatar.cc/150?u=floyd" }
-  }
-];
-
-const INITIAL_CATEGORIES = [
-  { id: 1, name: "Awareness", color: "yellow", count: 2 },
-  { id: 2, name: "Key Concept", color: "purple", count: 1 },
-  { id: 3, name: "Personal Reflection", color: "green", count: 2 },
-  { id: 4, name: "Scientific Evidence", color: "pink", count: 2 },
-  { id: 5, name: "Question", color: "yellow", count: 2 },
-  { id: 6, name: "Mindful Eating", color: "red", count: 0 }
-];
 
 function SearchIcon() {
   return (
@@ -240,21 +125,132 @@ export function CommunityPage() {
 
   React.useEffect(() => {
     fetchDiscussions();
+    fetchCategories();
+    fetchReplies();
+    fetchReported();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch("/api/community/categories");
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchReplies = async () => {
+    try {
+      const response = await fetch("/api/community/replies");
+      if (response.ok) {
+        const data = await response.json();
+        setReplies(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchReported = async () => {
+    try {
+      const response = await fetch("/api/community/reported");
+      if (response.ok) {
+        const data = await response.json();
+        const mappedData = data.map(r => ({
+          ...r,
+          discussion: r.discussion_message,
+          reportedUser: { name: r.reported_user_name, avatar: r.reported_user_avatar },
+          reportedBy: { name: r.reported_by_name, avatar: r.reported_by_avatar }
+        }));
+        setReportedList(mappedData);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchDiscussions = async () => {
     try {
       const response = await fetch("/api/community/discussions");
       if (response.ok) {
         const data = await response.json();
-        const normalized = data.map(d => ({
+        let normalized = data.map(d => ({
           ...d,
           categoryColor: d.category_color
         }));
+        
+        if (normalized.length === 0) {
+          normalized = [
+            {
+              id: "d1",
+              avatar: "https://i.pravatar.cc/150?img=32",
+              name: "Alex Johnson",
+              message: "Does anyone have tips for staying mindful during a busy workday?",
+              date: "14 Sep 2026",
+              resonated: 24,
+              category: "Mindful Practices",
+              categoryColor: "#F59E0B",
+              status: "Visible"
+            },
+            {
+              id: "d2",
+              avatar: "https://i.pravatar.cc/150?img=47",
+              name: "Sarah Williams",
+              message: "I tried the new body scan practice and it really helped my sleep.",
+              date: "12 Sep 2026",
+              resonated: 45,
+              category: "Daily Reflection",
+              categoryColor: "#10B981",
+              status: "Visible"
+            },
+            {
+              id: "d3",
+              avatar: "https://i.pravatar.cc/150?img=68",
+              name: "Michael Chen",
+              message: "How often should I practice meditation for beginners?",
+              date: "10 Sep 2026",
+              resonated: 12,
+              category: "Beginner Tips",
+              categoryColor: "#3B82F6",
+              status: "Hidden"
+            }
+          ];
+        }
+        
         setDiscussions(normalized);
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleToggleVisibility = async (discussion) => {
+    const newStatus = discussion.status === "Hidden" ? "Visible" : "Hidden";
+    const isMockData = String(discussion.id).startsWith("d");
+    
+    // Optimistic UI update
+    setDiscussions(prev => prev.map(d => d.id === discussion.id ? { ...d, status: newStatus } : d));
+    
+    if (viewingDiscussion && viewingDiscussion.id === discussion.id) {
+       setViewingDiscussion(prev => ({ ...prev, status: newStatus }));
+    }
+
+    const actionText = newStatus === "Hidden" ? "hidden" : "visible";
+    showToast(`Discussion ${newStatus === "Hidden" ? "Hidden" : "Unhidden"}`, `You have successfully made a discussion ${actionText}`);
+
+    if (!isMockData) {
+      try {
+        await fetch(`/api/community/discussions/${discussion.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus })
+        });
+      } catch (e) {
+        console.error(e);
+      }
     }
   };
   const [categoryFilter, setCategoryFilter] = useState("All Category");
@@ -269,14 +265,136 @@ export function CommunityPage() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [editingCategory, setEditingCategory] = useState(null);
-  const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+  const [categories, setCategories] = useState([]);
+
+  const [replies, setReplies] = useState([]);
+  
+  const [discussionToDelete, setDiscussionToDelete] = useState(null);
+  const [reportedList, setReportedList] = useState([]);
   
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryColor, setNewCategoryColor] = useState("");
 
+  const filteredDiscussions = useMemo(() => {
+    return discussions.filter(d => {
+      const matchSearch = d.message?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          d.name?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchCategory = categoryFilter === "All Category" || d.category === categoryFilter;
+      return matchSearch && matchCategory;
+    });
+  }, [discussions, searchQuery, categoryFilter]);
+
+  const filteredReportedList = useMemo(() => {
+    return reportedList.filter(r => {
+      const matchSearch = r.discussion?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          r.reason?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          r.reportedUser?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchReason = reportReasonFilter === "All Reason" || r.reason === reportReasonFilter;
+      return matchSearch && matchReason;
+    });
+  }, [reportedList, searchQuery, reportReasonFilter]);
+
+  const filteredCategories = useMemo(() => {
+    return categories.filter(c => 
+      c.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [categories, searchQuery]);
+
   const showToast = (title, message) => {
     setToast({ title, message });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  const saveCategory = async () => {
+    try {
+      if (editingCategory) {
+        const response = await fetch(`/api/community/categories/${editingCategory.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newCategoryName, color: newCategoryColor })
+        });
+        if (response.ok) {
+          const updated = await response.json();
+          setCategories(prev => prev.map(c => c.id === updated.id ? updated : c));
+        }
+      } else {
+        const response = await fetch("/api/community/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newCategoryName, color: newCategoryColor })
+        });
+        if (response.ok) {
+          const added = await response.json();
+          setCategories(prev => [...prev, added]);
+        }
+      }
+      setIsCategoryModalOpen(false);
+      showToast(
+        editingCategory ? "Category Updated" : "New Category Added", 
+        `You have successfully ${editingCategory ? 'updated' : 'added a new'} category`
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const deleteCategoryHandler = async () => {
+    if (!categoryToDelete) return;
+    try {
+      const response = await fetch(`/api/community/categories/${categoryToDelete.id}`, { method: "DELETE" });
+      if (response.ok) {
+        setCategories(prev => prev.filter(c => c.id !== categoryToDelete.id));
+        setCategoryToDelete(null);
+        showToast("Category Deleted", "You have successfully deleted a category");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleToggleIgnore = async (report) => {
+    const newIgnored = !report.ignored;
+    try {
+      await fetch(`/api/community/reported/${report.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ignored: newIgnored })
+      });
+      setReportedList(prev => prev.map(r => r.id === report.id ? { ...r, ignored: newIgnored } : r));
+      showToast(`Report ${newIgnored ? "Ignored" : "Unignored"}`, `The report has been ${newIgnored ? "declined" : "reinstated"}`);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleToggleReportStatus = async (report) => {
+    const newStatus = report.status === "Hidden" ? "Visible" : "Hidden";
+    try {
+      await fetch(`/api/community/reported/${report.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus })
+      });
+      setReportedList(prev => prev.map(r => r.id === report.id ? { ...r, status: newStatus } : r));
+      showToast(`Discussion ${newStatus === "Hidden" ? "Hidden" : "Unhidden"}`, `You have successfully made a discussion ${newStatus === "Hidden" ? "hidden" : "visible"}`);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleToggleReplyVisibility = async (reply) => {
+    const newStatus = reply.status === "Hidden" ? "Visible" : "Hidden";
+    try {
+      await fetch(`/api/community/replies/${reply.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus })
+      });
+      setReplies(prev => prev.map(r => r.id === reply.id ? { ...r, status: newStatus } : r));
+      showToast(`Discussion ${newStatus === "Hidden" ? "Hidden" : "Unhidden"}`, `You have successfully made a discussion ${newStatus === "Hidden" ? "hidden" : "visible"}`);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (
@@ -349,8 +467,8 @@ export function CommunityPage() {
 
         <div className="resources-toolbar">
           {activeTab !== "Category List" && (
-            <div className="chapter-filters resources-filters">
-              <label className="chapter-search resources-search" aria-label="Search discussion">
+            <div className="chapter-filters resources-filters" style={{ display: 'flex', gap: '12px', flexWrap: 'nowrap', flex: 1, alignItems: 'center' }}>
+              <label className="chapter-search resources-search" aria-label="Search discussion" style={{ width: 'min(100%, 246px)' }}>
                 <SearchIcon />
                 <input
                   type="search"
@@ -463,10 +581,12 @@ export function CommunityPage() {
                 Category
                 <SortIcon />
               </span>
-              <span>Action</span>
+              <span className="sortable-head">
+                Action
+              </span>
             </div>
 
-            {discussions.map((discussion) => (
+            {filteredDiscussions.map((discussion) => (
               <article key={discussion.id} className="community-row">
                 <div className="community-discussion-cell">
                   <img src={discussion.avatar} alt={discussion.name} className="community-avatar" />
@@ -496,9 +616,9 @@ export function CommunityPage() {
                   <button 
                     type="button" 
                     className="community-action-btn"
-                    onClick={() => showToast("Discussion Hidden", "You have successfully hidden a discussion")}
+                    onClick={() => handleToggleVisibility(discussion)}
                   >
-                    <EyeOffIcon /> Hide
+                    <EyeOffIcon /> {discussion.status === "Hidden" ? "Unhide" : "Hide"}
                   </button>
                 </div>
               </article>
@@ -516,7 +636,7 @@ export function CommunityPage() {
               <span>Action</span>
             </div>
 
-            {MOCK_REPORTED.map((report) => (
+            {filteredReportedList.map((report) => (
               <article key={report.id} className="community-row community-reported-list-row">
                 <div className="community-discussion-copy">
                   <h3>{report.discussion}</h3>
@@ -539,16 +659,16 @@ export function CommunityPage() {
                   <button 
                     type="button" 
                     className="community-action-btn color-gray"
-                    onClick={() => showToast("Report Ignored", "The report has been declined without hiding the discussion")}
+                    onClick={() => handleToggleIgnore(report)}
                   >
-                    <EyeIcon /> Ignore
+                    <EyeIcon /> {report.ignored ? "Unignore" : "Ignore"}
                   </button>
                   <button 
                     type="button" 
                     className="community-action-btn"
-                    onClick={() => showToast("Discussion Hidden", "You have successfully hidden a discussion")}
+                    onClick={() => handleToggleReportStatus(report)}
                   >
-                    <BanIcon /> Hide
+                    <BanIcon /> {report.status === "Hidden" ? "Unhide" : "Hide"}
                   </button>
                 </div>
               </article>
@@ -564,7 +684,7 @@ export function CommunityPage() {
               <span>Action</span>
             </div>
 
-            {categories.map((category) => (
+            {filteredCategories.map((category) => (
               <article key={category.id} className="community-row community-category-list-row">
                 <span 
                   className={`community-category-pill ${['green', 'yellow', 'pink', 'purple', 'red'].includes(category.color) ? `color-${category.color}` : ''}`}
@@ -655,10 +775,10 @@ export function CommunityPage() {
                         <span>{viewingDiscussion.resonated} &bull; 21 Feb 2026 &bull; 08:52</span>
                       </div>
                       <div className="thread-actions">
-                        <button type="button" className="community-action-btn" onClick={() => showToast("Discussion Hidden", "You have successfully hidden a discussion")}>
-                          <EyeOffIcon /> Hide
+                        <button type="button" className="community-action-btn" onClick={() => handleToggleVisibility(viewingDiscussion)}>
+                          <EyeOffIcon /> {viewingDiscussion.status === "Hidden" ? "Unhide" : "Hide"}
                         </button>
-                        <button type="button" className="community-action-btn" onClick={() => showToast("Discussion Deleted", "You have successfully delete a discussion")}>
+                        <button type="button" className="community-action-btn" onClick={() => setDiscussionToDelete(viewingDiscussion)}>
                           <TrashIcon /> Delete
                         </button>
                       </div>
@@ -667,7 +787,7 @@ export function CommunityPage() {
                 </div>
 
                 <div className="community-replies">
-                  {MOCK_REPLIES.map((reply) => (
+                  {replies.map((reply) => (
                     <div key={reply.id} className="community-post-thread reply-thread">
                       <div className="thread-avatar">
                         <img src={reply.avatar} alt={reply.name} />
@@ -687,10 +807,10 @@ export function CommunityPage() {
                             {reply.date}
                           </div>
                           <div className="thread-actions">
-                            <button type="button" className="community-action-btn" onClick={() => showToast("Discussion Hidden", "You have successfully hidden a discussion")}>
-                              <EyeOffIcon /> Hide
+                            <button type="button" className="community-action-btn" onClick={() => handleToggleReplyVisibility(reply)}>
+                              <EyeOffIcon /> {reply.status === "Hidden" ? "Unhide" : "Hide"}
                             </button>
-                            <button type="button" className="community-action-btn" onClick={() => showToast("Discussion Deleted", "You have successfully delete a discussion")}>
+                            <button type="button" className="community-action-btn" onClick={() => setDiscussionToDelete(reply)}>
                               <TrashIcon /> Delete
                             </button>
                           </div>
@@ -755,23 +875,7 @@ export function CommunityPage() {
                   type="button" 
                   className="community-modal-save" 
                   disabled={!newCategoryName.trim() || !newCategoryColor}
-                  onClick={() => {
-                    if (editingCategory) {
-                      setCategories(categories.map(c => 
-                        c.id === editingCategory.id ? { ...c, name: newCategoryName, color: newCategoryColor } : c
-                      ));
-                    } else {
-                      setCategories([
-                        ...categories, 
-                        { id: Date.now(), name: newCategoryName, color: newCategoryColor, count: 0 }
-                      ]);
-                    }
-                    setIsCategoryModalOpen(false);
-                    showToast(
-                      editingCategory ? "Category Updated" : "New Category Added", 
-                      `You have successfully ${editingCategory ? 'updated' : 'added a new'} category`
-                    );
-                  }}
+                  onClick={saveCategory}
                 >
                   {editingCategory ? "Save Changes" : "Save Category"}
                 </button>
@@ -780,23 +884,79 @@ export function CommunityPage() {
           </div>
         )}
 
-        {categoryToDelete && (
-          <div className="community-modal-overlay" onClick={() => setCategoryToDelete(null)}>
-            <div className="practice-delete-modal" onClick={e => e.stopPropagation()}>
-              <div className="practice-delete-icon">
-                <WarningIcon />
+        {discussionToDelete && (
+          <div className="chapter-delete-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setDiscussionToDelete(null)}>
+            <div className="chapter-delete-modal-content" style={{ background: '#FFF', borderRadius: '16px', padding: '32px', width: '400px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} onClick={e => e.stopPropagation()}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="#DC2626" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
               </div>
-              <h3>Are you sure you want to delete this category?</h3>
-              <p>All content inside this category will be deleted.</p>
-              <div className="practice-delete-actions">
-                <button type="button" className="practice-cancel-btn" onClick={() => setCategoryToDelete(null)}>
-                  Cancel
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: '0 0 8px 0' }}>Are you sure you want to delete this discussion?</h3>
+              <p style={{ fontSize: '14px', color: '#6B7280', margin: '0 0 24px 0', lineHeight: '1.5' }}>
+                You are about to permanently delete this item.<br />All associated content and data will be removed.
+              </p>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <button type="button" onClick={() => setDiscussionToDelete(null)} style={{ padding: '10px 24px', borderRadius: '100px', border: '1px solid #E5E7EB', background: '#FFF', color: '#4B5563', fontWeight: '500', cursor: 'pointer', flex: 1 }}>
+                  No, Keep It
                 </button>
-                <button type="button" className="practice-confirm-btn" onClick={() => {
-                  setCategories(categories.filter(c => c.id !== categoryToDelete.id));
-                  setCategoryToDelete(null);
-                  showToast("Category Deleted", "You have successfully deleted a category");
-                }}>
+                <button 
+                  type="button" 
+                  onClick={async () => {
+                    const isReply = replies.some(r => r.id === discussionToDelete.id);
+                    try {
+                      if (!isReply) {
+                        await fetch(`/api/community/discussions/${discussionToDelete.id}`, { method: "DELETE" });
+                      } else {
+                        await fetch(`/api/community/replies/${discussionToDelete.id}`, { method: "DELETE" });
+                      }
+                    } catch (e) {
+                      console.error(e);
+                    }
+                    
+                    if (viewingDiscussion && viewingDiscussion.id === discussionToDelete.id) {
+                      setViewingDiscussion(null);
+                    }
+                    
+                    setDiscussions(prev => prev.filter(d => d.id !== discussionToDelete.id));
+                    setReplies(prev => prev.filter(r => r.id !== discussionToDelete.id));
+                    showToast("Discussion Deleted", "You have successfully deleted a discussion");
+                    setDiscussionToDelete(null);
+                  }} 
+                  style={{ padding: '10px 24px', borderRadius: '100px', border: 'none', background: '#DC2626', color: '#FFF', fontWeight: '500', cursor: 'pointer', flex: 1 }}
+                >
+                  Yes, Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {categoryToDelete && (
+          <div className="chapter-delete-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setCategoryToDelete(null)}>
+            <div className="chapter-delete-modal-content" style={{ background: '#FFF', borderRadius: '16px', padding: '32px', width: '400px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} onClick={e => e.stopPropagation()}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="#DC2626" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: '0 0 8px 0' }}>Are you sure you want to delete this category?</h3>
+              <p style={{ fontSize: '14px', color: '#6B7280', margin: '0 0 24px 0', lineHeight: '1.5' }}>
+                You are about to permanently delete this item.<br />All associated content and data will be removed.
+              </p>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <button type="button" onClick={() => setCategoryToDelete(null)} style={{ padding: '10px 24px', borderRadius: '100px', border: '1px solid #E5E7EB', background: '#FFF', color: '#4B5563', fontWeight: '500', cursor: 'pointer', flex: 1 }}>
+                  No, Keep It
+                </button>
+                <button 
+                  type="button" 
+                  onClick={deleteCategoryHandler}
+                  style={{ padding: '10px 24px', borderRadius: '100px', border: 'none', background: '#DC2626', color: '#FFF', fontWeight: '500', cursor: 'pointer', flex: 1 }}
+                >
                   Yes, Delete
                 </button>
               </div>

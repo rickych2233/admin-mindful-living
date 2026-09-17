@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./roles.css";
 import {
   useRolesCollection,
@@ -188,6 +188,8 @@ function RolesPermissionsPage() {
   const [isAssignUserOpen, setIsAssignUserOpen] = useState(false);
   const [isRoleActionOpen, setIsRoleActionOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [assignSearchQuery, setAssignSearchQuery] = useState("");
+  const [pendingSelections, setPendingSelections] = useState([]);
 
   // Keep selection valid as roles load/change.
   useEffect(() => {
@@ -307,6 +309,47 @@ function RolesPermissionsPage() {
 
   const assignedIds = new Set((selectedRole?.assignedUsers || []).map((u) => u.id));
   const assignableUsers = (users || []).filter((u) => u.id != null && !assignedIds.has(u.id));
+
+  // Assign user modal helpers
+  const openAssignModal = () => {
+    setAssignSearchQuery("");
+    setPendingSelections([]);
+    setIsAssignUserOpen(true);
+  };
+
+  const filteredAssignable = useMemo(() => {
+    const q = assignSearchQuery.toLowerCase();
+    return assignableUsers.filter(
+      (u) => u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)
+    );
+  }, [assignableUsers, assignSearchQuery]);
+
+  const togglePending = (user) => {
+    setPendingSelections((prev) =>
+      prev.some((u) => u.id === user.id)
+        ? prev.filter((u) => u.id !== user.id)
+        : [...prev, user]
+    );
+  };
+
+  const removePending = (userId) => {
+    setPendingSelections((prev) => prev.filter((u) => u.id !== userId));
+  };
+
+  const handleConfirmAssign = async () => {
+    if (!selectedRole || selectedRole.apiId == null || pendingSelections.length === 0) return;
+    try {
+      for (const user of pendingSelections) {
+        await assignUser(selectedRole.apiId, user.apiId ?? user.id);
+      }
+      await refetch();
+      setIsAssignUserOpen(false);
+      const names = pendingSelections.map((u) => u.name).join(", ");
+      showToast("User Assigned", `${names} was added to ${selectedRole.name}.`);
+    } catch (e) {
+      showToast("Assign Failed", e?.message || "Gagal menambah user");
+    }
+  };
 
   return (
     <>
@@ -639,7 +682,7 @@ function RolesPermissionsPage() {
                       </span>
                       <button
                         type="button"
-                        onClick={() => setIsAssignUserOpen((v) => !v)}
+                        onClick={openAssignModal}
                         style={{
                           background: "#795289",
                           color: "#FFF",
@@ -656,54 +699,6 @@ function RolesPermissionsPage() {
                       >
                         <span>+</span> Assign User
                       </button>
-
-                      {isAssignUserOpen && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: "calc(100% + 8px)",
-                            right: 0,
-                            width: "280px",
-                            maxHeight: "260px",
-                            overflowY: "auto",
-                            background: "#FFF",
-                            border: "1px solid #E3E7ED",
-                            borderRadius: "12px",
-                            boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-                            zIndex: 20,
-                          }}
-                        >
-                          {assignableUsers.length === 0 && (
-                            <div style={{ padding: "16px", fontSize: "13px", color: "#A0AEC0" }}>
-                              No users available to assign.
-                            </div>
-                          )}
-                          {assignableUsers.map((user) => (
-                            <button
-                              key={user.id}
-                              type="button"
-                              onClick={() => handleAssignUser(user)}
-                              style={{
-                                width: "100%",
-                                textAlign: "left",
-                                background: "transparent",
-                                border: "none",
-                                borderBottom: "1px solid #F1F4F9",
-                                padding: "10px 16px",
-                                cursor: "pointer",
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: "2px",
-                              }}
-                            >
-                              <span style={{ fontSize: "13px", fontWeight: "500", color: "#171e2b" }}>
-                                {user.name}
-                              </span>
-                              <span style={{ fontSize: "12px", color: "#A0AEC0" }}>{user.email}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </div>
 
                     <div style={{ border: "1px solid #E3E7ED", borderRadius: "12px", overflow: "hidden" }}>
@@ -776,8 +771,8 @@ function RolesPermissionsPage() {
                             onClick={() => handleRemoveUser(user)}
                             style={{
                               background: "transparent",
-                              border: "1px solid #E3E7ED",
-                              color: "#A0AEC0",
+                              border: "1px solid #795289",
+                              color: "#795289",
                               borderRadius: "999px",
                               padding: "4px 12px",
                               fontSize: "12px",
@@ -1027,6 +1022,168 @@ function RolesPermissionsPage() {
                   Save Role
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign User Modal */}
+      {isAssignUserOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            background: "rgba(25, 31, 42, 0.28)",
+          }}
+          onClick={() => setIsAssignUserOpen(false)}
+        >
+          <div
+            style={{
+              background: "#FFF",
+              borderRadius: "16px",
+              width: "440px",
+              maxHeight: "600px",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 10px 40px rgba(0,0,0,0.12)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px 16px" }}>
+              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "600", color: "#171e2b" }}>Assign User</h3>
+              <button type="button" onClick={() => setIsAssignUserOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#A0AEC0", padding: 0 }}>
+                <CloseIcon />
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div style={{ padding: "0 24px 12px" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "10px", border: "1.5px solid #795289", borderRadius: "999px", padding: "8px 16px" }}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#795289" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search user..."
+                  value={assignSearchQuery}
+                  onChange={(e) => setAssignSearchQuery(e.target.value)}
+                  style={{ border: "none", outline: "none", fontSize: "14px", flex: 1, color: "#171e2b" }}
+                  autoComplete="off"
+                  autoFocus
+                />
+              </label>
+            </div>
+
+            {/* User list - always shown, filtered by search */}
+            {filteredAssignable.length > 0 ? (
+              <div style={{ padding: "0 24px 8px", overflowY: "auto", maxHeight: "200px" }}>
+                {filteredAssignable.map((user) => {
+                  const isSelected = pendingSelections.some((u) => u.id === user.id);
+                  return (
+                    <div
+                      key={user.id}
+                      onClick={() => togglePending(user)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        padding: "10px 0",
+                        borderBottom: "1px solid #F1F4F9",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {user.avatar ? (
+                        <img src={user.avatar} alt={user.name} style={{ width: "36px", height: "36px", borderRadius: "50%", objectFit: "cover" }} />
+                      ) : (
+                        <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#F4F6F9", display: "grid", placeItems: "center" }}>
+                          <UserIcon style={{ width: "18px", height: "18px", color: "#929bac" }} />
+                        </div>
+                      )}
+                      <span style={{ flex: 1, fontSize: "14px", fontWeight: "500", color: "#171e2b" }}>{user.name}</span>
+                      <div style={{
+                        width: "18px", height: "18px", borderRadius: "4px",
+                        border: isSelected ? "none" : "1.5px solid #CBD5E0",
+                        background: isSelected ? "#795289" : "transparent",
+                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+                      }}>
+                        {isSelected && (
+                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#FFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ padding: "12px 24px", fontSize: "13px", color: "#A0AEC0" }}>
+                {assignSearchQuery ? "No users found." : "No users available to assign."}
+              </div>
+            )}
+
+            {/* Listed Users Section - only shown when there are selections */}
+            {pendingSelections.length > 0 && (
+              <div style={{ padding: "4px 24px 20px", flex: 1, overflowY: "auto" }}>
+                <p style={{ fontSize: "11px", fontWeight: "700", color: "#795289", letterSpacing: "0.06em", margin: "8px 0 12px" }}>LISTED USER</p>
+                {pendingSelections.map((user) => (
+                  <div key={user.id} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 0", borderBottom: "1px solid #F9FAFC" }}>
+                    {user.avatar ? (
+                      <img src={user.avatar} alt={user.name} style={{ width: "36px", height: "36px", borderRadius: "50%", objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#F4F6F9", display: "grid", placeItems: "center" }}>
+                        <UserIcon style={{ width: "18px", height: "18px", color: "#929bac" }} />
+                      </div>
+                    )}
+                    <span style={{ flex: 1, fontSize: "14px", fontWeight: "500", color: "#171e2b" }}>{user.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removePending(user.id)}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#E53E3E", padding: "4px", display: "flex" }}
+                    >
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Footer */}
+            <div style={{ padding: "0 24px 24px", display: "flex", gap: "12px" }}>
+              <button
+                type="button"
+                onClick={() => setIsAssignUserOpen(false)}
+                style={{
+                  flex: 1, padding: "12px", background: "#FFF",
+                  color: "#795289", border: "1.5px solid #E3E7ED",
+                  borderRadius: "999px", fontSize: "14px", fontWeight: "500", cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAssign}
+                disabled={pendingSelections.length === 0}
+                style={{
+                  flex: 1, padding: "12px",
+                  background: pendingSelections.length > 0 ? "#795289" : "#F4F6F9",
+                  color: pendingSelections.length > 0 ? "#FFF" : "#A0AEC0",
+                  border: "none", borderRadius: "999px", fontSize: "14px", fontWeight: "500",
+                  cursor: pendingSelections.length > 0 ? "pointer" : "default"
+                }}
+              >
+                Confirm
+              </button>
             </div>
           </div>
         </div>

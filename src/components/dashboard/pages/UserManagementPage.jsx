@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import "./community.css";
 import { useUsersCollection, updateUserStatusViaApi } from "../utils/userUtils";
 import { UserAvatar } from "../utils/commonComponents.jsx";
 
@@ -29,7 +30,7 @@ export function UserManagementPage() {
   const [userRows, setUserRows] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [statusUpdateError, setStatusUpdateError] = useState("");
-  const [statusUpdateSuccess, setStatusUpdateSuccess] = useState("");
+  const [toast, setToast] = useState(null);
   const [statusUpdatingUserId, setStatusUpdatingUserId] = useState(null);
 
   useEffect(() => {
@@ -51,7 +52,6 @@ export function UserManagementPage() {
 
   useEffect(() => {
     setStatusUpdateError("");
-    setStatusUpdateSuccess("");
   }, [selectedUserId]);
 
   const filteredUserRows = useMemo(() => {
@@ -73,38 +73,55 @@ export function UserManagementPage() {
   const selectedUser = userRows.find((user) => user.id === selectedUserId) ?? null;
 
   const handleExportCsv = () => {
-    const header = [
-      "Name",
-      "Email",
-      "Language",
-      "Biometric",
-      "Donation Amount",
-      "Last Active",
-      "Status",
-      "Registered",
-      "Chapters Completed",
-    ];
+    try {
+      const header = [
+        "Name",
+        "Email",
+        "Language",
+        "Biometric",
+        "Donation Amount",
+        "Last Active",
+        "Status",
+        "Registered",
+        "Chapters Completed",
+      ];
 
-    const rows = filteredUserRows.map((user) => [
-      user.name,
-      user.email,
-      user.languageDetail,
-      user.biometric,
-      user.donationAmount,
-      user.lastActiveDetail,
-      user.status,
-      user.registered,
-      user.chaptersCompleted,
-    ]);
+      const rows = filteredUserRows.map((user) => [
+        user.name,
+        user.email,
+        user.languageDetail,
+        user.biometric,
+        user.donationAmount,
+        user.lastActiveDetail,
+        user.status,
+        user.registered,
+        user.chaptersCompleted,
+      ]);
 
-    const csvContent = [header, ...rows].map((columns) => columns.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const downloadUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.download = "users.csv";
-    link.click();
-    URL.revokeObjectURL(downloadUrl);
+      const csvContent = [header, ...rows].map((columns) => columns.join(",")).join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = "users.csv";
+      link.click();
+      URL.revokeObjectURL(downloadUrl);
+
+      setToast({
+        type: "success",
+        title: "Export Complete",
+        message: "CSV file has been successfully downloaded",
+      });
+      setTimeout(() => setToast(null), 3000);
+    } catch (e) {
+      console.error(e);
+      setToast({
+        type: "error",
+        title: "Export failed",
+        message: "Something went wrong while exporting your CSV. Please try again.",
+        onRetry: handleExportCsv
+      });
+    }
   };
 
   const toggleSelectedUserStatus = async () => {
@@ -117,7 +134,6 @@ export function UserManagementPage() {
     const apiUserId = selectedUser.apiId ?? selectedUser.id;
 
     setStatusUpdateError("");
-    setStatusUpdateSuccess("");
     setStatusUpdatingUserId(selectedUser.id);
 
     setUserRows((current) =>
@@ -147,7 +163,12 @@ export function UserManagementPage() {
           )
         );
       }
-      setStatusUpdateSuccess(result?.message || "Status user berhasil diperbarui.");
+      setToast({
+        title: nextStatus === "Active" ? "User Activated" : "User Deactivated",
+        message: result?.message || "Status user berhasil diperbarui."
+      });
+      setTimeout(() => setToast(null), 3000);
+      setSelectedUserId(null);
     } catch (updateError) {
       setUserRows((current) =>
         current.map((user) =>
@@ -166,7 +187,7 @@ export function UserManagementPage() {
   };
 
   return (
-    <>
+    <div>
       <header className="dashboard-header chapter-header">
         <h1>User Management</h1>
         <p>Monitor all user activity in the platform</p>
@@ -375,12 +396,21 @@ export function UserManagementPage() {
 
             <div className="user-profile-body">
               <div className="user-profile-summary">
-                <div className="user-avatar user-profile-avatar" aria-hidden="true">
-                  <svg viewBox="0 0 24 24">
-                    <circle cx="12" cy="8" r="3.1" />
-                    <path d="M6.5 18a5.5 5.5 0 0 1 11 0" />
-                  </svg>
-                </div>
+                {selectedUser.avatar ? (
+                  <img
+                    src={selectedUser.avatar}
+                    alt={selectedUser.name}
+                    className="user-profile-avatar"
+                    style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e8e3ed' }}
+                  />
+                ) : (
+                  <div className="user-avatar user-profile-avatar" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <circle cx="12" cy="8" r="3.1" />
+                      <path d="M6.5 18a5.5 5.5 0 0 1 11 0" />
+                    </svg>
+                  </div>
+                )}
 
                 <div className="user-profile-title">
                   <h3>{selectedUser.name}</h3>
@@ -392,67 +422,63 @@ export function UserManagementPage() {
 
               <div className="user-profile-grid">
                 <div className="user-profile-item">
-                  <span>Email</span>
-                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: '#80899a', fontSize: '13px' }}>Email</span>
+                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500', color: '#171e2b' }}>
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#795289" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" ry="2" /><polyline points="3 7 12 13 21 7" /></svg>
                     {selectedUser.email}
                   </strong>
                 </div>
                 <div className="user-profile-item">
-                  <span>Language</span>
-                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: '#80899a', fontSize: '13px' }}>Language</span>
+                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500', color: '#171e2b' }}>
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#795289" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
                     {selectedUser.languageDetail}
                   </strong>
                 </div>
                 <div className="user-profile-item">
-                  <span>Biometric Access</span>
-                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', color: selectedUser.biometric === "On" ? "#2B9367" : "#667085" }}>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke={selectedUser.biometric === "On" ? "#2B9367" : "#667085"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      {selectedUser.biometric === "On" ? (
-                        <>
-                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                          <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                        </>
+                  <span style={{ color: '#80899a', fontSize: '13px' }}>Biometric Access</span>
+                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500', color: selectedUser.biometric === 'On' ? '#2B9367' : '#667085' }}>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke={selectedUser.biometric === 'On' ? '#2B9367' : '#667085'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      {selectedUser.biometric === 'On' ? (
+                        <><circle cx="12" cy="12" r="10" /><polyline points="9 12 11 14 15 10" /></>
                       ) : (
-                        <>
-                          <circle cx="12" cy="12" r="10"></circle>
-                          <line x1="15" y1="9" x2="9" y2="15"></line>
-                          <line x1="9" y1="9" x2="15" y2="15"></line>
-                        </>
+                        <><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></>
                       )}
                     </svg>
                     {selectedUser.biometric}
                   </strong>
                 </div>
                 <div className="user-profile-item">
-                  <span>Registered</span>
-                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: '#80899a', fontSize: '13px' }}>Registered</span>
+                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500', color: '#171e2b' }}>
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#795289" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
                     {selectedUser.registered}
                   </strong>
                 </div>
                 <div className="user-profile-item">
-                  <span>Last Active</span>
-                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: '#80899a', fontSize: '13px' }}>Last Active</span>
+                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500', color: '#171e2b' }}>
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#795289" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                     {selectedUser.lastActiveDetail}
                   </strong>
                 </div>
                 <div className="user-profile-item">
-                  <span>Chapters Completed</span>
-                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#795289" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
+                  <span style={{ color: '#80899a', fontSize: '13px' }}>Chapters Completed</span>
+                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500', color: '#171e2b' }}>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#795289" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                    </svg>
                     {selectedUser.chaptersCompleted}
                   </strong>
                 </div>
                 <div className="user-profile-item user-profile-item-wide">
-                  <span>Donation Amount</span>
-                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: '#80899a', fontSize: '13px' }}>Donation Amount</span>
+                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500', color: '#171e2b' }}>
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#795289" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
-                      <line x1="12" y1="6" x2="12" y2="18"></line>
-                      <path d="M15 9.5H10.5a2 2 0 0 0 0 4h3a2 2 0 0 1 0 4H9"></path>
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="16" />
+                      <path d="M15 10H10.5a1.5 1.5 0 0 0 0 3h3a1.5 1.5 0 0 1 0 3H9" />
                     </svg>
                     {selectedUser.donationAmount}
                   </strong>
@@ -466,15 +492,27 @@ export function UserManagementPage() {
                 className="user-status-action-btn"
                 onClick={toggleSelectedUserStatus}
                 disabled={statusUpdatingUserId === selectedUser.id}
-                style={{
-                  color: "#795289",
-                  background: "#fdfbfe",
-                  border: "1px solid #e8e3ed"
+                style={selectedUser.status === "Active" ? {
+                  color: "#6B4F7A",
+                  background: "#FFF",
+                  border: "1px solid #D8C8E3"
+                } : {
+                  color: "#059669",
+                  background: "#FFF",
+                  border: "1px solid #6EE7B7"
                 }}
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true" style={{ fill: "none", stroke: "currentColor", strokeWidth: 2, width: "16px", height: "16px" }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+                {selectedUser.status === "Active" ? (
+                  <svg viewBox="0 0 24 24" aria-hidden="true" style={{ fill: "none", stroke: "currentColor", strokeWidth: 2, width: "16px", height: "16px" }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" strokeLinecap="round" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" aria-hidden="true" style={{ fill: "none", stroke: "currentColor", strokeWidth: 2, width: "16px", height: "16px" }}>
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                )}
                 {statusUpdatingUserId === selectedUser.id
                   ? "Updating..."
                   : selectedUser.status === "Active"
@@ -482,7 +520,21 @@ export function UserManagementPage() {
                   : "Mark as Active"}
               </button>
 
-              <button type="button" className="chapter-primary-btn user-close-btn" onClick={() => setSelectedUserId(null)}>
+              <button
+                type="button"
+                className="user-close-btn"
+                onClick={() => setSelectedUserId(null)}
+                style={{
+                  background: "#795289",
+                  color: "#FFF",
+                  border: "none",
+                  borderRadius: "999px",
+                  padding: "10px 24px",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                }}
+              >
                 Close
               </button>
             </div>
@@ -491,14 +543,63 @@ export function UserManagementPage() {
                 {statusUpdateError}
               </p>
             )}
-            {statusUpdateSuccess && (
-              <p style={{ margin: "10px 4px 0", color: "#067647", fontSize: "0.875rem" }}>
-                {statusUpdateSuccess}
-              </p>
-            )}
           </aside>
         </div>
       )}
-    </>
+      {toast && (
+        <div className="community-dark-toast" style={{ zIndex: 9999 }}>
+          <div className="dark-toast-icon">
+            {toast.type === "error" ? <XCircleFilledIcon /> : <CheckCircleFilledIcon />}
+          </div>
+          <div className="dark-toast-content">
+            <div className="dark-toast-header">
+              <strong>{toast.title}</strong>
+              <button type="button" className="dark-toast-close" onClick={() => setToast(null)}>
+                <XIcon />
+              </button>
+            </div>
+            <p>{toast.message}</p>
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <button type="button" className="dark-toast-dismiss" onClick={() => setToast(null)}>
+                Dismiss
+              </button>
+              {toast.onRetry && (
+                <button type="button" className="dark-toast-dismiss" style={{ fontWeight: 600 }} onClick={() => {
+                  setToast(null);
+                  toast.onRetry();
+                }}>
+                  Try Again
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+function CheckCircleFilledIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="#10B981" stroke="#10B981" width="24" height="24">
+      <circle cx="12" cy="12" r="10" fill="#10B981"></circle>
+      <path d="M9 12l2 2 4-4" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"></path>
+    </svg>
+  );
+}
+
+function XIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+  );
+}
+function XCircleFilledIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="#EF4444" stroke="#EF4444" width="24" height="24">
+      <circle cx="12" cy="12" r="10" fill="#EF4444"></circle>
+      <path d="M15 9l-6 6M9 9l6 6" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"></path>
+    </svg>
   );
 }

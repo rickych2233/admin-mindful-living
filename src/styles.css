@@ -3863,7 +3863,7 @@ body,
   border-radius: 999px;
   min-height: 42px;
   padding: 0 18px;
-  background: #717b8d;
+  background: #795289;
   color: #f3f6fb;
   font: inherit;
   cursor: pointer;
@@ -4837,7 +4837,7 @@ body,
 
 .notes-list-head,
 .notes-list-row {
-  grid-template-columns: minmax(0, 1.65fr) 230px 88px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.5fr) 180px 88px;
 }
 
 .bookmarks-list-head,

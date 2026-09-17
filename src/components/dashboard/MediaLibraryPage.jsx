@@ -372,17 +372,17 @@ function MediaLibraryPage() {
   }, [mediaFiles, selectedMediaId]);
 
   const [editingMediaId, setEditingMediaId] = useState(null);
+  const [mediaToDelete, setMediaToDelete] = useState(null);
 
-  const deleteMedia = async (mediaId) => {
-    if (!window.confirm("Are you sure you want to delete this media file?")) {
-      return;
-    }
+  const confirmDeleteMedia = async () => {
+    if (!mediaToDelete) return;
     try {
-      await fetch(`/api/media/${mediaId}`, { method: "DELETE" });
-      setMediaFiles((current) => current.filter((media) => media.id !== mediaId));
-      if (selectedMediaId === mediaId) {
+      await fetch(`/api/media/${mediaToDelete}`, { method: "DELETE" });
+      setMediaFiles((current) => current.filter((media) => media.id !== mediaToDelete));
+      if (selectedMediaId === mediaToDelete) {
         setSelectedMediaId(null);
       }
+      setMediaToDelete(null);
     } catch (error) {
       console.error("Failed to delete media:", error);
     }
@@ -438,9 +438,9 @@ function MediaLibraryPage() {
 
         {activeTab === "Content List" ? (
           <>
-            <div className="media-toolbar">
-              <div className="chapter-filters media-filters">
-                <label className="chapter-search media-search" aria-label="Search practice or content name...">
+            <div className="media-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div className="chapter-filters media-filters" style={{ display: 'flex', gap: '12px', flexWrap: 'nowrap', flex: 1 }}>
+                <label className="chapter-search media-search" aria-label="Search practice or content name..." style={{ width: 'min(100%, 246px)' }}>
               <SearchIcon />
               <input
                 type="search"
@@ -594,7 +594,7 @@ function MediaLibraryPage() {
                   type="button"
                   className="chapter-icon-btn"
                   aria-label={`Delete ${media.name}`}
-                  onClick={(e) => { e.stopPropagation(); deleteMedia(media.id); }}
+                  onClick={(e) => { e.stopPropagation(); setMediaToDelete(media.id); }}
                 >
                   <TrashIcon />
                 </button>
@@ -934,7 +934,7 @@ function MediaLibraryPage() {
                         >
                           <span style={{ color: (mediaForm.relatedChapters || []).length > 0 ? '#151c29' : '#8d95a4' }}>
                             {(mediaForm.relatedChapters || []).length === 0 ? "Select related chapters" : 
-                             (mediaForm.relatedChapters || []).length === 1 ? chapters.find(c => c.id === mediaForm.relatedChapters[0])?.title || "1 Chapter Selected" : 
+                             (mediaForm.relatedChapters || []).length === 1 ? renderTranslated(chapters.find(c => c.id === mediaForm.relatedChapters[0])?.title, LANG_CODES[activeLanguageTab]) || "1 Chapter Selected" : 
                              `${(mediaForm.relatedChapters || []).length} Chapters Selected`}
                           </span>
                           <ChevronDownIcon style={{ width: 16, height: 16, color: '#8d95a4' }} />
@@ -1093,23 +1093,23 @@ function MediaLibraryPage() {
                   <div className="chapter-form-field">
                     <label style={{ display: 'block', marginBottom: 12, fontSize: 13, fontWeight: 600, color: '#151c29' }}>Content Type <span style={{color: '#EF4444'}}>*</span></label>
                     <div className="content-type-grid">
-                      <div className={`content-type-card ${mediaForm.format === "Text" ? "active" : ""}`} onClick={() => setMediaForm({...mediaForm, format: "Text"})}>
+                      <div className={`content-type-card ${mediaForm.format === "Text" ? "active" : ""}`} onClick={() => { setMediaForm({...mediaForm, format: "Text"}); setSelectedMediaFile(null); }}>
                         <TextIcon />
                         <span>Text</span>
                       </div>
-                      <div className={`content-type-card ${mediaForm.format === "Video" ? "active" : ""}`} onClick={() => setMediaForm({...mediaForm, format: "Video"})}>
+                      <div className={`content-type-card ${mediaForm.format === "Video" ? "active" : ""}`} onClick={() => { setMediaForm({...mediaForm, format: "Video"}); setSelectedMediaFile(null); }}>
                         <VideoIcon />
                         <span>Video</span>
                       </div>
-                      <div className={`content-type-card ${mediaForm.format === "Image" ? "active" : ""}`} onClick={() => setMediaForm({...mediaForm, format: "Image"})}>
+                      <div className={`content-type-card ${mediaForm.format === "Image" ? "active" : ""}`} onClick={() => { setMediaForm({...mediaForm, format: "Image"}); setSelectedMediaFile(null); }}>
                         <ImageIcon2 />
                         <span>Image</span>
                       </div>
-                      <div className={`content-type-card ${mediaForm.format === "Document" ? "active" : ""}`} onClick={() => setMediaForm({...mediaForm, format: "Document"})}>
+                      <div className={`content-type-card ${mediaForm.format === "Document" ? "active" : ""}`} onClick={() => { setMediaForm({...mediaForm, format: "Document"}); setSelectedMediaFile(null); }}>
                         <DocumentIcon />
                         <span>Document</span>
                       </div>
-                      <div className={`content-type-card ${mediaForm.format === "Audio" ? "active" : ""}`} onClick={() => setMediaForm({...mediaForm, format: "Audio"})}>
+                      <div className={`content-type-card ${mediaForm.format === "Audio" ? "active" : ""}`} onClick={() => { setMediaForm({...mediaForm, format: "Audio"}); setSelectedMediaFile(null); }}>
                         <MusicIcon />
                         <span>Audio</span>
                       </div>
@@ -1339,6 +1339,36 @@ function MediaLibraryPage() {
             <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#A0AEC0", lineHeight: 1.4 }}>
               {toast.message}
             </p>
+          </div>
+        </div>
+      )}
+
+      {mediaToDelete && (
+        <div className="chapter-delete-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setMediaToDelete(null)}>
+          <div className="chapter-delete-modal-content" style={{ background: '#FFF', borderRadius: '16px', padding: '32px', width: '400px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <svg viewBox="0 0 24 24" width="24" height="24" stroke="#DC2626" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: '0 0 8px 0' }}>Are you sure you want to delete this media?</h3>
+            <p style={{ fontSize: '14px', color: '#6B7280', margin: '0 0 24px 0', lineHeight: '1.5' }}>
+              You are about to permanently delete this item.<br />All associated content and data will be removed.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button type="button" onClick={() => setMediaToDelete(null)} style={{ padding: '10px 24px', borderRadius: '100px', border: '1px solid #E5E7EB', background: '#FFF', color: '#4B5563', fontWeight: '500', cursor: 'pointer', flex: 1 }}>
+                No, Keep It
+              </button>
+              <button 
+                type="button" 
+                onClick={confirmDeleteMedia} 
+                style={{ padding: '10px 24px', borderRadius: '100px', border: 'none', background: '#DC2626', color: '#FFF', fontWeight: '500', cursor: 'pointer', flex: 1 }}
+              >
+                Yes, Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

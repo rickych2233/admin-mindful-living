@@ -21,6 +21,11 @@ const initialPracticeForm = {
   sessionContentFileObj: null,
   thumbnailPreview: "",
 };
+const getChapterTitle = (titleObjOrStr) => {
+  if (!titleObjOrStr) return "Untitled";
+  if (typeof titleObjOrStr === "string") return titleObjOrStr;
+  return titleObjOrStr.en || titleObjOrStr['English 🇬🇧'] || Object.values(titleObjOrStr)[0] || "Untitled";
+};
 
 export function PracticeManagementPage() {
   const [activeTab, setActiveTab] = useState("practice");
@@ -29,10 +34,9 @@ export function PracticeManagementPage() {
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [practiceRows, setPracticeRows] = useState([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [showSessionSuccessToast, setShowSessionSuccessToast] = useState(false);
+  const [toast, setToast] = useState(null);
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [showCategorySuccessToast, setShowCategorySuccessToast] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [addedCategories, setAddedCategories] = useState([]);
   const [expandedPracticeId, setExpandedPracticeId] = useState(null);
@@ -378,6 +382,8 @@ export function PracticeManagementPage() {
       await fetchPractices();
       setIsSessionDeleteModalOpen(false);
       setDeletingSessionData(null);
+      setToast({ title: "Session Deleted", message: "You have successfully deleted a session" });
+      setTimeout(() => setToast(null), 5000);
     } catch (error) {
       console.error("Failed to delete session:", error);
     }
@@ -549,9 +555,11 @@ export function PracticeManagementPage() {
       await fetchPractices();
       setIsPracticeDeleteModalOpen(false);
       setDeletingPracticeId(null);
-    } catch (err) {
-      console.error(err);
-      alert(`Gagal menghapus practice: ${err.message}`);
+      setToast({ title: "Practice Deleted", message: "You have successfully deleted a practice" });
+      setTimeout(() => setToast(null), 5000);
+    } catch (error) {
+      console.error(error);
+      alert(`Gagal menghapus practice: ${error.message}`);
     }
   };
 
@@ -626,6 +634,13 @@ export function PracticeManagementPage() {
           thumbnailName: nextFile.name,
           thumbnailPreview: resizedBase64,
         }));
+        
+        // Clear thumbnail validation error
+        setFormErrors((current) => {
+          const newErrors = { ...current };
+          delete newErrors.thumbnailName;
+          return newErrors;
+        });
       };
       img.src = e.target.result;
     };
@@ -642,6 +657,9 @@ export function PracticeManagementPage() {
           errors[field] = "This field is required";
         }
       });
+      if (!practiceForm.thumbnailName || practiceForm.thumbnailName.trim() === "") {
+        errors.thumbnailName = "Practice thumbnail is required";
+      }
     } else if (practiceStep === 2) {
       ["sessionTitle", "sessionType"].forEach(field => {
         if (!practiceForm[field] || practiceForm[field].trim() === "") {
@@ -749,10 +767,17 @@ export function PracticeManagementPage() {
       }
       await fetchPractices();
       const wasAddingSession = isAddingSession;
+      const wasEditingSession = editingSessionIndex !== null;
       closePracticeDrawer();
       if (wasAddingSession) {
-        setShowSessionSuccessToast(true);
-        setTimeout(() => setShowSessionSuccessToast(false), 5000);
+        setToast({ title: "New Session Added", message: "You have successfully added a new Session" });
+        setTimeout(() => setToast(null), 5000);
+      } else if (wasEditingSession) {
+        setToast({ title: "Session Updated", message: "You have successfully updated the Session" });
+        setTimeout(() => setToast(null), 5000);
+      } else {
+        setToast({ title: isEditMode ? "Practice Updated" : "New Practice Added", message: `You have successfully ${isEditMode ? 'updated the' : 'added a new'} Practice` });
+        setTimeout(() => setToast(null), 5000);
       }
     } catch (error) {
       console.error("Failed to save practice:", error);
@@ -783,8 +808,8 @@ export function PracticeManagementPage() {
       setIsAddCategoryModalOpen(false);
       setNewCategoryName("");
       setEditingCategoryId(null);
-      setShowCategorySuccessToast(true);
-      setTimeout(() => setShowCategorySuccessToast(false), 5000);
+      setToast({ title: editingCategoryId ? "Category Updated" : "New Category Added", message: `You have successfully ${editingCategoryId ? 'updated the' : 'added a new'} Category` });
+      setTimeout(() => setToast(null), 5000);
     } catch (error) {
       console.error("Failed to save category:", error);
     }
@@ -821,6 +846,8 @@ export function PracticeManagementPage() {
       await fetchCategories();
       setIsCategoryDeleteModalOpen(false);
       setDeletingCategory(null);
+      setToast({ title: "Category Deleted", message: "You have successfully deleted a category" });
+      setTimeout(() => setToast(null), 5000);
     } catch (error) {
       console.error("Failed to delete category:", error);
     }
@@ -956,7 +983,7 @@ export function PracticeManagementPage() {
                         <circle cx="16" cy="17" r="1.5" />
                       </svg>
                     </button>
-                    <span className="chapter-order-number">{practice.id}</span>
+                    <span className="chapter-order-number">{index + 1}</span>
                   </div>
 
                   <div className="practice-main-cell" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
@@ -1345,7 +1372,7 @@ export function PracticeManagementPage() {
                     >
                       <span style={{ color: practiceForm.relatedChapters.length > 0 ? '#151c29' : '#8d95a4' }}>
                         {practiceForm.relatedChapters.length === 0 ? "Select related chapters" : 
-                         practiceForm.relatedChapters.length === 1 ? chapters.find(c => c.id === practiceForm.relatedChapters[0])?.title || "1 Chapter Selected" : 
+                         practiceForm.relatedChapters.length === 1 ? getChapterTitle(chapters.find(c => c.id === practiceForm.relatedChapters[0])?.title) : 
                          `${practiceForm.relatedChapters.length} Chapters Selected`}
                       </span>
                       <svg viewBox="0 0 24 24" aria-hidden="true" style={{ transform: isRelatedChapterOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
@@ -1381,7 +1408,7 @@ export function PracticeManagementPage() {
                               }}
                               style={{ width: '16px', height: '16px', accentColor: '#795289', cursor: 'pointer' }}
                             />
-                            <span style={{ fontSize: '14px', color: '#4A5568' }}>{ch.title}</span>
+                            <span style={{ fontSize: '14px', color: '#4A5568' }}>{getChapterTitle(ch.title)}</span>
                           </label>
                         ))}
                       </div>
@@ -1406,7 +1433,7 @@ export function PracticeManagementPage() {
                         </button>
                       </div>
                     ) : (
-                      <label className="chapter-upload-box">
+                      <label className="chapter-upload-box" style={formErrors.thumbnailName ? { borderColor: '#E53E3E' } : {}}>
                         <input type="file" accept=".png,.jpg,.jpeg" onChange={handlePracticeThumbnailChange} />
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                           <circle cx="8" cy="8" r="2" />
@@ -1416,6 +1443,7 @@ export function PracticeManagementPage() {
                         <span>Supported file: PNG, JPG &nbsp;&nbsp;&nbsp;&nbsp; Max. size: 2 MB</span>
                       </label>
                     )}
+                    {formErrors.thumbnailName && <span style={{ color: '#E53E3E', fontSize: '12px', marginTop: '4px', display: 'block' }}>{formErrors.thumbnailName}</span>}
                   </div>
                 </div>
               )}
@@ -1629,7 +1657,7 @@ export function PracticeManagementPage() {
                 )}
 
                 <button type="button" onClick={() => handlePracticeContinue("Published")} disabled={isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#795289', border: 'none', color: '#FFF', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
-                  {(practiceStep === 3 || editingSessionIndex !== null || isAddingSession) ? "Publish Now" : "Continue"}
+                  {editingSessionIndex !== null ? "Save Changes" : ((practiceStep === 3 || isAddingSession) ? "Publish Now" : "Continue")}
                   {!(practiceStep === 3 || editingSessionIndex !== null || isAddingSession) && (
                     <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M5 12h14m-5-5 5 5-5 5" />
@@ -1684,7 +1712,7 @@ export function PracticeManagementPage() {
         </div>
       )}
 
-      {showCategorySuccessToast && (
+      {toast && (
         <div style={{
           position: 'fixed',
           top: '32px',
@@ -1708,15 +1736,15 @@ export function PracticeManagementPage() {
           </div>
           <div style={{ flexGrow: 1 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-              <strong style={{ color: '#ffffff', fontSize: '15px', fontWeight: '600' }}>New Category Added</strong>
-              <button type="button" onClick={() => setShowCategorySuccessToast(false)} style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 0 }} aria-label="Close">
+              <strong style={{ color: '#ffffff', fontSize: '15px', fontWeight: '600' }}>{toast.title}</strong>
+              <button type="button" onClick={() => setToast(null)} style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 0 }} aria-label="Close">
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             </div>
-            <p style={{ color: '#94A3B8', fontSize: '13px', margin: '0', lineHeight: '1.4' }}>You have successfully added a new Category</p>
+            <p style={{ color: '#94A3B8', fontSize: '13px', margin: '0', lineHeight: '1.4' }}>{toast.message}</p>
           </div>
           <style>{`
             @keyframes slideInDown {
@@ -1724,43 +1752,6 @@ export function PracticeManagementPage() {
               to { transform: translateY(0); opacity: 1; }
             }
           `}</style>
-        </div>
-      )}
-
-      {showSessionSuccessToast && (
-        <div style={{
-          position: 'fixed',
-          top: '32px',
-          right: '32px',
-          width: '340px',
-          background: '#161d29',
-          borderRadius: '12px',
-          padding: '20px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-          zIndex: 9999,
-          display: 'flex',
-          gap: '12px',
-          border: '1px solid #222a40',
-          animation: 'slideInDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-        }}>
-          <div style={{ flexShrink: 0, marginTop: '2px' }}>
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="#10B981">
-              <circle cx="12" cy="12" r="12" />
-              <path d="M17 8l-7 8-3-3" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </svg>
-          </div>
-          <div style={{ flexGrow: 1 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-              <strong style={{ color: '#ffffff', fontSize: '15px', fontWeight: '600' }}>New Session Added</strong>
-              <button type="button" onClick={() => setShowSessionSuccessToast(false)} style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 0 }} aria-label="Close">
-                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-            <p style={{ color: '#94A3B8', fontSize: '13px', margin: '0', lineHeight: '1.4' }}>You have successfully added a new Session</p>
-          </div>
         </div>
       )}
 
