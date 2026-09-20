@@ -5,7 +5,7 @@ export function ActivityChart({ labels, primaryValues, secondaryValues }) {
   const width = 660;
   const height = 250;
   const padding = 18;
-  const maxValue = Math.max(...primaryValues, ...secondaryValues) * 1.15;
+  const maxValue = Math.max(Math.max(...primaryValues, ...secondaryValues) * 1.15, 1);
   const primaryPoints = buildChartPoints(primaryValues, width, height, padding, maxValue);
   const secondaryPoints = buildChartPoints(secondaryValues, width, height, padding, maxValue);
   const innerWidth = width - padding * 2;
