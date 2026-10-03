@@ -607,9 +607,9 @@ export default function NotesBookmarksPage() {
                 <span className="detail-notes-label">Notes by</span>
                 <span className="detail-notes-value bold">{viewingNote.name}</span>
               </div>
-              <div className="detail-notes-item" style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                <span className="detail-notes-label" style={{ width: 'auto' }}>Category</span>
-                <div className="notes-category-cell">
+              <div className="detail-notes-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8, display: 'flex' }}>
+                <span className="detail-notes-label">Category</span>
+                <div className="notes-category-cell" style={{ marginTop: '4px' }}>
                   {viewingNote.categories.map((cat, idx) => (
                     <span key={idx} className={`community-category-pill color-${cat.color}`}>
                       {cat.name}

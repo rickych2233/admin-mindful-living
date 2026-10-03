@@ -200,23 +200,28 @@
 }
 
 .community-category-pill.color-green {
-  background: #E6F9F0;
-  color: #2B9367;
+  background: #E6F7EE;
+  color: #2D9462;
 }
 
 .community-category-pill.color-yellow {
-  background: #FEF3C7;
-  color: #D97706;
+  background: #FFF6DA;
+  color: #F18F01;
+}
+
+.community-category-pill.color-orange {
+  background: #F8EFE0;
+  color: #C88D2E;
 }
 
 .community-category-pill.color-pink {
-  background: #FAE8FF;
-  color: #C026D3;
+  background: #FBEEFA;
+  color: #94299B;
 }
 
 .community-category-pill.color-purple {
-  background: #F3E8FF;
-  color: #9333EA;
+  background: #E8E0F0;
+  color: #5B446A;
 }
 
 .community-category-pill.color-red {

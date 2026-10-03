@@ -13,8 +13,23 @@ function safeNum(value, fallback = 0) {
 /** Returns string, trims whitespace; returns fallback if null/undefined/empty */
 function safeStr(value, fallback = "") {
   if (value === null || value === undefined) return fallback;
+  
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (typeof parsed === "object" && !Array.isArray(parsed)) {
+        value = parsed;
+      }
+    } catch (e) {
+      // Not JSON, continue as normal string
+    }
+  }
+
+  if (typeof value === "object" && !Array.isArray(value)) {
+    value = value["English 🇬🇧"] || value["en"] || value["English"] || Object.values(value)[0] || fallback;
+  }
   const s = String(value).trim();
-  return s.length > 0 ? s : fallback;
+  return s.length > 0 && s !== "[object Object]" ? s : fallback;
 }
 
 /** Safe array: always returns an array, never null/undefined */

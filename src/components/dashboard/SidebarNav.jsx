@@ -26,16 +26,18 @@ function Icon({ type }) {
 function SidebarNav({
   activeItem = "dashboard",
   isOpen = false,
+  isCollapsed = false,
+  onToggleCollapse = () => { },
   onClose = () => { },
   onSelectItem = () => { },
   onLogout = () => { },
   onProfileClick = () => { },
 }) {
   return (
-    <div className={`sidebar-wrapper${isOpen ? " is-open" : ""}`}>
-      <button type="button" className="sidebar-collapse-btn" aria-label="Collapse sidebar">
+    <div className={`sidebar-wrapper${isOpen ? " is-open" : ""}${isCollapsed ? " is-collapsed" : ""}`}>
+      <button type="button" className="sidebar-collapse-btn" aria-label="Collapse sidebar" onClick={onToggleCollapse}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="15 18 9 12 15 6" />
+          <polyline points={isCollapsed ? "9 18 15 12 9 6" : "15 18 9 12 15 6"} />
         </svg>
       </button>
       <aside className="sidebar-nav">

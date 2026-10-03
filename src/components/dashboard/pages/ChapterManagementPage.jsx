@@ -439,7 +439,12 @@ export function ChapterManagementPage() {
   };
 
   const handleThumbnailChange = (event) => {
-    const nextFile = event.target.files?.[0];
+    let nextFile = null;
+    if (event.dataTransfer && event.dataTransfer.files) {
+      nextFile = event.dataTransfer.files[0];
+    } else if (event.target && event.target.files) {
+      nextFile = event.target.files[0];
+    }
 
     if (!nextFile) {
       setChapterForm((current) => ({
@@ -644,8 +649,8 @@ export function ChapterManagementPage() {
       try {
         const apiId = editingChapter.apiId ?? editingChapter.id;
         const chapterData = {
-          title: merge(chapterForm.title, 'title'),
-          description: merge(chapterForm.description, 'description'),
+          title: JSON.stringify(merge(chapterForm.title, 'title')),
+          description: JSON.stringify(merge(chapterForm.description, 'description')),
           status: finalStatus !== "Drafted" ? finalStatus : (editingChapter.status || "Drafted"),
           thumbnail: chapterForm.thumbnailPreview || null,
         };
@@ -719,8 +724,8 @@ export function ChapterManagementPage() {
       const normalizedTitle = chapterForm.title.trim();
       
       const chapterData = {
-        title: merge(chapterForm.title, 'title'),
-        description: merge(chapterForm.description, 'description'),
+        title: JSON.stringify(merge(chapterForm.title, 'title')),
+        description: JSON.stringify(merge(chapterForm.description, 'description')),
         status: finalStatus,
         thumbnail: chapterForm.thumbnailPreview || null,
         sections: [
@@ -1166,26 +1171,28 @@ export function ChapterManagementPage() {
               </button>
             </div>
 
-            <div className="chapter-stepper">
-              {chapterStepItems.map((step) => {
-                const isActive = chapterStep === step.id;
-                const isComplete = chapterStep > step.id;
+            {!isEditMode && (
+              <div className="chapter-stepper">
+                {chapterStepItems.map((step) => {
+                  const isActive = chapterStep === step.id;
+                  const isComplete = chapterStep > step.id;
 
-                return (
-                  <div
-                    key={step.id}
-                    className={`chapter-step${isActive ? " is-active" : ""}${isComplete ? " is-complete" : ""}`}
-                  >
-                    <div className="chapter-step-circle">
-                      {isComplete ? (
-                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                      ) : step.id}
+                  return (
+                    <div
+                      key={step.id}
+                      className={`chapter-step${isActive ? " is-active" : ""}${isComplete ? " is-complete" : ""}`}
+                    >
+                      <div className="chapter-step-circle">
+                        {isComplete ? (
+                          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        ) : step.id}
+                      </div>
+                      <span>{step.label}</span>
                     </div>
-                    <span>{step.label}</span>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="chapter-drawer-body">
               <div className="language-tabs" style={{ display: 'flex', gap: '24px', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px', marginBottom: '24px' }}>
@@ -1287,7 +1294,16 @@ export function ChapterManagementPage() {
                         </button>
                       </div>
                     ) : (
-                      <label className="chapter-upload-box">
+                      <label 
+                        className="chapter-upload-box"
+                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleThumbnailChange(e);
+                        }}
+                      >
                         <input type="file" accept=".png,.jpg,.jpeg" onChange={handleThumbnailChange} />
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                           <circle cx="8" cy="8" r="2" />

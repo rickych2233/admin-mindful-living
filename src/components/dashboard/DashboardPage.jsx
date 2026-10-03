@@ -22,6 +22,7 @@ function DashboardPage({ onLogout = () => {} }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const pathAfterDashboard = location.pathname.replace(/^\/dashboard\/?/, "");
@@ -43,7 +44,7 @@ function DashboardPage({ onLogout = () => {} }) {
   );
 
   return (
-    <section className="dashboard-shell">
+    <section className={`dashboard-shell${isSidebarCollapsed ? " is-collapsed" : ""}`}>
       {isSidebarOpen && (
         <button
           type="button"
@@ -56,6 +57,8 @@ function DashboardPage({ onLogout = () => {} }) {
       <SidebarNav
         activeItem={activeItem}
         isOpen={isSidebarOpen}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onClose={() => setIsSidebarOpen(false)}
         onSelectItem={handleSelectItem}
         onLogout={() => setIsLogoutModalOpen(true)}
