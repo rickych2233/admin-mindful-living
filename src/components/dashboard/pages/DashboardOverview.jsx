@@ -186,6 +186,7 @@ export function DashboardOverview() {
   const [isLoading,    setIsLoading]    = useState(true);   // first load
   const [isRefreshing, setIsRefreshing] = useState(false);  // subsequent polls
   const [fetchError,   setFetchError]   = useState(null);
+  const [chaptersPage, setChaptersPage] = useState(1);
 
   useEffect(() => {
     let mounted = true;
@@ -255,6 +256,9 @@ export function DashboardOverview() {
   const newestDiscussion= community.newestDiscussion ?? null;
   const mostReportedCat = community.mostReportedCategory ?? null;
   const chaptersList    = safeArr(content.chaptersList);
+  const chaptersPerPage = 8;
+  const totalChapterPages = Math.ceil(chaptersList.length / chaptersPerPage);
+  const paginatedChapters = chaptersList.slice((chaptersPage - 1) * chaptersPerPage, chaptersPage * chaptersPerPage);
   const topSupporters   = safeArr(donations.topSupporters);
   const recentSupporters= safeArr(donations.recentSupporters);
 
@@ -660,37 +664,73 @@ export function DashboardOverview() {
                   {[...Array(3)].map((_, i) => <Skeleton key={i} height="2rem" radius="8px" />)}
                 </div>
               ) : chaptersList.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: "1rem" }}>
-                  {chaptersList.map((ch, idx) => {
-                    const order  = safeNum(ch.chapterOrder ?? ch.chapter_order, idx + 1);
-                    const title  = safeStr(ch.title, "Untitled Chapter");
-                    const status = safeStr(ch.status, "Drafted");
-                    return (
-                      <div key={ch.id ?? idx} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                        <span style={{
-                          width: "28px", height: "28px", borderRadius: "50%", background: "#885F9A",
-                          color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: "0.78rem", fontWeight: "700", flexShrink: 0
-                        }}>
-                          {order}
-                        </span>
-                        <span style={{
-                          flex: 1, fontSize: "0.9rem", fontWeight: "500", color: "#111827",
-                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"
-                        }}>
-                          {title}
-                        </span>
-                        <span style={{
-                          fontSize: "0.75rem", padding: "0.2rem 0.6rem", borderRadius: "999px", fontWeight: "500",
-                          background: status === "Published" ? "#dcfce7" : "#f3f4f6",
-                          color: status === "Published" ? "#16a34a" : "#6b7280"
-                        }}>
-                          {status}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
+                <>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: "1rem" }}>
+                    {paginatedChapters.map((ch, idx) => {
+                      const actualIdx = (chaptersPage - 1) * chaptersPerPage + idx;
+                      const order  = safeNum(ch.chapterOrder ?? ch.chapter_order, actualIdx + 1);
+                      const title  = safeStr(ch.title, "Untitled Chapter");
+                      const status = safeStr(ch.status, "Drafted");
+                      return (
+                        <div key={ch.id ?? actualIdx} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                          <span style={{
+                            width: "28px", height: "28px", borderRadius: "50%", background: "#885F9A",
+                            color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: "0.78rem", fontWeight: "700", flexShrink: 0
+                          }}>
+                            {order}
+                          </span>
+                          <span style={{
+                            flex: 1, fontSize: "0.9rem", fontWeight: "500", color: "#111827",
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"
+                          }}>
+                            {title}
+                          </span>
+                          <span style={{
+                            fontSize: "0.75rem", padding: "0.2rem 0.6rem", borderRadius: "999px", fontWeight: "500",
+                            background: status === "Published" ? "#dcfce7" : "#f3f4f6",
+                            color: status === "Published" ? "#16a34a" : "#6b7280"
+                          }}>
+                            {status}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {totalChapterPages > 1 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #e5e7eb" }}>
+                      <button
+                        onClick={() => setChaptersPage(p => Math.max(1, p - 1))}
+                        disabled={chaptersPage === 1}
+                        style={{
+                          padding: "0.4rem 0.8rem", borderRadius: "6px", fontSize: "0.85rem", fontWeight: "500",
+                          background: chaptersPage === 1 ? "#f3f4f6" : "#fff",
+                          color: chaptersPage === 1 ? "#9ca3af" : "#4b5563",
+                          border: `1px solid ${chaptersPage === 1 ? "#e5e7eb" : "#d1d5db"}`,
+                          cursor: chaptersPage === 1 ? "not-allowed" : "pointer"
+                        }}
+                      >
+                        Previous
+                      </button>
+                      <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>
+                        Page {chaptersPage} of {totalChapterPages}
+                      </span>
+                      <button
+                        onClick={() => setChaptersPage(p => Math.min(totalChapterPages, p + 1))}
+                        disabled={chaptersPage === totalChapterPages}
+                        style={{
+                          padding: "0.4rem 0.8rem", borderRadius: "6px", fontSize: "0.85rem", fontWeight: "500",
+                          background: chaptersPage === totalChapterPages ? "#f3f4f6" : "#fff",
+                          color: chaptersPage === totalChapterPages ? "#9ca3af" : "#4b5563",
+                          border: `1px solid ${chaptersPage === totalChapterPages ? "#e5e7eb" : "#d1d5db"}`,
+                          cursor: chaptersPage === totalChapterPages ? "not-allowed" : "pointer"
+                        }}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </>
               ) : (
                 <EmptyState icon="📖" message="No chapters have been created yet" />
               )}
