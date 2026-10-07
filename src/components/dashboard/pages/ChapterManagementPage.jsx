@@ -43,6 +43,13 @@ const parseBlocks = (contentObjOrStr, mediaArr, initialTranslations = {}) => {
     contentObj = { en: "" };
   }
 
+  if (contentObj.en && typeof contentObj.en === 'string' && contentObj.en.startsWith('{') && contentObj.en.endsWith('}')) {
+    try {
+      const parsedEn = JSON.parse(contentObj.en);
+      contentObj = parsedEn;
+    } catch (e) {}
+  }
+
   const englishHtml = contentObj.en || contentObj['English 🇬🇧'] || "";
   
   const parsedBlocks = [];
@@ -642,7 +649,7 @@ export function ChapterManagementPage() {
         }
       });
       
-      return { contentHtml: JSON.stringify(contentHtml), mediaList };
+      return { contentHtml, mediaList };
     };
 
     const { contentHtml, mediaList } = serializeBlocks(chapterForm.editorBlocks);
