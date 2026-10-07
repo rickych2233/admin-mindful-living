@@ -271,6 +271,12 @@ function MediaLibraryPage() {
   const [selectedMediaId, setSelectedMediaId] = useState(null);
 
   const [toast, setToast] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, categoryFilter, statusFilter]);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -372,6 +378,30 @@ function MediaLibraryPage() {
   }, [mediaFiles, selectedMediaId]);
 
   const [editingMediaId, setEditingMediaId] = useState(null);
+
+  const canContinueStep1 = useMemo(() => {
+    if (!mediaForm.name || mediaForm.name.trim() === "") return false;
+    if (!mediaForm.category || mediaForm.category === "Select content category") return false;
+    if (mediaForm.status === "Published") {
+      if (!mediaForm.author || mediaForm.author.trim() === "") return false;
+      const getTxt = (val) => val || "";
+      if (getTxt(activeLanguageTab === 'English 🇬🇧' ? mediaForm.shortQuote : getVal(mediaForm.shortQuote, 'shortQuote', activeLanguageTab)).trim() === "") return false;
+      if (getTxt(activeLanguageTab === 'English 🇬🇧' ? mediaForm.whyItMatters : getVal(mediaForm.whyItMatters, 'whyItMatters', activeLanguageTab)).trim() === "") return false;
+      if (getTxt(activeLanguageTab === 'English 🇬🇧' ? mediaForm.corpusConnection : getVal(mediaForm.corpusConnection, 'corpusConnection', activeLanguageTab)).trim() === "") return false;
+      if (!selectedThumbnail && !editingMediaId) return false;
+    }
+    return true;
+  }, [mediaForm, selectedThumbnail, editingMediaId, activeLanguageTab, getVal]);
+
+  const canSubmitStep2 = useMemo(() => {
+    if (mediaForm.format === "Text") {
+      const getTxt = (val) => val || "";
+      return getTxt(activeLanguageTab === 'English 🇬🇧' ? mediaForm.textContent : getVal(mediaForm.textContent, 'textContent', activeLanguageTab)).replace(/<[^>]*>?/gm, '').trim() !== "";
+    } else {
+      return selectedMediaFile !== null || editingMediaId !== null;
+    }
+  }, [mediaForm, selectedMediaFile, editingMediaId, activeLanguageTab, getVal]);
+
   const [mediaToDelete, setMediaToDelete] = useState(null);
 
   const confirmDeleteMedia = async () => {
@@ -544,7 +574,7 @@ function MediaLibraryPage() {
             <span>Action</span>
           </div>
 
-          {visibleMediaFiles.map((media) => (
+          {visibleMediaFiles.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((media) => (
             <article key={media.id} className="media-row" onClick={() => setSelectedMediaId(media.id)}>
               <div className="media-file-cell">
                 <div 
@@ -613,7 +643,7 @@ function MediaLibraryPage() {
             <div className="practice-footer-left">
               <span>Showing</span>
               <button type="button" className="practice-page-size">
-                10
+                {itemsPerPage}
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="m7 10 5 5 5-5" />
                 </svg>
@@ -622,13 +652,37 @@ function MediaLibraryPage() {
             </div>
   
             <div className="practice-pagination">
-              <button type="button" className="practice-page-btn" aria-label="Previous page">
+              <button 
+                type="button" 
+                className="practice-page-btn" 
+                aria-label="Previous page"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              >
                 <svg viewBox="0 0 24 24" aria-hidden="true" stroke="currentColor" fill="none" strokeWidth="2">
                   <path d="m15 18-6-6 6-6" />
                 </svg>
               </button>
-              <button type="button" className="practice-page-btn" style={{ background: '#f6effa', color: '#795289', borderColor: '#f6effa' }}>1</button>
-              <button type="button" className="practice-page-btn" aria-label="Next page">
+              
+              {Array.from({ length: Math.ceil(visibleMediaFiles.length / itemsPerPage) }).map((_, idx) => (
+                <button 
+                  key={idx} 
+                  type="button" 
+                  className="practice-page-btn" 
+                  style={currentPage === idx + 1 ? { background: '#f6effa', color: '#795289', borderColor: '#f6effa' } : {}}
+                  onClick={() => setCurrentPage(idx + 1)}
+                >
+                  {idx + 1}
+                </button>
+              ))}
+
+              <button 
+                type="button" 
+                className="practice-page-btn" 
+                aria-label="Next page"
+                disabled={currentPage === Math.ceil(visibleMediaFiles.length / itemsPerPage) || visibleMediaFiles.length === 0}
+                onClick={() => setCurrentPage(Math.min(Math.ceil(visibleMediaFiles.length / itemsPerPage), currentPage + 1))}
+              >
                 <svg viewBox="0 0 24 24" aria-hidden="true" stroke="currentColor" fill="none" strokeWidth="2">
                   <path d="m9 18 6-6-6-6" />
                 </svg>
@@ -1229,7 +1283,7 @@ function MediaLibraryPage() {
             {addStep === 1 ? (
               <div className="media-drawer-footer">
                 <button type="button" className="chapter-secondary-btn" onClick={() => { setIsAddModalOpen(false); setAddStep(1); }}>Cancel</button>
-                <button type="button" className="chapter-primary-btn" style={{ gap: 8 }} onClick={() => setAddStep(2)}>
+                <button type="button" className="chapter-primary-btn" style={{ gap: 8, opacity: !canContinueStep1 ? 0.5 : 1, cursor: !canContinueStep1 ? 'not-allowed' : 'pointer' }} disabled={!canContinueStep1} onClick={() => setAddStep(2)}>
                   Continue 
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -1248,7 +1302,11 @@ function MediaLibraryPage() {
                   <button type="button" className="chapter-secondary-btn" style={{ gap: 8 }}>
                     <DocumentIcon style={{ width: 16, height: 16 }} /> Save as Draft
                   </button>
-                  <button type="button" className="chapter-primary-btn" style={{ gap: 8 }} onClick={async () => {
+                  <button type="button" className="chapter-primary-btn" style={{ gap: 8, opacity: !canSubmitStep2 ? 0.5 : 1, cursor: !canSubmitStep2 ? 'not-allowed' : 'pointer' }} disabled={!canSubmitStep2} onClick={async (e) => {
+                    const btn = e.currentTarget;
+                    const originalText = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = "Saving...";
                     try {
                       await fetch(editingMediaId ? `/api/media/${editingMediaId}` : "/api/media", {
                         method: editingMediaId ? "PUT" : "POST",
@@ -1264,9 +1322,23 @@ function MediaLibraryPage() {
                       setSelectedMediaFile(null);
                       setMediaForm({ name: "", author: "", format: "Video", category: "Book", status: "Published", relatedChapters: [] });
                       showToast(editingMediaId ? "Content Updated" : "New Content Added", editingMediaId ? "You have successfully updated the content." : "You have successfully added new content in media library.");
-                    } catch(err) { console.error(err) }
+                    } catch(err) { 
+                      console.error(err); 
+                    } finally {
+                      btn.disabled = false;
+                      btn.innerHTML = originalText;
+                    }
                   }}>
-                    <CheckIcon style={{ width: 16, height: 16 }} /> Publish Now
+                    {editingMediaId ? (
+                      <>
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                        Save Changes
+                      </>
+                    ) : (
+                      <>
+                        <CheckIcon style={{ width: 16, height: 16 }} /> Publish Now
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

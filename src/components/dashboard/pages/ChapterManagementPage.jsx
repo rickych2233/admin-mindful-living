@@ -354,6 +354,7 @@ export function ChapterManagementPage() {
     setChapterStep(1);
     setChapterForm(initialChapterForm);
     setEditingChapter(null);
+    setAddSectionFor(null);
   };
 
   const handleEditChapter = async (chapter) => {
@@ -503,13 +504,14 @@ export function ChapterManagementPage() {
     reader.readAsDataURL(nextFile);
   };
 
-  const isEditMode = editingChapter !== null;
+  const isAddSectionMode = addSectionFor !== null;
+  const isEditMode = editingChapter !== null && !isAddSectionMode;
 
   const canContinue =
     chapterStep === 1
       ? chapterForm.title.trim() !== "" && chapterForm.description.trim() !== ""
       : chapterStep === 2
-        ? (isEditMode ? true : chapterForm.sectionName.trim() !== "" && chapterForm.sectionCaption.trim() !== "")
+        ? (isAddSectionMode || editingChapter ? chapterForm.sectionName.trim() !== "" && chapterForm.sectionCaption.trim() !== "" : chapterForm.sectionName.trim() !== "" && chapterForm.sectionCaption.trim() !== "")
         : true;
 
   const handleFileChange = (e, type) => {
@@ -593,7 +595,7 @@ export function ChapterManagementPage() {
       return;
     }
 
-    if (chapterStep < 3) {
+    if (chapterStep < 3 && !isEditMode && !isAddSectionMode && !(editingChapter && chapterStep === 2)) {
       setChapterStep((current) => current + 1);
       return;
     }
@@ -644,6 +646,37 @@ export function ChapterManagementPage() {
     };
 
     const { contentHtml, mediaList } = serializeBlocks(chapterForm.editorBlocks);
+
+    if (isAddSectionMode) {
+      setIsSubmitting(true);
+      setSubmitError("");
+      try {
+        const apiId = addSectionFor;
+        const result = await createSection(apiId, {
+          title: merge(chapterForm.sectionName, 'sectionName'),
+          description: merge(chapterForm.sectionCaption, 'sectionCaption'),
+          content: contentHtml,
+          type: chapterForm.sectionType,
+          contents: mediaList.map((m) => ({
+             title: m.title || "",
+             type: m.type,
+             url: m.url || "",
+             is_required: m.isRequired,
+             duration: m.duration || "2 Minutes",
+             instructions: m.instructions || ""
+          }))
+        });
+        const newSec = normalizeSection(result.section || result);
+        setSectionsMap((p) => ({ ...p, [apiId]: [...(p[apiId] || []), newSec] }));
+        closeChapterDrawer();
+        refetch();
+      } catch (err) {
+        setSubmitError(err.message || "Gagal membuat section.");
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
 
     if (isEditMode) {
       try {
@@ -1040,7 +1073,7 @@ export function ChapterManagementPage() {
                     <div className="section-panel" style={{ padding: '24px', background: '#FAFAFC', borderTop: '1px solid #F1F3F5' }}>
                       <div className="section-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                         <span style={{ fontSize: '14px', color: '#718096', fontWeight: '500' }}>Sections in {renderTranslated(chapter.title, LANG_CODES[activeLanguageTab])}</span>
-                        <button type="button" onClick={() => { setAddSectionFor(cId); setSectionForm({ title: "", description: "", type: "Text" }); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#795289', color: '#FFF', border: 'none', padding: '6px 16px', borderRadius: '100px', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>
+                        <button type="button" onClick={() => { setAddSectionFor(cId); setEditingChapter(chapter); setTranslations({}); setChapterForm({ ...initialChapterForm, sectionType: "Text" }); setChapterStep(2); setIsDrawerOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#795289', color: '#FFF', border: 'none', padding: '6px 16px', borderRadius: '100px', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>
                           <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
                           Add Section
                         </button>
@@ -1099,7 +1132,7 @@ export function ChapterManagementPage() {
                               <div className="section-contents-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '1px solid #E2E8F0', paddingLeft: '16px', marginLeft: '4px' }}>
                                 {sec.contents.map((content) => (
                                   <div key={content.id} className="content-item" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <span className="content-icon" style={{ color: '#4A5568', display: 'flex', alignItems: 'center' }}>
+                                    <span className="content-icon" style={{ color: '#795289', display: 'flex', alignItems: 'center' }}>
                                       <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="1.5" fill="none">
                                         {content.type === "Video" ? (
                                           <><rect x="2" y="6" width="20" height="12" rx="2" ry="2" /><polygon points="10 9 15 12 10 15 10 9" /></>
@@ -1123,23 +1156,7 @@ export function ChapterManagementPage() {
 
                       {!loading && sections.length === 0 && <div className="section-loading">No sections yet.</div>}
 
-                      {addSectionFor === cId && (
-                        <div className="section-add-form">
-                          <div className="section-add-form-row">
-                            <input type="text" placeholder="Section title *" value={sectionForm.title} onChange={(e) => setSectionForm((f) => ({ ...f, title: e.target.value }))} />
-                            <select value={sectionForm.type} onChange={(e) => setSectionForm((f) => ({ ...f, type: e.target.value }))}>
-                              <option>Text</option><option>Video</option><option>Audio</option>
-                            </select>
-                          </div>
-                          <input type="text" placeholder="Description (optional)" value={sectionForm.description} onChange={(e) => setSectionForm((f) => ({ ...f, description: e.target.value }))} />
-                          <div className="section-add-form-actions">
-                            <button type="button" className="chapter-secondary-btn" onClick={() => setAddSectionFor(null)}>Cancel</button>
-                            <button type="button" className="section-add-btn" onClick={() => handleAddSection(chapter)} disabled={!sectionForm.title.trim() || sectionSubmitting}>
-                              {sectionSubmitting ? "Creating..." : "Create Section"}
-                            </button>
-                          </div>
-                        </div>
-                      )}
+
                     </div>
                   );
                 })()}
@@ -1160,8 +1177,8 @@ export function ChapterManagementPage() {
           <aside className="chapter-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
             <div className="chapter-drawer-header">
               <div>
-                <h2>{isEditMode ? "Edit Chapter" : "Add Chapter"}</h2>
-                <p>{isEditMode ? "Update chapter and section details" : "Step through to set up chapter and first section"}</p>
+                <h2>{isAddSectionMode ? "Add Section" : (editingChapter && chapterStep === 2) ? "Edit Section" : isEditMode ? "Edit Chapter" : "Add Chapter"}</h2>
+                <p>{isAddSectionMode ? "Add a new section to your chapter" : (editingChapter && chapterStep === 2) ? "Update section details" : isEditMode ? "Update chapter details" : "Step through to set up chapter and first section"}</p>
               </div>
 
               <button type="button" className="chapter-drawer-close" aria-label="Close add chapter form" onClick={closeChapterDrawer}>
@@ -1171,7 +1188,7 @@ export function ChapterManagementPage() {
               </button>
             </div>
 
-            {!isEditMode && (
+            {(!isEditMode && !isAddSectionMode && !(editingChapter && chapterStep === 2)) && (
               <div className="chapter-stepper">
                 {chapterStepItems.map((step) => {
                   const isActive = chapterStep === step.id;
@@ -1357,10 +1374,12 @@ export function ChapterManagementPage() {
                     />
                   </div>
 
-                  <div className="section-info-warning" style={{ background: '#FFFFAF', color: '#B7791F', padding: '12px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px' }}>
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                    <span>You can add more sections once you finish adding the chapter.</span>
-                  </div>
+                  {(!isEditMode && !isAddSectionMode && !(editingChapter && chapterStep === 2)) && (
+                    <div className="section-info-warning" style={{ background: '#FFFFAF', color: '#B7791F', padding: '12px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px' }}>
+                      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                      <span>You can add more sections once you finish adding the chapter.</span>
+                    </div>
+                  )}
 
                   <div className="chapter-field chapter-field-wide">
                     <span>
@@ -1557,10 +1576,6 @@ export function ChapterManagementPage() {
                   <div className="review-section">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                       <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#2D3748', margin: 0 }}>Initial Section Summary</h3>
-                      <button type="button" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#4A5568', background: '#FFF', border: '1px solid #E2E8F0', padding: '6px 12px', borderRadius: '100px', cursor: 'pointer' }}>
-                        Open Preview
-                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                      </button>
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>
@@ -1632,14 +1647,14 @@ export function ChapterManagementPage() {
                 type="button"
                 style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F8F6FA', border: '1px solid #EAE6F0', padding: '10px 24px', borderRadius: '100px', color: '#795289', fontWeight: '500', cursor: 'pointer' }}
                 onClick={() => {
-                  if (isEditMode || chapterStep === 1) {
+                  if (isEditMode || isAddSectionMode || (editingChapter && chapterStep === 2) || chapterStep === 1) {
                     closeChapterDrawer();
                     return;
                   }
                   setChapterStep((current) => current - 1);
                 }}
               >
-                {isEditMode || chapterStep === 1 ? (
+                {isEditMode || isAddSectionMode || (editingChapter && chapterStep === 2) || chapterStep === 1 ? (
                   "Cancel"
                 ) : (
                   <>
@@ -1649,15 +1664,17 @@ export function ChapterManagementPage() {
                 )}
               </button>
 
-              {chapterStep === 3 ? (
+              {chapterStep === 3 || isEditMode || isAddSectionMode || (editingChapter && chapterStep === 2) ? (
                 <div style={{ display: 'flex', gap: '12px' }}>
-                  <button type="button" onClick={() => handleContinue("Drafted")} disabled={!canContinue || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF', border: '1px solid #EAE6F0', color: '#795289', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                    Save as Draft
-                  </button>
+                  {(!isAddSectionMode && !(editingChapter && chapterStep === 2)) && (
+                    <button type="button" onClick={() => handleContinue("Drafted")} disabled={!canContinue || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF', border: '1px solid #EAE6F0', color: '#795289', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
+                      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                      Save as Draft
+                    </button>
+                  )}
                   <button 
                     type="button" 
-                    onClick={() => handleContinue(isEditMode ? (editingChapter?.status || "Drafted") : "Published")} 
+                    onClick={() => handleContinue(isEditMode || isAddSectionMode || (editingChapter && chapterStep === 2) ? (editingChapter?.status || "Drafted") : "Published")} 
                     disabled={!canContinue || isSubmitting} 
                     style={{ 
                       display: 'flex', 
@@ -1668,12 +1685,12 @@ export function ChapterManagementPage() {
                       color: '#FFF', 
                       padding: '10px 24px', 
                       borderRadius: '100px', 
-                      fontWeight: '500', 
-                      cursor: 'pointer' 
+                      cursor: (!canContinue || isSubmitting) ? 'not-allowed' : 'pointer',
+                      opacity: (!canContinue || isSubmitting) ? 0.5 : 1
                     }}
                   >
-                    {isSubmitting ? (isEditMode ? "Saving..." : "Publishing...") : (
-                      isEditMode ? (
+                    {isSubmitting ? (isAddSectionMode ? "Creating..." : (isEditMode || editingChapter) ? "Saving..." : "Publishing...") : (
+                      isAddSectionMode ? "Create Section" : (isEditMode || editingChapter) ? (
                         <>
                           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                           Save Changes

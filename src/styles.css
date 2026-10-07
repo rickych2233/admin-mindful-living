@@ -505,6 +505,7 @@ body,
 .dashboard-header {
   border-bottom: 1px solid #e5e7ec;
   padding: 18px 22px 14px;
+  margin-bottom: 32px;
 }
 
 .dashboard-header h1 {
@@ -1520,7 +1521,7 @@ body,
 .dashboard-main {
   min-width: 0;
   display: block;
-  background: linear-gradient(180deg, #f7f9ff 0%, #eef3fb 100%);
+  background: #eaeff4;
   padding: 0;
   height: 100vh;
   overflow-y: auto;
@@ -1560,31 +1561,29 @@ body,
 .dashboard-header,
 .chapter-header {
   padding: 32px 32px 24px;
-  border-bottom: 1px solid rgba(35, 52, 91, 0.06);
-  background: transparent;
+  border-bottom: 1px solid #d1d5db;
+  background: #ffffff;
+  margin-bottom: 32px;
 }
 
 .dashboard-header h1,
 .chapter-header h1 {
-  margin: 0;
+  margin: 0 0 4px;
   font-size: 28px;
-  line-height: 1.05;
-  font-weight: 900;
-  letter-spacing: -0.05em;
-  color: #0a0f1f;
+  font-weight: 700;
+  color: #1a1e29;
 }
 
 .dashboard-header p,
 .chapter-header p {
-  margin: 12px 0 0;
-  font-size: 15px;
-  color: #a5abb8;
-  font-weight: 500;
+  margin: 0;
+  font-size: 14px;
+  color: #8c95a5;
 }
 
 .overview-content,
 .chapter-page {
-  padding: 10px 32px 32px 24px;
+  padding: 0 32px 40px;
 }
 
 .dashboard-section {
@@ -2164,11 +2163,11 @@ body,
 }
 
 .chapter-header {
-  background: #fbfbfc;
+  background: #ffffff;
 }
 
 .chapter-page {
-  background: #f3f5f8;
+  background: transparent;
 }
 
 .chapter-table-card,
@@ -2956,9 +2955,9 @@ body,
 
 .chapter-drawer {
   width: min(100%, 750px);
-  height: calc(100vh - 32px);
-  margin: 16px;
-  border-radius: 18px;
+  height: 100vh;
+  margin: 0;
+  border-radius: 0;
   overflow: hidden;
   background: #ffffff;
   box-shadow: -18px 0 40px rgba(17, 23, 34, 0.16);
@@ -5334,6 +5333,7 @@ body,
   padding: 32px 32px 24px;
   border-bottom: 1px solid #d1d5db;
   background-color: #ffffff;
+  margin-bottom: 32px;
 }
 
 .dashboard-header-satyatech h1 {

@@ -416,6 +416,16 @@
   gap: 8px;
 }
 
+.thread-actions .community-action-btn {
+  background: #FAF8FB;
+  border: 1px solid #E9DFEF;
+  color: #795289;
+}
+
+.thread-actions .community-action-btn:hover {
+  background: #F3E8FF;
+}
+
 .community-replies {
   margin-top: 32px;
   padding-top: 32px;

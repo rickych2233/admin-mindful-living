@@ -666,6 +666,10 @@ export function PracticeManagementPage() {
           errors[field] = "This field is required";
         }
       });
+      
+      if (!practiceForm.sessionContentFileName && !practiceForm.sessionContentFileObj) {
+        errors.sessionContentFileName = "Upload file is required";
+      }
     }
 
     if (Object.keys(errors).length > 0) {
@@ -865,7 +869,7 @@ export function PracticeManagementPage() {
         <p>Organize the practices and categories in one place</p>
       </header>
 
-      <section className="chapter-page practice-management-page mt-5">
+      <section className="chapter-page practice-management-page">
         <div className="practice-tabs">
           <button
             type="button"
@@ -1270,8 +1274,8 @@ export function PracticeManagementPage() {
           <aside className="chapter-drawer practice-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
             <div className="chapter-drawer-header">
               <div>
-                <h2>{isAddingSession ? "Add Session" : isEditMode ? "Edit Practice" : "Add Practice"}</h2>
-                <p>{isAddingSession ? `Practice - ${editingPractice?.title}` : isEditMode ? "Update practice and section details" : "Step through to set up practice and first session"}</p>
+                <h2>{isAddingSession ? "Add Session" : (isEditMode && editingSessionIndex !== null) ? "Edit Session" : isEditMode ? "Edit Practice" : "Add Practice"}</h2>
+                <p>{isAddingSession ? `Practice - ${editingPractice?.title}` : (isEditMode && editingSessionIndex !== null) ? "Update session details" : isEditMode ? "Update practice and section details" : "Step through to set up practice and first session"}</p>
               </div>
 
               <button type="button" className="chapter-drawer-close" aria-label="Close add practice form" onClick={closePracticeDrawer}>
@@ -1562,6 +1566,7 @@ export function PracticeManagementPage() {
                         </span>
                       </label>
                     )}
+                    {formErrors.sessionContentFileName && <span style={{ color: '#E53E3E', fontSize: '12px', marginTop: '4px', display: 'block' }}>{formErrors.sessionContentFileName}</span>}
                   </div>
                   
                   {(!isAddingSession && editingSessionIndex === null) && (
@@ -1583,51 +1588,90 @@ export function PracticeManagementPage() {
               )}
 
               {practiceStep === 3 && (
-                <div className="chapter-review-card">
-                  <div className="chapter-review-block">
-                    <span>Practice Name</span>
-                    <strong>{practiceForm.name || "-"}</strong>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  <div>
+                    <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+                      <div style={{ width: '120px', height: '160px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#EDF2F7' }}>
+                        <img src={practiceForm.thumbnailPreview || "/placeholder-thumb.jpg"} alt="Thumbnail" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#2D3748', margin: '0 0 8px 0' }}>{practiceForm.name || "Untitled Practice"}</h3>
+                        <p style={{ fontSize: '14px', color: '#4A5568', margin: '0 0 16px 0', lineHeight: '1.5' }}>{practiceForm.caption || "No description provided."}</p>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#EBF4FF', color: '#3182CE', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500' }}>
+                            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" strokeWidth="2" fill="none"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                            Active
+                          </span>
+                          {practiceForm.category && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', background: '#F7FAFC', border: '1px solid #E2E8F0', color: '#4A5568', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500' }}>
+                              {practiceForm.category}
+                            </span>
+                          )}
+                          {practiceForm.durationRange && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', background: '#F7FAFC', border: '1px solid #E2E8F0', color: '#4A5568', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500' }}>
+                              <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" strokeWidth="2" fill="none" style={{ marginRight: '4px' }}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                              {practiceForm.durationRange}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="chapter-review-block">
-                    <span>Caption</span>
-                    <p>{practiceForm.caption || "-"}</p>
-                  </div>
-                  <div className="chapter-review-block">
-                    <span>Category &amp; Goal</span>
-                    <strong>
-                      {practiceForm.category || "-"} {"\u2022"} {practiceForm.goalType || "-"}
-                    </strong>
-                    <p>{practiceForm.durationRange || "-"}</p>
-                  </div>
-                  <div className="chapter-review-block">
-                    <span>First Session</span>
-                    <strong>{practiceForm.sessionTitle || "-"}</strong>
-                    <p style={{ marginBottom: "12px" }}>{practiceForm.sessionType} - {practiceForm.sessionContentFileName || "No file uploaded"}</p>
-                    {(() => {
-                      const mediaSrc = practiceForm.sessionContentFileObj
-                        ? URL.createObjectURL(practiceForm.sessionContentFileObj)
-                        : practiceForm.sessionContentFileName?.startsWith('http')
-                          ? practiceForm.sessionContentFileName
-                          : practiceForm.sessionContentFileName
-                            ? `/uploads/${practiceForm.sessionContentFileName}`
-                            : null;
 
-                      if (!mediaSrc) return null;
+                  <hr style={{ border: 'none', borderTop: '1px solid #E2E8F0', margin: 0 }} />
 
-                      return practiceForm.sessionType === "Video" ? (
-                        <video 
-                          controls 
-                          src={mediaSrc} 
-                          style={{ width: '100%', maxHeight: '240px', borderRadius: '8px', background: '#000', marginTop: '8px' }} 
-                        />
-                      ) : practiceForm.sessionType === "Audio" ? (
-                        <audio 
-                          controls 
-                          src={mediaSrc} 
-                          style={{ width: '100%', marginTop: '8px' }} 
-                        />
-                      ) : null;
-                    })()}
+                  <div className="review-section">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                      <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#2D3748', margin: 0 }}>Initial Session Summary</h3>
+                    </div>
+
+                    <div style={{ marginBottom: '16px' }}>
+                      <span style={{ display: 'block', fontSize: '13px', color: '#718096', marginBottom: '4px' }}>Session Name</span>
+                      <strong style={{ fontSize: '15px', color: '#2D3748', fontWeight: '500' }}>{practiceForm.sessionTitle || "-"}</strong>
+                    </div>
+
+                    <div style={{ marginBottom: '16px' }}>
+                      <span style={{ display: 'block', fontSize: '13px', color: '#718096', marginBottom: '4px' }}>Content Type</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#EDF2F7', color: '#4A5568', padding: '4px 10px', borderRadius: '6px', fontSize: '13px', fontWeight: '500' }}>
+                        {practiceForm.sessionType === "Video" ? (
+                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                        ) : (
+                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M8 8v8M16 8v8M4 11v2M20 11v2" /></svg>
+                        )}
+                        {practiceForm.sessionType}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span style={{ display: 'block', fontSize: '13px', color: '#718096', marginBottom: '8px' }}>Attached File</span>
+                      <div style={{ padding: '12px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#F7FAFC' }}>
+                        {(() => {
+                          const mediaSrc = practiceForm.sessionContentFileObj
+                            ? URL.createObjectURL(practiceForm.sessionContentFileObj)
+                            : practiceForm.sessionContentFileName?.startsWith('http')
+                              ? practiceForm.sessionContentFileName
+                              : practiceForm.sessionContentFileName
+                                ? `/uploads/${practiceForm.sessionContentFileName}`
+                                : null;
+
+                          if (!mediaSrc) return <span style={{ color: '#A0AEC0', fontSize: '14px' }}>No file uploaded</span>;
+
+                          return (
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="#4A5568" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                                <span style={{ fontSize: '14px', color: '#4A5568', fontWeight: '500' }}>{practiceForm.sessionContentFileName}</span>
+                              </div>
+                              {practiceForm.sessionType === "Video" ? (
+                                <video controls src={mediaSrc} style={{ width: '100%', maxHeight: '240px', borderRadius: '8px', background: '#000' }} />
+                              ) : (
+                                <audio controls src={mediaSrc} style={{ width: '100%' }} />
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

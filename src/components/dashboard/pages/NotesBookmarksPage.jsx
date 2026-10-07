@@ -302,7 +302,7 @@ export default function NotesBookmarksPage() {
         <p>Keep track of users' notes & bookmark within the platform.</p>
       </header>
 
-      <section className="chapter-page notes-bookmarks-page mt-5">
+      <section className="chapter-page notes-bookmarks-page">
 
         <div className="community-kpis">
           <div className="community-kpi-card kpi-glow-purple">
