@@ -27,6 +27,27 @@ const getChapterTitle = (titleObjOrStr) => {
   return titleObjOrStr.en || titleObjOrStr['English 🇬🇧'] || Object.values(titleObjOrStr)[0] || "Untitled";
 };
 
+function PracticeSummary({ form, chapters }) {
+  const relatedChapters = chapters.filter(chapter => form.relatedChapters.includes(chapter.id));
+  return (
+    <section className="practice-summary" aria-label="Practice summary">
+      <h3>Practice Summary</h3>
+      <div className="practice-summary-content">
+        {form.thumbnailPreview && <img className="practice-summary-thumbnail" src={form.thumbnailPreview} alt="Practice thumbnail" />}
+        <div className="practice-summary-info">
+          <h4>{form.name || "Untitled Practice"}</h4>
+          <p>{form.caption || "No description provided."}</p>
+          <div className="practice-summary-tags">
+            {form.category && <span>{form.category}</span>}
+            {form.durationRange && <span>{form.durationRange}</span>}
+          </div>
+          {relatedChapters.length > 0 && <p className="practice-summary-related">Related chapters: {relatedChapters.map(chapter => getChapterTitle(chapter.title)).join(", ")}</p>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function PracticeManagementPage() {
   const [activeTab, setActiveTab] = useState("practice");
   const [searchQuery, setSearchQuery] = useState("");
@@ -679,7 +700,7 @@ export function PracticeManagementPage() {
       setFormErrors({});
     }
 
-    if (practiceStep < 3 && editingSessionIndex === null && !isAddingSession) {
+    if (practiceStep < 3 && editingSessionIndex === null) {
       setPracticeStep((current) => current + 1);
       return;
     }
@@ -745,7 +766,7 @@ export function PracticeManagementPage() {
 
       const newPractice = {
         title: practiceForm.name.trim(),
-        goal: "-",
+        goal: practiceForm.goalType.trim() || editingPractice?.goal || "-",
         duration: practiceForm.durationRange.trim(),
         sessions: sessionsCount,
         category: practiceForm.category.trim(),
@@ -1285,7 +1306,7 @@ export function PracticeManagementPage() {
               </button>
             </div>
 
-            {(!isAddingSession && editingSessionIndex === null && practiceStep === 1) && (
+            {editingSessionIndex === null && (
               <div className="chapter-stepper">
                 {practiceStepItems.map((step) => {
                   const isActive = practiceStep === step.id;
@@ -1295,6 +1316,7 @@ export function PracticeManagementPage() {
                     <div
                       key={step.id}
                       className={`chapter-step${isActive ? " is-active" : ""}${isComplete ? " is-complete" : ""}`}
+                      aria-current={isActive ? "step" : undefined}
                     >
                       <div className="chapter-step-circle">{step.id}</div>
                       <span>{step.label}</span>
@@ -1305,6 +1327,7 @@ export function PracticeManagementPage() {
             )}
 
             <div className="chapter-drawer-body">
+              {practiceStep >= 2 && <PracticeSummary form={practiceForm} chapters={chapters} />}
               {practiceStep === 1 && (
                 <div className="chapter-form-grid">
                   <div className="chapter-field">
@@ -1580,7 +1603,7 @@ export function PracticeManagementPage() {
                         <line x1="12" y1="16" x2="12.01" y2="16"></line>
                       </svg>
                       <span style={{ fontSize: '14px', color: '#B7791F' }}>
-                        You can add more sessions once you finish adding the chapter.
+                        You can add more sessions once you finish adding the practice.
                       </span>
                     </div>
                   )}
@@ -1589,40 +1612,9 @@ export function PracticeManagementPage() {
 
               {practiceStep === 3 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                  <div>
-                    <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
-                      <div style={{ width: '120px', height: '160px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#EDF2F7' }}>
-                        <img src={practiceForm.thumbnailPreview || "/placeholder-thumb.jpg"} alt="Thumbnail" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      </div>
-                      <div>
-                        <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#2D3748', margin: '0 0 8px 0' }}>{practiceForm.name || "Untitled Practice"}</h3>
-                        <p style={{ fontSize: '14px', color: '#4A5568', margin: '0 0 16px 0', lineHeight: '1.5' }}>{practiceForm.caption || "No description provided."}</p>
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#EBF4FF', color: '#3182CE', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500' }}>
-                            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" strokeWidth="2" fill="none"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
-                            Active
-                          </span>
-                          {practiceForm.category && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', background: '#F7FAFC', border: '1px solid #E2E8F0', color: '#4A5568', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500' }}>
-                              {practiceForm.category}
-                            </span>
-                          )}
-                          {practiceForm.durationRange && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', background: '#F7FAFC', border: '1px solid #E2E8F0', color: '#4A5568', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500' }}>
-                              <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" strokeWidth="2" fill="none" style={{ marginRight: '4px' }}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                              {practiceForm.durationRange}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <hr style={{ border: 'none', borderTop: '1px solid #E2E8F0', margin: 0 }} />
-
                   <div className="review-section">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                      <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#2D3748', margin: 0 }}>Initial Session Summary</h3>
+                      <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#2D3748', margin: 0 }}>{isAddingSession ? "Session Summary" : "Initial Session Summary"}</h3>
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>
@@ -1694,15 +1686,15 @@ export function PracticeManagementPage() {
               </button>
 
               <div style={{ display: 'flex', gap: '12px' }}>
-                {(practiceStep === 3 || editingSessionIndex !== null || isAddingSession) && (
+                {(practiceStep === 3 || editingSessionIndex !== null) && (
                   <button type="button" onClick={() => handlePracticeContinue("Drafted")} disabled={isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF', border: '1px solid #EAE6F0', color: '#795289', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
                     Save as Draft
                   </button>
                 )}
 
                 <button type="button" onClick={() => handlePracticeContinue("Published")} disabled={isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#795289', border: 'none', color: '#FFF', padding: '10px 24px', borderRadius: '100px', fontWeight: '500', cursor: 'pointer' }}>
-                  {editingSessionIndex !== null ? "Save Changes" : ((practiceStep === 3 || isAddingSession) ? "Publish Now" : "Continue")}
-                  {!(practiceStep === 3 || editingSessionIndex !== null || isAddingSession) && (
+                  {editingSessionIndex !== null ? "Save Changes" : (practiceStep === 3 ? "Publish Now" : "Continue")}
+                  {!(practiceStep === 3 || editingSessionIndex !== null) && (
                     <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M5 12h14m-5-5 5 5-5 5" />
                     </svg>

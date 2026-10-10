@@ -1886,6 +1886,11 @@ body,
   aspect-ratio: 1;
 }
 
+/* Wrapper around the donut svg so consumers can position a center overlay */
+.donut-fig {
+  position: relative;
+}
+
 .donut-track,
 .donut-segment {
   fill: none;
@@ -2683,7 +2688,11 @@ body,
 
 .chapter-management-page .chapter-toolbar {
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 0;
+}
+
+.satyatech-dashboard-grid.chapter-management-page {
+  gap: 16px;
 }
 
 .chapter-management-page .chapter-filters {
@@ -2890,7 +2899,8 @@ body,
   gap: 8px;
 }
 
-.chapter-view-btn {
+.chapter-view-btn,
+.user-view-btn {
   border: 1px solid #e5d9f2;
   border-radius: 999px;
   min-height: 34px;
@@ -2909,6 +2919,7 @@ body,
 }
 
 .chapter-view-btn:hover,
+.user-view-btn:hover,
 .chapter-icon-btn:hover {
   background: #fdfafd;
 }
@@ -3436,7 +3447,7 @@ body,
 }
 
 .content-icon {
-  color: #1a1e29;
+  color: #885F9A;
   display: flex;
   align-items: center;
 }
@@ -3808,6 +3819,132 @@ body,
   gap: 16px;
 }
 
+.practice-summary {
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid #eae6f0;
+  border-radius: 12px;
+  background: #faf7fc;
+}
+
+.practice-summary h3 {
+  margin: 0 0 12px;
+  color: #885f9a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.practice-summary-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.practice-summary-thumbnail {
+  width: 72px;
+  height: 96px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.practice-summary-info {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.practice-summary-info h4 {
+  margin: 0 0 6px;
+  color: #191f2a;
+  font-size: 16px;
+}
+
+.practice-summary-info p {
+  margin: 0 0 10px;
+  color: #647082;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.practice-summary-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.practice-summary-tags span {
+  padding: 4px 8px;
+  border: 1px solid #e5d9f2;
+  border-radius: 6px;
+  background: #fff;
+  color: #795289;
+  font-size: 12px;
+}
+
+.practice-summary-info .practice-summary-related {
+  margin: 10px 0 0;
+  font-size: 12px;
+}
+
+.chapter-drawer .custom-rte-content {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 16px;
+  border: none;
+  outline: none;
+  line-height: 1.6;
+}
+
+.chapter-drawer .custom-rte-content p {
+  margin: 0 0 8px;
+}
+
+.chapter-drawer .custom-rte-content > :last-child {
+  margin-bottom: 0;
+}
+
+.chapter-editor-block {
+  margin: 0;
+  padding: 0 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chapter-editor-media {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.chapter-editor-image {
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.chapter-editor-image img {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.chapter-editor-video {
+  aspect-ratio: 16 / 9;
+  max-height: 320px;
+  background: #1a202c;
+}
+
+.chapter-editor-video video {
+  max-width: 100%;
+  max-height: 100%;
+}
+
 @media (max-width: 980px) {
 
   .practice-table-head,
@@ -3891,6 +4028,8 @@ body,
   background: #795289;
   color: #f3f6fb;
   font: inherit;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -4001,18 +4140,10 @@ body,
 
 .user-view-btn {
   justify-self: start;
-  border: 1px solid #e4e8ee;
-  border-radius: 999px;
-  min-height: 34px;
-  padding: 0 12px;
-  background: #fbfcfd;
-  color: #7b8595;
-  font: inherit;
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
+}
+
+.user-view-btn svg {
+  width: 16px;
 }
 
 .user-profile-overlay {
@@ -4129,6 +4260,8 @@ body,
   background: #ffffff;
   color: #535f71;
   font: inherit;
+  font-size: 14px;
+  font-weight: 500;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -4138,6 +4271,9 @@ body,
 .user-close-btn {
   min-width: 76px;
   justify-content: center;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 @media (max-width: 1180px) {
@@ -4251,8 +4387,6 @@ body,
     border-radius: 12px;
     font-size: 13px;
     font-weight: 500;
-    background: #f4f6f9;
-    border-color: #e8ecf2;
   }
 }
 
@@ -5323,7 +5457,7 @@ body,
   background: #cc0000;
 }
 
-/* SATYATECH DASHBOARD OVERVIEW */
+/* SATYATECH SHARED PAGE LAYOUT (used by Chapter Management & other content pages) */
 .dashboard-content-wrapper {
   background: #eaeff4;
   min-height: 100%;
@@ -5354,262 +5488,6 @@ body,
   display: flex;
   flex-direction: column;
   gap: 32px;
-}
-
-.satyatech-section-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: #795289;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin: 0 0 16px;
-}
-
-.satyatech-cards-row {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.satyatech-card {
-  background: #fdfdfd;
-  border-radius: 12px;
-  padding: 20px;
-  flex: 1;
-  min-width: 280px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-  border: 1px solid #e2e8f0;
-}
-
-.st-metric-card {
-  background: linear-gradient(135deg, #ffffff 40%, #ebf4ff 75%, #f5ebff 100%);
-  border-color: #eef2f6;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
-  border-radius: 16px;
-}
-
-.st-metric-card .st-card-label {
-  font-size: 15px;
-  color: #768396;
-  font-weight: 400;
-}
-
-.st-metric-card .st-card-value {
-  font-size: 38px;
-  font-weight: 800;
-  color: #0b1120;
-  margin-top: 4px;
-  margin-bottom: 12px;
-}
-
-.st-metric-card .st-chip-positive {
-  background: #e6f8f0;
-  color: #1ea47b;
-  border-radius: 20px;
-  padding: 6px 14px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.st-metric-card .st-note {
-  font-size: 14px;
-  color: #768396;
-  margin-left: 4px;
-}
-
-.st-card-label {
-  font-size: 13px;
-  color: #8c95a5;
-  font-weight: 500;
-  margin: 0 0 12px;
-}
-
-.st-card-value {
-  font-size: 32px;
-  font-weight: 700;
-  color: #1a1e29;
-  margin: 0 0 16px;
-}
-
-.st-card-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.st-chip {
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.st-chip-positive {
-  background: #e6f4ea;
-  color: #1e8e3e;
-}
-
-.st-chip-negative {
-  background: #fce8e6;
-  color: #d93025;
-}
-
-.st-note {
-  font-size: 12px;
-  color: #8c95a5;
-}
-
-.st-purple-text {
-  color: #7b668f;
-}
-
-.st-red-text {
-  color: #c53030;
-}
-
-.st-card-subtitle {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1a1e29;
-  margin: 0 0 8px;
-}
-
-.st-card-detail {
-  font-size: 13px;
-  color: #718096;
-  margin: 0;
-}
-
-.st-progress-bar {
-  width: 100%;
-  height: 6px;
-  background: #e2e8f0;
-  border-radius: 3px;
-  margin-top: 16px;
-  overflow: hidden;
-}
-
-.st-progress-fill {
-  height: 100%;
-  background: #795289;
-  border-radius: 3px;
-}
-
-.st-chart-card {
-  width: 100%;
-}
-
-.st-chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-}
-
-.st-chart-container {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-
-.st-warning-card {
-  background: linear-gradient(135deg, #ffffff 0%, #fff1ea 100%);
-  border-color: #f6e6df;
-}
-
-.st-warning-label {
-  color: #885F9A;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.st-warning-card .st-card-subtitle {
-  color: #0b1120;
-  font-weight: 600;
-  margin-top: 10px;
-  font-size: 15px;
-}
-
-.st-warning-card .st-card-detail {
-  color: #7b8a9e;
-  margin-top: 6px;
-}
-
-.st-warning-card .st-card-detail strong {
-  color: #2d3748;
-  font-weight: 500;
-}
-
-.st-chip-neutral {
-  background: #f1f5f9;
-  color: #64748b;
-}
-
-.st-activity-row {
-  display: flex;
-  gap: 20px;
-}
-
-.st-chart-line-card {
-  flex: 3;
-  display: flex;
-  flex-direction: column;
-}
-
-.st-donut-card {
-  flex: 2;
-  display: flex;
-  flex-direction: column;
-}
-
-.st-chart-toggles {
-  display: flex;
-  background: #f1f5f9;
-  border-radius: 999px;
-  padding: 4px;
-}
-
-.st-toggle-btn {
-  background: transparent;
-  border: none;
-  padding: 6px 16px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.st-toggle-active {
-  background: #7b668f;
-  color: white;
-}
-
-.st-donut-container {
-  position: relative;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.st-donut-center {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.st-donut-center strong {
-  font-size: 28px;
-  color: #1a1e29;
-}
-
-.st-donut-center span {
-  font-size: 12px;
-  color: #8c95a5;
 }
 
 /* SIDEBAR COLLAPSE FIXES */

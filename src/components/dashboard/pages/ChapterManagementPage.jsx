@@ -1111,7 +1111,7 @@ export function ChapterManagementPage() {
                             </div>
                             <span className="section-title" style={{ fontSize: '14px', fontWeight: '600', color: '#111827', textTransform: 'none' }}>{renderTranslated(sec.title, LANG_CODES[activeLanguageTab])}</span>
                             
-                            <span className="section-status-pill" onClick={() => handleToggleSectionStatus(chapter, sec.id)} style={{ cursor: "pointer", marginLeft: "auto", marginRight: "12px", display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '100px', fontSize: '12px', fontWeight: '500', background: sec.status === 'Published' ? '#E6F4EA' : '#F1F3F5', color: sec.status === 'Published' ? '#1E7E34' : '#495057' }} title="Click to toggle status">
+                            <span className="section-status-pill" onClick={() => handleToggleSectionStatus(chapter, sec.id)} style={{ cursor: "pointer", marginLeft: "auto", marginRight: "12px", display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '100px', fontSize: '12px', fontWeight: '500', background: sec.status === 'Published' ? '#e6f8f0' : '#f1f5f9', color: sec.status === 'Published' ? '#1ea47b' : '#64748b' }} title="Click to toggle status">
                               {sec.status === "Published" ? (
                                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
                               ) : (
@@ -1121,10 +1121,10 @@ export function ChapterManagementPage() {
                             </span>
 
                             <div className="section-actions" style={{ display: 'flex', gap: '8px' }}>
-                              <button type="button" onClick={() => handleEditSection(chapter, sec)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #E2E8F0', borderRadius: '50%', background: '#FFF', color: '#718096', cursor: 'pointer' }} aria-label="Edit section">
+                              <button type="button" onClick={() => handleEditSection(chapter, sec)} className="chapter-icon-btn" aria-label="Edit section">
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                               </button>
-                              <button type="button" onClick={() => openDeleteSectionModal(chapter, sec.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #E2E8F0', borderRadius: '50%', background: '#FFF', color: '#E53E3E', cursor: 'pointer' }} aria-label="Delete section">
+                              <button type="button" onClick={() => openDeleteSectionModal(chapter, sec.id)} className="chapter-icon-btn" aria-label="Delete section">
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
                               </button>
                             </div>
@@ -1139,7 +1139,7 @@ export function ChapterManagementPage() {
                               <div className="section-contents-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '1px solid #E2E8F0', paddingLeft: '16px', marginLeft: '4px' }}>
                                 {sec.contents.map((content) => (
                                   <div key={content.id} className="content-item" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <span className="content-icon" style={{ color: '#795289', display: 'flex', alignItems: 'center' }}>
+                                    <span className="content-icon">
                                       <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="1.5" fill="none">
                                         {content.type === "Video" ? (
                                           <><rect x="2" y="6" width="20" height="12" rx="2" ry="2" /><polygon points="10 9 15 12 10 15 10 9" /></>
@@ -1467,7 +1467,6 @@ export function ChapterManagementPage() {
                                   setVal(`content_${block.id}`, activeLanguageTab, newHtml);
                                 }
                               }}
-                              style={{ width: '100%', minHeight: '80px', border: 'none', padding: '16px', outline: 'none' }}
                               dangerouslySetInnerHTML={{ __html: textContent || '<p><br></p>' }}
                             />
                           );
@@ -1475,14 +1474,14 @@ export function ChapterManagementPage() {
 
                         // Media Blocks
                         return (
-                          <div key={block.id} style={{ margin: '0', padding: '0 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div key={block.id} className="chapter-editor-block">
                             {block.type === 'image' && (
-                              <div style={{ width: '100%', height: '400px', background: '#F7FAFC', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid #E2E8F0' }}>
-                                <img src={block.url} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                              <div className="chapter-editor-media chapter-editor-image">
+                                <img src={block.url} alt="Preview" />
                               </div>
                             )}
                             {block.type === 'video' && (
-                              <div style={{ width: '100%', height: '400px', background: '#1A202C', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                              <div className="chapter-editor-media chapter-editor-video">
                                 <video src={block.url} controls style={{ maxWidth: '100%', maxHeight: '100%', outline: 'none' }} />
                               </div>
                             )}
