@@ -21,3 +21,6 @@ Thumbs.db
 # Debug/test scratch files
 pw_screenshot.png
 pw_edit_screenshot.png
+pw_dsh_*.png
+pw_dsh_shot.js
+diff_dump.patch
