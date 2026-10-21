@@ -191,7 +191,7 @@ export function DashboardOverview() {
           <Card loading={loading} label="Recurring Donors" value={`${count(donation.recurring)} Donors`} detail="Recurring payments not tracked yet" />
         </div>
         <div className="dsh-row dsh-row--donations">
-          <article className="dsh-card dsh-supporters-card"><h3 className="dsh-card-title">Recent Supporters</h3><p className="dsh-detail">Contributing accounts, ordered by join date</p>
+          <article className="dsh-card dsh-supporters-card"><h3 className="dsh-card-title">Recent Donations</h3><p className="dsh-detail">Contributing accounts, ordered by join date</p>
             <div className="dsh-table-wrap"><table className="dsh-table"><thead><tr><th scope="col">Contributor</th><th scope="col">Joined</th><th scope="col">Contribution</th></tr></thead><tbody>
               {loading ? <tr><td colSpan="3"><Skeleton /></td></tr> : recent.length ? recent.map((item, index) => <tr key={item.id ?? index}><td><div className="dsh-table-name"><Avatar name={item.name} /><span title={text(item.name)}>{text(item.name, "Anonymous")}</span></div></td><td>{date(item.joinedAt)}</td><td>{money(item.amount)}</td></tr>) : <tr><td colSpan="3" className="dsh-empty">{unavailable ? "Data unavailable" : "No contributions yet"}</td></tr>}
             </tbody></table></div>

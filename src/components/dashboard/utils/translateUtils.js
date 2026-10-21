@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { API_BASE_URL } from './apiConfig';
 
 export async function autoTranslate(text, source = 'en') {
@@ -9,12 +9,16 @@ export async function autoTranslate(text, source = 'en') {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, source, targets: ['fr', 'id', 'ru', 'es'] })
     });
-    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
     const result = await response.json();
+    if (!response.ok || Object.keys(result.errors || {}).length) {
+      const error = new Error(result.message || `HTTP error ${response.status}`);
+      error.translations = result.translations || {};
+      throw error;
+    }
     return result.translations || {};
   } catch (error) {
     console.error("Auto-translate failed:", error);
-    return {};
+    throw error;
   }
 }
 
@@ -27,7 +31,17 @@ export const LANG_CODES = {
 };
 
 export function useTranslations(initial = {}) {
-  const [translations, setTranslations] = useState(initial);
+  const [translations, updateTranslations] = useState(initial);
+  const requests = useRef({});
+  const manualEdits = useRef({});
+  const [translationErrors, setTranslationErrors] = useState({});
+  const setTranslations = (value) => {
+    requests.current = {};
+    manualEdits.current = {};
+    setTranslationErrors({});
+    setIsTranslating({});
+    updateTranslations(value);
+  };
   const [isTranslating, setIsTranslating] = useState({});
 
   const getVal = (baseValue, field, activeTab) => {
@@ -38,21 +52,35 @@ export function useTranslations(initial = {}) {
 
   const handleTranslate = async (text, field) => {
     if (!text || !text.trim()) return;
+    const request = Symbol(field);
+    requests.current[field] = request;
     setIsTranslating(prev => ({ ...prev, [field]: true }));
-    try {
-      const res = await autoTranslate(text);
-      setTranslations(t => ({
+    setTranslationErrors(prev => ({ ...prev, [field]: '' }));
+    const apply = (result) => {
+      if (requests.current[field] !== request) return;
+      updateTranslations(t => ({
         ...t,
-        [field]: { ...(t[field] || {}), ...res }
+        [field]: { ...(t[field] || {}), ...Object.fromEntries(
+          Object.entries(result).filter(([lang]) => !manualEdits.current[`${field}:${lang}`])
+        ) }
       }));
+    };
+    try {
+      apply(await autoTranslate(text));
+    } catch (error) {
+      apply(error.translations || {});
+      if (requests.current[field] === request) {
+        setTranslationErrors(prev => ({ ...prev, [field]: 'Translation failed for one or more languages. Please retry.' }));
+      }
     } finally {
-      setIsTranslating(prev => ({ ...prev, [field]: false }));
+      if (requests.current[field] === request) setIsTranslating(prev => ({ ...prev, [field]: false }));
     }
   };
 
   const setVal = (field, activeTab, val) => {
     const lang = LANG_CODES[activeTab];
-    setTranslations(t => ({
+    manualEdits.current[`${field}:${lang}`] = true;
+    updateTranslations(t => ({
       ...t,
       [field]: { ...(t[field] || {}), [lang]: val }
     }));
@@ -62,5 +90,5 @@ export function useTranslations(initial = {}) {
     return { en: baseValue || "", ...(translations[field] || {}) };
   };
 
-  return { translations, setTranslations, getVal, setVal, handleTranslate, merge, isTranslating };
+  return { translations, setTranslations, getVal, setVal, handleTranslate, merge, isTranslating, translationErrors };
 }

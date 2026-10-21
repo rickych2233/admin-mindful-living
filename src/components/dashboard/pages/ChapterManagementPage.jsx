@@ -67,7 +67,7 @@ const parseBlocks = (contentObjOrStr, mediaArr, initialTranslations = {}) => {
      let html = "";
      for (let node of Array.from(docNode.body.childNodes)) {
         if (node.nodeType === 1 && node.classList.contains('media-embed')) {
-           if (html || chunkIdx >= 0) {
+           if (html) {
               if (chunkIdx === targetIndex) return html;
               chunkIdx++;
               html = "";
@@ -124,9 +124,8 @@ const parseBlocks = (contentObjOrStr, mediaArr, initialTranslations = {}) => {
   
   if (currentHtml) flushText();
   
-  if (parsedBlocks.length === 0 && mediaArr && mediaArr.length > 0) {
-     currentHtml = englishHtml;
-     flushText();
+  if (!doc.body.querySelector('.media-embed') && mediaArr && mediaArr.length > 0) {
+     if (parsedBlocks.length === 0) { currentHtml = englishHtml; flushText(); }
      mediaArr.forEach(m => parsedBlocks.push({
           id: m.id || 'media_' + Math.random(),
           originalId: m.id,
@@ -160,7 +159,7 @@ export function ChapterManagementPage() {
   const [sectionForm, setSectionForm] = useState({ title: "", description: "", type: "Text" });
   const [sectionSubmitting, setSectionSubmitting] = useState(false);
   const [activeLanguageTab, setActiveLanguageTab] = useState("English 🇬🇧");
-  const { translations, setTranslations, getVal, setVal, handleTranslate, merge, isTranslating } = useTranslations();
+  const { translations, setTranslations, getVal, setVal, handleTranslate, merge, isTranslating, translationErrors } = useTranslations();
   const [showPublishedModal, setShowPublishedModal] = useState({ show: false, status: null });
   const [draggedChapterIndex, setDraggedChapterIndex] = useState(null);
   const [dragOverChapterIndex, setDragOverChapterIndex] = useState(null);
@@ -358,6 +357,7 @@ export function ChapterManagementPage() {
 
   const closeChapterDrawer = () => {
     setIsDrawerOpen(false);
+    setTranslations({});
     setChapterStep(1);
     setChapterForm(initialChapterForm);
     setEditingChapter(null);
@@ -607,6 +607,10 @@ export function ChapterManagementPage() {
       return;
     }
 
+    if (Object.values(isTranslating).some(Boolean) || Object.values(translationErrors).some(Boolean)) {
+      setSubmitError('Please wait for translations to finish, or retry failed translations before saving.');
+      return;
+    }
     setIsSubmitting(true);
     setSubmitError("");
 
@@ -1219,6 +1223,16 @@ export function ChapterManagementPage() {
             )}
 
             <div className="chapter-drawer-body">
+              {Object.values(translationErrors).some(Boolean) && (
+                <div role="alert" style={{ padding: '12px', background: '#FFF5F5', color: '#9B2C2C', marginBottom: '16px' }}>
+                  Some translations failed. Your existing text has been kept.
+                  <button type="button" onClick={() => {
+                    const fields = { title: chapterForm.title, description: chapterForm.description, sectionName: chapterForm.sectionName, sectionCaption: chapterForm.sectionCaption };
+                    chapterForm.editorBlocks.forEach(b => { if (b.type === 'text') fields[`content_${b.id}`] = b.content; });
+                    Object.keys(translationErrors).forEach(field => { if (translationErrors[field] && fields[field]) handleTranslate(fields[field], field); });
+                  }}>Retry translation</button>
+                </div>
+              )}
               <div className="language-tabs" style={{ display: 'flex', gap: '24px', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px', marginBottom: '24px' }}>
                 {['English 🇬🇧', 'France 🇫🇷', 'Indonesian 🇮🇩', 'Russian 🇷🇺', 'Spanish 🇪🇸'].map(lang => (
                   <button
