@@ -616,7 +616,7 @@ export function CommunityPage() {
                     className="community-action-btn"
                     onClick={() => handleToggleVisibility(discussion)}
                   >
-                    <EyeOffIcon /> {discussion.status === "Hidden" ? "Unhide" : "Hide"}
+                    {discussion.status === "Hidden" ? <EyeIcon /> : <EyeOffIcon />} {discussion.status === "Hidden" ? "Unhide" : "Hide"}
                   </button>
                 </div>
               </article>
@@ -774,7 +774,7 @@ export function CommunityPage() {
                       </div>
                       <div className="thread-actions">
                         <button type="button" className="community-action-btn" onClick={() => handleToggleVisibility(viewingDiscussion)}>
-                          <EyeOffIcon /> {viewingDiscussion.status === "Hidden" ? "Unhide" : "Hide"}
+                          {viewingDiscussion.status === "Hidden" ? <EyeIcon /> : <EyeOffIcon />} {viewingDiscussion.status === "Hidden" ? "Unhide" : "Hide"}
                         </button>
                         <button type="button" className="community-action-btn" onClick={() => setDiscussionToDelete(viewingDiscussion)}>
                           <TrashIcon /> Delete
@@ -806,7 +806,7 @@ export function CommunityPage() {
                           </div>
                           <div className="thread-actions">
                             <button type="button" className="community-action-btn" onClick={() => handleToggleReplyVisibility(reply)}>
-                              <EyeOffIcon /> {reply.status === "Hidden" ? "Unhide" : "Hide"}
+                              {reply.status === "Hidden" ? <EyeIcon /> : <EyeOffIcon />} {reply.status === "Hidden" ? "Unhide" : "Hide"}
                             </button>
                             <button type="button" className="community-action-btn" onClick={() => setDiscussionToDelete(reply)}>
                               <TrashIcon /> Delete
