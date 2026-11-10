@@ -984,16 +984,16 @@ export function PracticeManagementPage() {
               return (
               <React.Fragment key={practice.id}>
                 <article 
-                  className={`practice-row ${draggedPracticeIndex === actualIndex ? 'dragging' : ''}`}
+                  className={`practice-row ${draggedPracticeIndex !== null && draggedPracticeIndex === actualIndex ? 'dragging' : ''}`}
                   draggable={isDragAndDropEnabled}
                   onDragStart={(e) => isDragAndDropEnabled && handlePracticeDragStart(e, actualIndex)}
                   onDragOver={(e) => isDragAndDropEnabled && handlePracticeDragOver(e, actualIndex)}
                   onDragLeave={(e) => isDragAndDropEnabled && handlePracticeDragLeave(e, actualIndex)}
                   onDrop={(e) => isDragAndDropEnabled && handlePracticeDrop(e, actualIndex)}
                   style={{ 
-                    opacity: draggedPracticeIndex === actualIndex ? 0.5 : 1,
-                    borderTop: dragOverPracticeIndex === actualIndex && actualIndex < draggedPracticeIndex ? '3px solid #795289' : undefined,
-                    borderBottom: dragOverPracticeIndex === actualIndex && actualIndex > draggedPracticeIndex ? '3px solid #795289' : undefined,
+                    opacity: draggedPracticeIndex !== null && draggedPracticeIndex === actualIndex ? 0.5 : 1,
+                    borderTop: dragOverPracticeIndex !== null && dragOverPracticeIndex === actualIndex && actualIndex < draggedPracticeIndex ? '3px solid #795289' : undefined,
+                    borderBottom: dragOverPracticeIndex !== null && dragOverPracticeIndex === actualIndex && actualIndex > draggedPracticeIndex ? '3px solid #795289' : undefined,
                     transition: 'border 0.2s ease-in-out'
                   }}
                 >

@@ -990,7 +990,7 @@ export function ChapterManagementPage() {
               return (
               <React.Fragment key={chapter.id}>
                 <article 
-                  className={`chapter-row chapter-row-redesign ${draggedChapterIndex === actualIndex ? 'dragging' : ''}`}
+                  className={`chapter-row chapter-row-redesign ${draggedChapterIndex !== null && draggedChapterIndex === actualIndex ? 'dragging' : ''}`}
                   draggable={isDragAndDropEnabled}
                   onDragStart={(e) => isDragAndDropEnabled && handleDragStart(e, actualIndex)}
                   onDragOver={(e) => isDragAndDropEnabled && handleDragOver(e, actualIndex)}
