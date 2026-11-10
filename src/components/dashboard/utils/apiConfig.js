@@ -1,5 +1,9 @@
 const LOCAL_API_BASE_URL = import.meta.env.VITE_LOCAL_API_BASE_URL || "http://localhost:3001";
-const SERVER_API_BASE_URL = import.meta.env.VITE_SERVER_API_BASE_URL || "https://satyatech.org";
+const SERVER_API_BASE_URL =
+  import.meta.env.VITE_SERVER_API_BASE_URL ||
+  (typeof window !== "undefined" && window.location.origin && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1"
+    ? window.location.origin
+    : "https://admin.satyatech.org");
 const USERS_API_PATH = import.meta.env.VITE_USERS_API_PATH || "/api/users";
 const CHAPTERS_API_PATH = import.meta.env.VITE_CHAPTERS_API_PATH || "/api/chapters";
 const ROLES_API_PATH = import.meta.env.VITE_ROLES_API_PATH || "/api/roles";
@@ -25,39 +29,44 @@ const USERS_API_URL = `${API_BASE_URL}${USERS_API_PATH}`;
 const RELATIVE_USERS_API_PATH = "/api/users";
 const CURRENT_ORIGIN_USERS_API_URL = CURRENT_ORIGIN ? `${CURRENT_ORIGIN}${RELATIVE_USERS_API_PATH}` : RELATIVE_USERS_API_PATH;
 
-// Simplified fallback list - only use endpoints with /api prefix
-const USERS_API_FALLBACKS = [
-  RELATIVE_USERS_API_PATH,
-  CURRENT_ORIGIN_USERS_API_URL,
-  USERS_API_URL,
-  `${API_BASE_URL}/api/users`,
-  // Only add server fallbacks if NOT using local API
-  ...(!USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/users`] : []),
-];
+// Deduplicated fallback list - only use endpoints with /api prefix
+const USERS_API_FALLBACKS = Array.from(
+  new Set([
+    RELATIVE_USERS_API_PATH,
+    CURRENT_ORIGIN_USERS_API_URL,
+    USERS_API_URL,
+    `${API_BASE_URL}/api/users`,
+    ...(!USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/users`] : []),
+  ])
+);
 
 const CHAPTERS_API_URL = `${API_BASE_URL}${CHAPTERS_API_PATH}`;
 const RELATIVE_CHAPTERS_API_PATH = "/api/chapters";
 const CURRENT_ORIGIN_CHAPTERS_API_URL = CURRENT_ORIGIN ? `${CURRENT_ORIGIN}${RELATIVE_CHAPTERS_API_PATH}` : RELATIVE_CHAPTERS_API_PATH;
 
-const CHAPTERS_API_FALLBACKS = [
-  RELATIVE_CHAPTERS_API_PATH,
-  CURRENT_ORIGIN_CHAPTERS_API_URL,
-  CHAPTERS_API_URL,
-  `${API_BASE_URL}/api/chapters`,
-  ...(!USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/chapters`] : []),
-];
+const CHAPTERS_API_FALLBACKS = Array.from(
+  new Set([
+    RELATIVE_CHAPTERS_API_PATH,
+    CURRENT_ORIGIN_CHAPTERS_API_URL,
+    CHAPTERS_API_URL,
+    `${API_BASE_URL}/api/chapters`,
+    ...(!USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/chapters`] : []),
+  ])
+);
 
 const ROLES_API_URL = `${API_BASE_URL}${ROLES_API_PATH}`;
 const RELATIVE_ROLES_API_PATH = "/api/roles";
 const CURRENT_ORIGIN_ROLES_API_URL = CURRENT_ORIGIN ? `${CURRENT_ORIGIN}${RELATIVE_ROLES_API_PATH}` : RELATIVE_ROLES_API_PATH;
 
-const ROLES_API_FALLBACKS = [
-  RELATIVE_ROLES_API_PATH,
-  CURRENT_ORIGIN_ROLES_API_URL,
-  ROLES_API_URL,
-  `${API_BASE_URL}/api/roles`,
-  ...(!USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/roles`] : []),
-];
+const ROLES_API_FALLBACKS = Array.from(
+  new Set([
+    RELATIVE_ROLES_API_PATH,
+    CURRENT_ORIGIN_ROLES_API_URL,
+    ROLES_API_URL,
+    `${API_BASE_URL}/api/roles`,
+    ...(!USE_LOCAL_API ? [`${SERVER_API_BASE_URL}/api/roles`] : []),
+  ])
+);
 
 function getSectionsApiFallbacks(chapterId) {
   const encodedId = encodeURIComponent(String(chapterId));

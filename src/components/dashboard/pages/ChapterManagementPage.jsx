@@ -133,6 +133,8 @@ const parseBlocks = (contentObjOrStr, mediaArr, initialTranslations = {}) => {
           title: m.title || "",
           url: m.url || "",
           isRequired: m.is_required !== undefined ? m.is_required : true,
+          duration: m.duration || "2 Minutes",
+          instructions: m.instructions || "",
      }));
   } else if (parsedBlocks.length === 0) {
      currentHtml = englishHtml || '<p><br></p>';
@@ -358,6 +360,8 @@ export function ChapterManagementPage() {
   const closeChapterDrawer = () => {
     setIsDrawerOpen(false);
     setTranslations({});
+    setActiveLanguageTab("English 🇬🇧");
+    setSubmitError("");
     setChapterStep(1);
     setChapterForm(initialChapterForm);
     setEditingChapter(null);
@@ -366,6 +370,9 @@ export function ChapterManagementPage() {
 
   const handleEditChapter = async (chapter) => {
     setEditingChapter(chapter);
+    setAddSectionFor(null);
+    setActiveLanguageTab("English 🇬🇧");
+    setSubmitError("");
     
     // Default empty section
     let firstSection = null;
@@ -380,10 +387,10 @@ export function ChapterManagementPage() {
     }
     
     const initialTrans = {
-      title: chapter.title || {},
-      description: chapter.summary || {},
-      sectionName: firstSection?.title || {},
-      sectionCaption: firstSection?.description || {},
+      title: typeof chapter.title === "object" && chapter.title ? chapter.title : {},
+      description: typeof chapter.summary === "object" && chapter.summary ? chapter.summary : {},
+      sectionName: typeof firstSection?.title === "object" && firstSection?.title ? firstSection.title : {},
+      sectionCaption: typeof firstSection?.description === "object" && firstSection?.description ? firstSection.description : {},
     };
     
     const editorBlocks = parseBlocks(firstSection?.content, firstSection?.contents || [], initialTrans);
@@ -410,11 +417,14 @@ export function ChapterManagementPage() {
 
   const handleEditSection = (chapter, section) => {
     setEditingChapter(chapter);
+    setAddSectionFor(null);
+    setActiveLanguageTab("English 🇬🇧");
+    setSubmitError("");
     const initialTrans = {
-      title: chapter.title || {},
-      description: chapter.summary || {},
-      sectionName: section.title || {},
-      sectionCaption: section.description || {},
+      title: typeof chapter.title === "object" && chapter.title ? chapter.title : {},
+      description: typeof chapter.summary === "object" && chapter.summary ? chapter.summary : {},
+      sectionName: typeof section.title === "object" && section.title ? section.title : {},
+      sectionCaption: typeof section.description === "object" && section.description ? section.description : {},
     };
 
     const editorBlocks = parseBlocks(section.content, section.contents || [], initialTrans);
@@ -695,11 +705,11 @@ export function ChapterManagementPage() {
         const chapterData = {
           title: JSON.stringify(merge(chapterForm.title, 'title')),
           description: JSON.stringify(merge(chapterForm.description, 'description')),
-          status: finalStatus !== "Drafted" ? finalStatus : (editingChapter.status || "Drafted"),
+          status: finalStatus,
           thumbnail: chapterForm.thumbnailPreview || null,
         };
 
-        if (chapterForm.sectionName && chapterForm.sectionName.trim()) {
+        if (chapterStep === 2 && chapterForm.sectionName && chapterForm.sectionName.trim()) {
           chapterData.sections = [
             {
               id: chapterForm.sectionId,
@@ -729,7 +739,7 @@ export function ChapterManagementPage() {
                 ...c,
                 title: result.chapter?.title || result.title || chapterData.title,
                 summary: result.chapter?.description || result.description || chapterData.description,
-                status: finalStatus !== "Drafted" ? finalStatus : (editingChapter.status || "Drafted"),
+                status: finalStatus,
                 thumbnail: chapterData.thumbnail || c.thumbnail,
               }
               : c
@@ -932,7 +942,7 @@ export function ChapterManagementPage() {
             </label>
           </div>
 
-          <button type="button" className="master-add-btn" onClick={() => { setEditingChapter(null); setIsDrawerOpen(true); }}>
+          <button type="button" className="master-add-btn" onClick={() => { setEditingChapter(null); setAddSectionFor(null); setTranslations({}); setActiveLanguageTab("English 🇬🇧"); setSubmitError(""); setChapterForm(initialChapterForm); setChapterStep(1); setIsDrawerOpen(true); }}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 5v14M5 12h14" />
             </svg>
@@ -994,7 +1004,7 @@ export function ChapterManagementPage() {
                   }}
                 >
                   <div className="chapter-order-cell">
-                    <button type="button" className="chapter-drag-btn" aria-label={`Move ${renderTranslated(chapter.title, LANG_CODES[activeLanguageTab])}`} style={{ cursor: isDragAndDropEnabled ? 'grab' : 'not-allowed', pointerEvents: isDragAndDropEnabled ? 'auto' : 'none' }}>
+                    <button type="button" className="chapter-drag-btn" aria-label={`Move ${renderTranslated(chapter.title, "en")}`} style={{ cursor: isDragAndDropEnabled ? 'grab' : 'not-allowed', pointerEvents: isDragAndDropEnabled ? 'auto' : 'none' }}>
                       <svg viewBox="0 0 24 24" aria-hidden="true">
                         <circle cx="8" cy="7" r="1.5" />
                         <circle cx="16" cy="7" r="1.5" />
@@ -1012,7 +1022,7 @@ export function ChapterManagementPage() {
                       {chapter.thumbnail ? (
                         <img 
                           src={chapter.thumbnail} 
-                          alt={renderTranslated(chapter.title, LANG_CODES[activeLanguageTab])} 
+                          alt={renderTranslated(chapter.title, "en")} 
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                         />
                       ) : (
@@ -1023,9 +1033,9 @@ export function ChapterManagementPage() {
                       )}
                     </div>
                     <div className="chapter-copy">
-                      <h3>{renderTranslated(chapter.title, LANG_CODES[activeLanguageTab])}</h3>
+                      <h3>{renderTranslated(chapter.title, "en")}</h3>
                       <p>
-                        {renderTranslated(chapter.summary, LANG_CODES[activeLanguageTab])} {"\u2022"} {chapter.sections} sections
+                        {renderTranslated(chapter.summary, "en")} {"\u2022"} {chapter.sections} sections
                       </p>
                     </div>
                   </div>
@@ -1053,7 +1063,7 @@ export function ChapterManagementPage() {
                       View Sections
                     </button>
 
-                    <button type="button" className="chapter-icon-btn" aria-label={`Edit ${renderTranslated(chapter.title, LANG_CODES[activeLanguageTab])}`} onClick={() => handleEditChapter(chapter)}>
+                    <button type="button" className="chapter-icon-btn" aria-label={`Edit ${renderTranslated(chapter.title, "en")}`} onClick={() => handleEditChapter(chapter)}>
                       <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                         <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -1063,7 +1073,7 @@ export function ChapterManagementPage() {
                     <button
                       type="button"
                       className="chapter-icon-btn"
-                      aria-label={`Delete ${renderTranslated(chapter.title, LANG_CODES[activeLanguageTab])}`}
+                      aria-label={`Delete ${renderTranslated(chapter.title, "en")}`}
                       onClick={() => openDeleteChapterModal(chapter.id)}
                     >
                       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1083,8 +1093,8 @@ export function ChapterManagementPage() {
                   return (
                     <div className="section-panel" style={{ padding: '24px', background: '#FAFAFC', borderTop: '1px solid #F1F3F5' }}>
                       <div className="section-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                        <span style={{ fontSize: '14px', color: '#718096', fontWeight: '500' }}>Sections in {renderTranslated(chapter.title, LANG_CODES[activeLanguageTab])}</span>
-                        <button type="button" onClick={() => { setAddSectionFor(cId); setEditingChapter(chapter); setTranslations({}); setChapterForm({ ...initialChapterForm, sectionType: "Text" }); setChapterStep(2); setIsDrawerOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#795289', color: '#FFF', border: 'none', padding: '6px 16px', borderRadius: '100px', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>
+                        <span style={{ fontSize: '14px', color: '#718096', fontWeight: '500' }}>Sections in {renderTranslated(chapter.title, "en")}</span>
+                        <button type="button" onClick={() => { setAddSectionFor(cId); setEditingChapter(chapter); setTranslations({}); setActiveLanguageTab("English 🇬🇧"); setSubmitError(""); setChapterForm({ ...initialChapterForm, sectionType: "Text" }); setChapterStep(2); setIsDrawerOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#795289', color: '#FFF', border: 'none', padding: '6px 16px', borderRadius: '100px', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>
                           <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
                           Add Section
                         </button>
@@ -1113,7 +1123,7 @@ export function ChapterManagementPage() {
                             <div className="section-drag" style={{ color: '#CBD5E0', cursor: 'grab', display: 'flex', alignItems: 'center' }}>
                               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="8" cy="7" r="1.5" /><circle cx="16" cy="7" r="1.5" /><circle cx="8" cy="12" r="1.5" /><circle cx="16" cy="12" r="1.5" /><circle cx="8" cy="17" r="1.5" /><circle cx="16" cy="17" r="1.5" /></svg>
                             </div>
-                            <span className="section-title" style={{ fontSize: '14px', fontWeight: '600', color: '#111827', textTransform: 'none' }}>{renderTranslated(sec.title, LANG_CODES[activeLanguageTab])}</span>
+                            <span className="section-title" style={{ fontSize: '14px', fontWeight: '600', color: '#111827', textTransform: 'none' }}>{renderTranslated(sec.title, "en")}</span>
                             
                             <span className="section-status-pill" onClick={() => handleToggleSectionStatus(chapter, sec.id)} style={{ cursor: "pointer", marginLeft: "auto", marginRight: "12px", display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '100px', fontSize: '12px', fontWeight: '500', background: sec.status === 'Published' ? '#e6f8f0' : '#f1f5f9', color: sec.status === 'Published' ? '#1ea47b' : '#64748b' }} title="Click to toggle status">
                               {sec.status === "Published" ? (
@@ -1155,7 +1165,7 @@ export function ChapterManagementPage() {
                                       </svg>
                                     </span>
                                     <span className="content-title" style={{ fontSize: '13px', color: '#2D3748' }}>
-                                      {renderTranslated(content.title, LANG_CODES[activeLanguageTab])} {content.is_required && <span style={{ color: '#E53E3E', marginLeft: '2px' }}>*</span>}
+                                      {renderTranslated(content.title, "en")} {content.is_required && <span style={{ color: '#E53E3E', marginLeft: '2px' }}>*</span>}
                                     </span>
                                   </div>
                                 ))}
