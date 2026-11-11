@@ -222,6 +222,8 @@ export function PracticeManagementPage() {
     setIsDrawerOpen(false);
     setPracticeStep(1);
     setPracticeForm(initialPracticeForm);
+    setFormErrors({});
+    setIsRelatedChapterOpen(false);
     setEditingPractice(null);
     setEditingSessionIndex(null);
     setIsAddingSession(false);
@@ -229,6 +231,8 @@ export function PracticeManagementPage() {
 
   const handleEditPractice = (practice) => {
     setEditingPractice(practice);
+    setFormErrors({});
+    setIsRelatedChapterOpen(false);
     const session = practice.sessions && practice.sessions.length > 0 ? practice.sessions[0] : {};
     
     setPracticeForm({
@@ -331,6 +335,8 @@ export function PracticeManagementPage() {
   const handleEditSession = (practice, sessionIndex) => {
     const session = Array.isArray(practice.sessions) ? practice.sessions[sessionIndex] : {};
     setEditingPractice(practice);
+    setFormErrors({});
+    setIsRelatedChapterOpen(false);
     setPracticeForm({
       ...initialPracticeForm,
       name: practice.title || "",
@@ -353,6 +359,8 @@ export function PracticeManagementPage() {
 
   const handleAddSession = (practice) => {
     setEditingPractice(practice);
+    setFormErrors({});
+    setIsRelatedChapterOpen(false);
     setPracticeForm({
       ...initialPracticeForm,
       name: practice.title || "",
@@ -375,6 +383,8 @@ export function PracticeManagementPage() {
 
   const handleAddPractice = () => {
     setEditingPractice(null);
+    setFormErrors({});
+    setIsRelatedChapterOpen(false);
     setPracticeForm(initialPracticeForm);
     setPracticeStep(1);
     setEditingSessionIndex(null);
@@ -1455,7 +1465,7 @@ export function PracticeManagementPage() {
                             <span className="file-size" style={{ fontSize: '12px', color: '#718096' }}>59.7 KB</span>
                           </div>
                         </div>
-                        <button type="button" className="thumb-delete-btn" onClick={() => setPracticeForm(f => ({ ...f, thumbnailName: "" }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E53E3E' }}>
+                        <button type="button" className="thumb-delete-btn" onClick={() => setPracticeForm(f => ({ ...f, thumbnailName: "", thumbnailPreview: "" }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E53E3E' }}>
                           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
                         </button>
                       </div>
@@ -1495,7 +1505,11 @@ export function PracticeManagementPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          setPracticeForm(f => ({ ...f, sessionType: "Video" }));
+                          setPracticeForm(f => (
+                            f.sessionType === "Video"
+                              ? f
+                              : { ...f, sessionType: "Video", sessionContentFileName: "", sessionContentFileObj: null }
+                          ));
                           if (formErrors.sessionType) {
                             setFormErrors(current => {
                               const newErrors = { ...current };
@@ -1523,7 +1537,11 @@ export function PracticeManagementPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          setPracticeForm(f => ({ ...f, sessionType: "Audio" }));
+                          setPracticeForm(f => (
+                            f.sessionType === "Audio"
+                              ? f
+                              : { ...f, sessionType: "Audio", sessionContentFileName: "", sessionContentFileObj: null }
+                          ));
                           if (formErrors.sessionType) {
                             setFormErrors(current => {
                               const newErrors = { ...current };
@@ -1565,7 +1583,7 @@ export function PracticeManagementPage() {
                             </span>
                           </div>
                         </div>
-                        <button type="button" className="thumb-delete-btn" onClick={() => setPracticeForm(f => ({ ...f, sessionContentFileName: "" }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E53E3E' }}>
+                        <button type="button" className="thumb-delete-btn" onClick={() => setPracticeForm(f => ({ ...f, sessionContentFileName: "", sessionContentFileObj: null }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E53E3E' }}>
                           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
                         </button>
                       </div>

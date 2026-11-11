@@ -388,19 +388,19 @@ function MediaLibraryPage() {
       if (getTxt(activeLanguageTab === 'English 🇬🇧' ? mediaForm.shortQuote : getVal(mediaForm.shortQuote, 'shortQuote', activeLanguageTab)).trim() === "") return false;
       if (getTxt(activeLanguageTab === 'English 🇬🇧' ? mediaForm.whyItMatters : getVal(mediaForm.whyItMatters, 'whyItMatters', activeLanguageTab)).trim() === "") return false;
       if (getTxt(activeLanguageTab === 'English 🇬🇧' ? mediaForm.corpusConnection : getVal(mediaForm.corpusConnection, 'corpusConnection', activeLanguageTab)).trim() === "") return false;
-      if (!selectedThumbnail && !editingMediaId) return false;
+      if (!selectedThumbnail) return false;
     }
     return true;
-  }, [mediaForm, selectedThumbnail, editingMediaId, activeLanguageTab, getVal]);
+  }, [mediaForm, selectedThumbnail, activeLanguageTab, getVal]);
 
   const canSubmitStep2 = useMemo(() => {
     if (mediaForm.format === "Text") {
       const getTxt = (val) => val || "";
       return getTxt(activeLanguageTab === 'English 🇬🇧' ? mediaForm.textContent : getVal(mediaForm.textContent, 'textContent', activeLanguageTab)).replace(/<[^>]*>?/gm, '').trim() !== "";
     } else {
-      return selectedMediaFile !== null || editingMediaId !== null;
+      return selectedMediaFile !== null;
     }
-  }, [mediaForm, selectedMediaFile, editingMediaId, activeLanguageTab, getVal]);
+  }, [mediaForm, selectedMediaFile, activeLanguageTab, getVal]);
 
   const [mediaToDelete, setMediaToDelete] = useState(null);
 
@@ -420,12 +420,15 @@ function MediaLibraryPage() {
 
   const openEditModal = (media) => {
     setEditingMediaId(media.id);
+    setActiveLanguageTab('English 🇬🇧');
+    setIsRelatedChapterOpen(false);
     setTranslations({
       shortQuote: media.short_quote || media.shortQuote || {},
       whyItMatters: media.why_it_matters || media.whyItMatters || {},
       corpusConnection: media.corpus_connection || media.corpusConnection || {},
       criticalNote: media.critical_note || media.criticalNote || {},
       integrationQuestion: media.integration_question || media.integrationQuestion || {},
+      textContent: media.text_content || media.textContent || {},
     });
     setMediaForm({
       name: media.name || "",
@@ -438,10 +441,13 @@ function MediaLibraryPage() {
       whyItMatters: renderTranslated(media.why_it_matters || media.whyItMatters, "en") || "",
       corpusConnection: renderTranslated(media.corpus_connection || media.corpusConnection, "en") || "",
       criticalNote: renderTranslated(media.critical_note || media.criticalNote, "en") || "",
-      integrationQuestion: renderTranslated(media.integration_question || media.integrationQuestion, "en") || ""
+      integrationQuestion: renderTranslated(media.integration_question || media.integrationQuestion, "en") || "",
+      textContent: renderTranslated(media.text_content || media.textContent, "en") || "",
     });
     setSelectedThumbnail(media.thumbnail || null);
     setSelectedMediaFile(media.content_file || media.contentFile || null);
+    if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
+    if (mediaInputRef.current) mediaInputRef.current.value = "";
     setAddStep(1);
     setIsAddModalOpen(true);
   };

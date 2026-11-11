@@ -9,6 +9,14 @@ export function UserProfileModal({ isOpen, onClose, userProfile }) {
 
   if (!isOpen) return null;
 
+  const handleClose = () => {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setMessage("");
+    onClose();
+  };
+
   const handleChangePassword = (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
@@ -30,7 +38,7 @@ export function UserProfileModal({ isOpen, onClose, userProfile }) {
       <div className="user-profile-modal">
         <div className="modal-header">
           <h2>User Profile</h2>
-          <button type="button" className="close-btn" onClick={onClose}>
+          <button type="button" className="close-btn" onClick={handleClose}>
             &times;
           </button>
         </div>

@@ -1398,7 +1398,7 @@ export function ChapterManagementPage() {
                             <span className="file-size" style={{ fontSize: '12px', color: '#718096' }}>59.7 KB</span>
                           </div>
                         </div>
-                        <button type="button" className="thumb-delete-btn" onClick={() => setChapterForm(f => ({ ...f, thumbnailName: "" }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E53E3E' }}>
+                        <button type="button" className="thumb-delete-btn" onClick={() => setChapterForm(f => ({ ...f, thumbnailName: "", thumbnailPreview: "" }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E53E3E' }}>
                           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
                         </button>
                       </div>

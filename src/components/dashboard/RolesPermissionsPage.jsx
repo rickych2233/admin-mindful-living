@@ -370,7 +370,10 @@ function RolesPermissionsPage() {
               <button
                 type="button"
                 className="roles-add-role-btn"
-                onClick={() => setIsAddRoleModalOpen(true)}
+                onClick={() => {
+                  setNewRoleName("");
+                  setIsAddRoleModalOpen(true);
+                }}
                 style={{
                   background: "transparent",
                   color: "#795289",
