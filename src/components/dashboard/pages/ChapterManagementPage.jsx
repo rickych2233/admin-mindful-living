@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useChaptersCollection, createChapter, updateChapter, deleteChapter, toggleChapterStatus, reorderChapters } from "../utils/chapterUtils";
 import { fetchSectionsByChapter, createSection, deleteSection, toggleSectionStatus, normalizeSection, reorderSections } from "../utils/sectionUtils";
-import { useTranslations, LANG_CODES, sanitizeEditorHtml } from "../utils/translateUtils";
+import { useTranslations, LANG_CODES, sanitizeEditorHtml, stripHtmlText } from "../utils/translateUtils";
 import { renderTranslated } from "../utils/renderTranslated";
 
 const chapterStepItems = [
@@ -25,7 +25,7 @@ const initialChapterForm = {
   thumbnailPreview: "",
 };
 
-const parseBlocks = (contentObjOrStr, mediaArr, initialTranslations = {}) => {
+const parseBlocks = (contentObjOrStr, mediaArr, initialTranslations = {}, initialSources = {}) => {
   let contentObj = {};
   if (typeof contentObjOrStr === 'string') {
     try {
@@ -56,57 +56,94 @@ const parseBlocks = (contentObjOrStr, mediaArr, initialTranslations = {}) => {
   const parser = new DOMParser();
   const doc = parser.parseFromString(englishHtml, 'text/html');
   
-  const langDocs = {};
-  Object.keys(contentObj).forEach(lang => {
-     if (lang !== 'en') langDocs[lang] = parser.parseFromString(contentObj[lang] || "", 'text/html');
-  });
-
-  const extractNthTextChunk = (docNode, targetIndex) => {
-     if (!docNode) return "";
-     let chunkIdx = 0;
-     let html = "";
-     for (let node of Array.from(docNode.body.childNodes)) {
-        if (node.nodeType === 1 && node.classList.contains('media-embed')) {
-           if (html) {
-              if (chunkIdx === targetIndex) return html;
-              chunkIdx++;
-              html = "";
-           }
-        } else {
-           if (node.nodeType === 1) html += node.outerHTML;
-           else if (node.nodeType === 3) html += node.textContent;
-        }
-     }
-     if (chunkIdx === targetIndex) return html;
-     return "";
+  const splitDocTextSlots = (docNode) => {
+    if (!docNode || !docNode.body) return [""];
+    const slots = [];
+    let html = "";
+    for (const node of Array.from(docNode.body.childNodes)) {
+      if (node.nodeType === 1 && node.classList.contains('media-embed')) {
+        slots.push(html);
+        html = "";
+      } else if (node.nodeType === 1) {
+        html += node.outerHTML;
+      } else if (node.nodeType === 3) {
+        const div = document.createElement('div');
+        div.textContent = node.textContent;
+        html += div.innerHTML;
+      }
+    }
+    slots.push(html);
+    return slots;
   };
 
+  const langSlots = {};
+  Object.keys(contentObj).forEach(lang => {
+    if (lang !== 'en') {
+      const langDoc = parser.parseFromString(contentObj[lang] || "", 'text/html');
+      langSlots[lang] = splitDocTextSlots(langDoc);
+    }
+  });
+
+  const hasMediaEmbedMarkers = Boolean(doc.body.querySelector('.media-embed'));
   let currentHtml = "";
   let textBlockIndex = 0;
 
-  const flushText = () => {
-      const id = 'text_' + Math.random();
-      parsedBlocks.push({ id, type: 'text', content: currentHtml });
-      
-      initialTranslations[`content_${id}`] = {};
-      Object.keys(contentObj).forEach(lang => {
-         if (lang !== 'en') {
-            initialTranslations[`content_${id}`][lang] = extractNthTextChunk(langDocs[lang], textBlockIndex) || currentHtml;
-         }
-      });
-      
-      textBlockIndex++;
-      currentHtml = "";
+  const flushText = (forceEmptySlot = false) => {
+    if (!currentHtml && !forceEmptySlot) return;
+    const id = 'text_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    const blockHtml = currentHtml || '<p><br></p>';
+    parsedBlocks.push({ id, type: 'text', content: blockHtml });
+    const fieldKey = `content_${id}`;
+    if (stripHtmlText(blockHtml)) {
+      initialSources[fieldKey] = blockHtml;
+    }
+    initialTranslations[fieldKey] = {};
+    Object.keys(contentObj).forEach(lang => {
+      if (lang !== 'en') {
+        const slotHtml = langSlots[lang]?.[textBlockIndex] ?? "";
+        initialTranslations[fieldKey][lang] = stripHtmlText(blockHtml)
+          ? (slotHtml || blockHtml)
+          : (slotHtml || "");
+      }
+    });
+    textBlockIndex++;
+    currentHtml = "";
   };
 
-  Array.from(doc.body.childNodes).forEach(node => {
-    if (node.nodeType === 1 && node.classList.contains('media-embed')) {
-      if (currentHtml) flushText();
-      const idx = parseInt(node.getAttribute('data-index'), 10);
-      const m = mediaArr[idx];
-      if (m) {
+  if (hasMediaEmbedMarkers) {
+    Array.from(doc.body.childNodes).forEach(node => {
+      if (node.nodeType === 1 && node.classList.contains('media-embed')) {
+        flushText(true);
+        const idx = parseInt(node.getAttribute('data-index'), 10);
+        const m = mediaArr[idx];
+        if (m) {
+          parsedBlocks.push({
+            id: m.id || 'media_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+            originalId: m.id,
+            type: (m.type || "image").toLowerCase(),
+            title: m.title || "",
+            url: m.url || "",
+            isRequired: m.is_required !== undefined ? m.is_required : true,
+            duration: m.duration || "2 Minutes",
+            instructions: m.instructions || "",
+          });
+        }
+      } else if (node.nodeType === 1) {
+        currentHtml += node.outerHTML;
+      } else if (node.nodeType === 3) {
+        const div = document.createElement('div');
+        div.textContent = node.textContent;
+        currentHtml += div.innerHTML;
+      }
+    });
+    flushText(true);
+  } else {
+    currentHtml = englishHtml || '<p><br></p>';
+    flushText(true);
+    if (mediaArr && mediaArr.length > 0) {
+      mediaArr.forEach(m => {
         parsedBlocks.push({
-          id: m.id || 'media_' + Math.random(),
+          id: m.id || 'media_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
           originalId: m.id,
           type: (m.type || "image").toLowerCase(),
           title: m.title || "",
@@ -115,30 +152,10 @@ const parseBlocks = (contentObjOrStr, mediaArr, initialTranslations = {}) => {
           duration: m.duration || "2 Minutes",
           instructions: m.instructions || "",
         });
-      }
-    } else {
-      if (node.nodeType === 1) currentHtml += node.outerHTML;
-      else if (node.nodeType === 3) currentHtml += node.textContent;
+        currentHtml = '<p><br></p>';
+        flushText(true);
+      });
     }
-  });
-  
-  if (currentHtml) flushText();
-  
-  if (!doc.body.querySelector('.media-embed') && mediaArr && mediaArr.length > 0) {
-     if (parsedBlocks.length === 0) { currentHtml = englishHtml; flushText(); }
-     mediaArr.forEach(m => parsedBlocks.push({
-          id: m.id || 'media_' + Math.random(),
-          originalId: m.id,
-          type: (m.type || "image").toLowerCase(),
-          title: m.title || "",
-          url: m.url || "",
-          isRequired: m.is_required !== undefined ? m.is_required : true,
-          duration: m.duration || "2 Minutes",
-          instructions: m.instructions || "",
-     }));
-  } else if (parsedBlocks.length === 0) {
-     currentHtml = englishHtml || '<p><br></p>';
-     flushText();
   }
   return parsedBlocks;
 };
@@ -161,7 +178,7 @@ export function ChapterManagementPage() {
   const [sectionForm, setSectionForm] = useState({ title: "", description: "", type: "Text" });
   const [sectionSubmitting, setSectionSubmitting] = useState(false);
   const [activeLanguageTab, setActiveLanguageTab] = useState("English 🇬🇧");
-  const { translations, setTranslations, getVal, setVal, handleTranslate, merge, isTranslating, translationErrors } = useTranslations();
+  const { translations, translationsRef, setTranslations, getVal, setVal, handleTranslate, merge, isTranslating, translationErrors } = useTranslations();
   const [showPublishedModal, setShowPublishedModal] = useState({ show: false, status: null });
   const [draggedChapterIndex, setDraggedChapterIndex] = useState(null);
   const [dragOverChapterIndex, setDragOverChapterIndex] = useState(null);
@@ -392,9 +409,15 @@ export function ChapterManagementPage() {
       sectionName: typeof firstSection?.title === "object" && firstSection?.title ? firstSection.title : {},
       sectionCaption: typeof firstSection?.description === "object" && firstSection?.description ? firstSection.description : {},
     };
+    const initialSources = {
+      title: renderTranslated(chapter.title, "en") || "",
+      description: renderTranslated(chapter.summary, "en") || "",
+      sectionName: renderTranslated(firstSection?.title, "en") || "",
+      sectionCaption: renderTranslated(firstSection?.description, "en") || "",
+    };
     
-    const editorBlocks = parseBlocks(firstSection?.content, firstSection?.contents || [], initialTrans);
-    setTranslations(initialTrans);
+    const editorBlocks = parseBlocks(firstSection?.content, firstSection?.contents || [], initialTrans, initialSources);
+    setTranslations(initialTrans, initialSources);
     
     setChapterForm({
       title: renderTranslated(chapter.title, "en") || "",
@@ -426,9 +449,15 @@ export function ChapterManagementPage() {
       sectionName: typeof section.title === "object" && section.title ? section.title : {},
       sectionCaption: typeof section.description === "object" && section.description ? section.description : {},
     };
+    const initialSources = {
+      title: renderTranslated(chapter.title, "en") || "",
+      description: renderTranslated(chapter.summary, "en") || "",
+      sectionName: renderTranslated(section.title, "en") || "",
+      sectionCaption: renderTranslated(section.description, "en") || "",
+    };
 
-    const editorBlocks = parseBlocks(section.content, section.contents || [], initialTrans);
-    setTranslations(initialTrans);
+    const editorBlocks = parseBlocks(section.content, section.contents || [], initialTrans, initialSources);
+    setTranslations(initialTrans, initialSources);
     
     setChapterForm({
       title: renderTranslated(chapter.title, "en") || "",
@@ -572,31 +601,70 @@ export function ChapterManagementPage() {
         return;
       }
       const { syncedBlocks } = syncActiveTextBlocks();
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const base64Url = event.target.result;
+      if (activeLanguageTab === 'English 🇬🇧') {
+        syncedBlocks.forEach((b) => {
+          if (b.type === 'text' && stripHtmlText(b.content)) {
+            handleTranslate(b.content, `content_${b.id}`);
+          }
+        });
+      }
+      const appendMediaBlock = (dataUrl) => {
         setChapterForm(f => {
           const baseBlocks = (f.editorBlocks || []).map((b) => {
             const match = syncedBlocks.find((sb) => sb.id === b.id);
             return match ? { ...b, content: match.content } : b;
           });
           const newMediaBlock = {
-            id: 'media_' + Date.now(),
+            id: 'media_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
             type,
             name: file.name,
-            url: base64Url,
+            url: dataUrl,
             file,
             isRequired: true,
             title: "",
             duration: "2 Minutes",
             instructions: ""
           };
-          const newTextBlock = { id: 'text_' + Date.now() + Math.random(), type: 'text', content: '<p><br></p>' };
+          const newTextBlock = {
+            id: 'text_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+            type: 'text',
+            content: '<p><br></p>'
+          };
           return {
             ...f,
             editorBlocks: [...baseBlocks, newMediaBlock, newTextBlock]
           };
         });
+      };
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const rawDataUrl = event.target.result;
+        if (type === 'image') {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            let width = img.width;
+            let height = img.height;
+            const MAX_DIM = 1200;
+            if (width > height && width > MAX_DIM) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else if (height >= width && height > MAX_DIM) {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressedUrl = canvas.toDataURL("image/jpeg", 0.82);
+            appendMediaBlock(compressedUrl);
+          };
+          img.onerror = () => appendMediaBlock(rawDataUrl);
+          img.src = rawDataUrl;
+        } else {
+          appendMediaBlock(rawDataUrl);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -605,20 +673,31 @@ export function ChapterManagementPage() {
 
   const handleInsertGuidedExercise = () => {
     const { syncedBlocks } = syncActiveTextBlocks();
+    if (activeLanguageTab === 'English 🇬🇧') {
+      syncedBlocks.forEach((b) => {
+        if (b.type === 'text' && stripHtmlText(b.content)) {
+          handleTranslate(b.content, `content_${b.id}`);
+        }
+      });
+    }
     setChapterForm(f => {
       const baseBlocks = (f.editorBlocks || []).map((b) => {
         const match = syncedBlocks.find((sb) => sb.id === b.id);
         return match ? { ...b, content: match.content } : b;
       });
       const newExerciseBlock = {
-        id: 'media_' + Date.now(),
+        id: 'media_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
         type: 'exercise',
         isRequired: true,
         title: "",
         duration: "2 Minutes",
         instructions: ""
       };
-      const newTextBlock = { id: 'text_' + Date.now() + Math.random(), type: 'text', content: '<p><br></p>' };
+      const newTextBlock = {
+        id: 'text_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+        type: 'text',
+        content: '<p><br></p>'
+      };
       return {
         ...f,
         editorBlocks: [...baseBlocks, newExerciseBlock, newTextBlock]
@@ -627,10 +706,33 @@ export function ChapterManagementPage() {
   };
 
   const removeBlock = (id) => {
-    setChapterForm(f => ({
-      ...f,
-      editorBlocks: f.editorBlocks.filter(b => b.id !== id)
-    }));
+    const { syncedBlocks } = syncActiveTextBlocks();
+    setChapterForm(f => {
+      const baseBlocks = (f.editorBlocks || []).map((b) => {
+        const match = syncedBlocks.find((sb) => sb.id === b.id);
+        return match ? { ...b, content: match.content } : b;
+      });
+      const idx = baseBlocks.findIndex(b => b.id === id);
+      if (idx === -1) return f;
+      const nextBlocks = baseBlocks.filter(b => b.id !== id);
+      if (idx > 0 && idx < baseBlocks.length - 1) {
+        const prevBlock = nextBlocks[idx - 1];
+        const followingBlock = nextBlocks[idx];
+        if (prevBlock?.type === 'text' && followingBlock?.type === 'text') {
+          const prevHasText = Boolean(stripHtmlText(prevBlock.content));
+          const followingHasText = Boolean(stripHtmlText(followingBlock.content));
+          if (!followingHasText) {
+            nextBlocks.splice(idx, 1);
+          } else if (!prevHasText) {
+            nextBlocks.splice(idx - 1, 1);
+          }
+        }
+      }
+      return {
+        ...f,
+        editorBlocks: nextBlocks
+      };
+    });
   };
 
   const handleBlockChange = (id, newProps) => {
@@ -657,29 +759,49 @@ export function ChapterManagementPage() {
       return;
     }
 
+    const { syncedBlocks } = chapterStep === 2 ? syncActiveTextBlocks() : { syncedBlocks: chapterForm.editorBlocks };
+    const activeBlocks = syncedBlocks || chapterForm.editorBlocks || [];
+
     if (chapterStep < 3 && !isEditMode && !isAddSectionMode && !(editingChapter && chapterStep === 2)) {
-      if (chapterStep === 2) {
-        const { syncedBlocks } = syncActiveTextBlocks();
-        if (activeLanguageTab === 'English 🇬🇧') {
-          if (chapterForm.sectionName) handleTranslate(chapterForm.sectionName, 'sectionName');
-          if (chapterForm.sectionCaption) handleTranslate(chapterForm.sectionCaption, 'sectionCaption');
-          syncedBlocks.forEach((b) => {
-            if (b.type === 'text' && b.content) {
-              handleTranslate(b.content, `content_${b.id}`);
-            }
-          });
-        }
+      if (chapterStep === 1 && activeLanguageTab === 'English 🇬🇧') {
+        if (chapterForm.title) handleTranslate(chapterForm.title, 'title');
+        if (chapterForm.description) handleTranslate(chapterForm.description, 'description');
+      }
+      if (chapterStep === 2 && activeLanguageTab === 'English 🇬🇧') {
+        if (chapterForm.sectionName) handleTranslate(chapterForm.sectionName, 'sectionName');
+        if (chapterForm.sectionCaption) handleTranslate(chapterForm.sectionCaption, 'sectionCaption');
+        activeBlocks.forEach((b) => {
+          if (b.type === 'text' && stripHtmlText(b.content)) {
+            handleTranslate(b.content, `content_${b.id}`);
+          }
+        });
       }
       setChapterStep((current) => current + 1);
       return;
     }
 
+    setIsSubmitting(true);
+    setSubmitError("");
+
+    const pendingTranslations = [];
+    if (chapterForm.title) pendingTranslations.push(handleTranslate(chapterForm.title, 'title'));
+    if (chapterForm.description) pendingTranslations.push(handleTranslate(chapterForm.description, 'description'));
+    if (chapterForm.sectionName) pendingTranslations.push(handleTranslate(chapterForm.sectionName, 'sectionName'));
+    if (chapterForm.sectionCaption) pendingTranslations.push(handleTranslate(chapterForm.sectionCaption, 'sectionCaption'));
+    activeBlocks.forEach((b) => {
+      if (b.type === 'text') {
+        pendingTranslations.push(handleTranslate(b.content, `content_${b.id}`));
+      }
+    });
+    if (pendingTranslations.length > 0) {
+      await Promise.all(pendingTranslations);
+    }
+
     if (Object.values(isTranslating).some(Boolean) || Object.values(translationErrors).some(Boolean)) {
+      setIsSubmitting(false);
       setSubmitError('Please wait for translations to finish, or retry failed translations before saving.');
       return;
     }
-    setIsSubmitting(true);
-    setSubmitError("");
 
     const serializeBlocks = (blocks) => {
       const contentHtml = { en: "" };
@@ -688,14 +810,15 @@ export function ChapterManagementPage() {
       });
       
       const mediaList = [];
+      const liveTranslations = translationsRef.current || translations || {};
       
       blocks.forEach((b) => {
         if (b.type === 'text') {
            const domNode = document.getElementById(b.id);
            
-           let enContent = b.content;
+           let enContent = sanitizeEditorHtml(b.content || "");
            if (activeLanguageTab === 'English 🇬🇧' && domNode) {
-               enContent = domNode.innerHTML;
+               enContent = sanitizeEditorHtml(domNode.innerHTML);
            }
            contentHtml.en += enContent;
            
@@ -703,9 +826,9 @@ export function ChapterManagementPage() {
                const lang = LANG_CODES[tab];
                if (lang === 'en') return;
                
-               let langContent = translations[`content_${b.id}`]?.[lang] || "";
-               if (activeLanguageTab === tab && domNode) {
-                   langContent = domNode.innerHTML;
+               let langContent = liveTranslations[`content_${b.id}`]?.[lang] || "";
+               if (activeLanguageTab === tab && domNode && domNode.dataset.userEdited === 'true') {
+                   langContent = sanitizeEditorHtml(domNode.innerHTML);
                }
                contentHtml[lang] += (langContent || enContent);
            });
@@ -723,7 +846,7 @@ export function ChapterManagementPage() {
       return { contentHtml, mediaList };
     };
 
-    const { contentHtml, mediaList } = serializeBlocks(chapterForm.editorBlocks);
+    const { contentHtml, mediaList } = serializeBlocks(activeBlocks);
 
     if (isAddSectionMode) {
       setIsSubmitting(true);
@@ -1310,22 +1433,16 @@ export function ChapterManagementPage() {
                       const { syncedBlocks } = syncActiveTextBlocks();
                       setActiveLanguageTab(lang);
                       if (lang !== 'English 🇬🇧') {
-                        const targetLang = LANG_CODES[lang];
-                        if (chapterForm.title && !translations.title?.[targetLang] && !isTranslating['title']) handleTranslate(chapterForm.title, 'title');
-                        if (chapterForm.description && !translations.description?.[targetLang] && !isTranslating['description']) handleTranslate(chapterForm.description, 'description');
-                        if (chapterForm.sectionName && !translations.sectionName?.[targetLang] && !isTranslating['sectionName']) handleTranslate(chapterForm.sectionName, 'sectionName');
-                        if (chapterForm.sectionCaption && !translations.sectionCaption?.[targetLang] && !isTranslating['sectionCaption']) handleTranslate(chapterForm.sectionCaption, 'sectionCaption');
+                        if (chapterForm.title) handleTranslate(chapterForm.title, 'title');
+                        if (chapterForm.description) handleTranslate(chapterForm.description, 'description');
+                        if (chapterForm.sectionName) handleTranslate(chapterForm.sectionName, 'sectionName');
+                        if (chapterForm.sectionCaption) handleTranslate(chapterForm.sectionCaption, 'sectionCaption');
                         if (syncedBlocks) {
-                           syncedBlocks.forEach(b => {
-                             if (b.type === 'text') {
-                               const field = `content_${b.id}`;
-                               const origBlock = chapterForm.editorBlocks.find(ob => ob.id === b.id);
-                               const contentChanged = origBlock && origBlock.content !== b.content;
-                               if (b.content && (contentChanged || !translations[field]?.[targetLang]) && !isTranslating[field]) {
-                                 handleTranslate(b.content, field);
-                               }
-                             }
-                           });
+                          syncedBlocks.forEach(b => {
+                            if (b.type === 'text') {
+                              handleTranslate(b.content, `content_${b.id}`);
+                            }
+                          });
                         }
                       }
                     }}

@@ -80,10 +80,16 @@ export function useTranslations(initial = {}) {
   const [translationErrors, setTranslationErrors] = useState({});
   const [isTranslating, setIsTranslating] = useState({});
 
-  const setTranslations = (value) => {
+  const setTranslations = (value, initialSources = {}) => {
     requests.current = {};
     manualEdits.current = {};
     lastTranslatedSource.current = {};
+    Object.entries(initialSources || {}).forEach(([field, src]) => {
+      const cleanSrc = sanitizeEditorHtml(String(src || '')).trim();
+      if (cleanSrc && stripHtmlText(cleanSrc)) {
+        lastTranslatedSource.current[field] = cleanSrc;
+      }
+    });
     inFlightSource.current = {};
     setTranslationErrors({});
     setIsTranslating({});
@@ -100,7 +106,20 @@ export function useTranslations(initial = {}) {
 
   const handleTranslate = async (text, field) => {
     const cleanText = sanitizeEditorHtml(String(text || '')).trim();
-    if (!cleanText || !stripHtmlText(cleanText)) return;
+    if (!cleanText || !stripHtmlText(cleanText)) {
+      delete lastTranslatedSource.current[field];
+      delete inFlightSource.current[field];
+      updateTranslations(t => {
+        if (!t[field]) return t;
+        const next = {
+          ...t,
+          [field]: { fr: '', id: '', ru: '', es: '' }
+        };
+        translationsRef.current = next;
+        return next;
+      });
+      return;
+    }
 
     const existingFieldTrans = translationsRef.current[field] || {};
     const hasAllTargets = TARGET_LANGS.every(
@@ -188,5 +207,5 @@ export function useTranslations(initial = {}) {
     return { ...(translationsRef.current[field] || translations[field] || {}), en: baseValue || "" };
   };
 
-  return { translations, setTranslations, getVal, setVal, handleTranslate, merge, isTranslating, translationErrors };
+  return { translations, translationsRef, setTranslations, getVal, setVal, handleTranslate, merge, isTranslating, translationErrors };
 }
