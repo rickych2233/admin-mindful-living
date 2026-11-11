@@ -526,7 +526,7 @@ export function ChapterManagementPage() {
 
   const canContinue =
     chapterStep === 1
-      ? chapterForm.title.trim() !== "" && chapterForm.description.trim() !== ""
+      ? chapterForm.title.trim() !== "" && chapterForm.description.trim() !== "" && chapterForm.thumbnailName.trim() !== ""
       : chapterStep === 2
         ? (isAddSectionMode || editingChapter ? chapterForm.sectionName.trim() !== "" && chapterForm.sectionCaption.trim() !== "" : chapterForm.sectionName.trim() !== "" && chapterForm.sectionCaption.trim() !== "")
         : true;

@@ -365,7 +365,11 @@ function MediaLibraryPage() {
         media.format.toLowerCase().includes(normalizedQuery);
       
       const matchesCategory = categoryFilter === "All Category" || media.category === categoryFilter;
-      const matchesStatus = statusFilter === "All Status" || media.status === statusFilter;
+      const matchesStatus =
+        statusFilter === "All Status" ||
+        media.status === statusFilter ||
+        (statusFilter === "Draft" && media.status === "Drafted") ||
+        (statusFilter === "Drafted" && media.status === "Draft");
 
       return matchesQuery && matchesCategory && matchesStatus;
     });
@@ -388,6 +392,8 @@ function MediaLibraryPage() {
       if (getTxt(activeLanguageTab === 'English 🇬🇧' ? mediaForm.shortQuote : getVal(mediaForm.shortQuote, 'shortQuote', activeLanguageTab)).trim() === "") return false;
       if (getTxt(activeLanguageTab === 'English 🇬🇧' ? mediaForm.whyItMatters : getVal(mediaForm.whyItMatters, 'whyItMatters', activeLanguageTab)).trim() === "") return false;
       if (getTxt(activeLanguageTab === 'English 🇬🇧' ? mediaForm.corpusConnection : getVal(mediaForm.corpusConnection, 'corpusConnection', activeLanguageTab)).trim() === "") return false;
+      if (getTxt(activeLanguageTab === 'English 🇬🇧' ? mediaForm.criticalNote : getVal(mediaForm.criticalNote, 'criticalNote', activeLanguageTab)).trim() === "") return false;
+      if (getTxt(activeLanguageTab === 'English 🇬🇧' ? mediaForm.integrationQuestion : getVal(mediaForm.integrationQuestion, 'integrationQuestion', activeLanguageTab)).trim() === "") return false;
       if (!selectedThumbnail) return false;
     }
     return true;
@@ -616,9 +622,9 @@ function MediaLibraryPage() {
               <span className="media-cell-text">{media.dateAdded}</span>
               
               <div>
-                <span className={`media-status-pill ${media.status.toLowerCase().replace(" ", "-")}`}>
+                <span className={`media-status-pill ${(media.status === "Draft" ? "drafted" : media.status.toLowerCase()).replace(" ", "-")}`}>
                   {media.status === "Published" && <PublishedStatusIcon />}
-                  {media.status === "Drafted" && <DraftedStatusIcon />}
+                  {(media.status === "Drafted" || media.status === "Draft") && <DraftedStatusIcon />}
                   {media.status === "Internal Only" && <InternalStatusIcon />}
                   {media.status}
                 </span>
@@ -1192,9 +1198,8 @@ function MediaLibraryPage() {
                             type="button"
                             onClick={() => {
                               setActiveLanguageTab(lang);
-                              if (lang !== 'English 🇬🇧') {
-                                const targetLang = LANG_CODES[lang];
-                                if (mediaForm.textContent && !translations.textContent?.[targetLang] && !isTranslating['textContent']) handleTranslate(mediaForm.textContent, 'textContent');
+                              if (lang !== 'English 🇬🇧' && mediaForm.textContent) {
+                                handleTranslate(mediaForm.textContent, 'textContent');
                               }
                             }}
                             style={{
@@ -1312,7 +1317,52 @@ function MediaLibraryPage() {
                   Previous
                 </button>
                 <div style={{ display: 'flex', gap: 12 }}>
-                  <button type="button" className="chapter-secondary-btn" style={{ gap: 8 }}>
+                  <button
+                    type="button"
+                    className="chapter-secondary-btn"
+                    style={{ gap: 8, opacity: !canSubmitStep2 ? 0.5 : 1, cursor: !canSubmitStep2 ? 'not-allowed' : 'pointer' }}
+                    disabled={!canSubmitStep2}
+                    onClick={async (e) => {
+                      const btn = e.currentTarget;
+                      const originalText = btn.innerHTML;
+                      btn.disabled = true;
+                      btn.innerHTML = "Saving...";
+                      try {
+                        await fetch(editingMediaId ? `/api/media/${editingMediaId}` : "/api/media", {
+                          method: editingMediaId ? "PUT" : "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            ...mediaForm,
+                            status: "Drafted",
+                            shortQuote: merge(mediaForm.shortQuote, "shortQuote"),
+                            whyItMatters: merge(mediaForm.whyItMatters, "whyItMatters"),
+                            corpusConnection: merge(mediaForm.corpusConnection, "corpusConnection"),
+                            criticalNote: merge(mediaForm.criticalNote, "criticalNote"),
+                            integrationQuestion: merge(mediaForm.integrationQuestion, "integrationQuestion"),
+                            textContent: merge(mediaForm.textContent, "textContent"),
+                            thumbnail: typeof selectedThumbnail === 'string' ? selectedThumbnail : (selectedThumbnail?.preview || null),
+                            contentFile: selectedMediaFile,
+                          }),
+                        });
+                        if (typeof fetchMediaFiles === "function") {
+                          await fetchMediaFiles();
+                        }
+                        setIsAddModalOpen(false);
+                        setAddStep(1);
+                        setEditingMediaId(null);
+                        setSelectedThumbnail(null);
+                        setSelectedMediaFile(null);
+                        setIsRelatedChapterOpen(false);
+                        setMediaForm({ name: "", author: "", format: "Video", category: "Book", status: "Published", relatedChapters: [], textContent: "" });
+                        showToast("Draft Saved", "Content has been saved as a draft.");
+                      } catch (err) {
+                        console.error(err);
+                      } finally {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                      }
+                    }}
+                  >
                     <DocumentIcon style={{ width: 16, height: 16 }} /> Save as Draft
                   </button>
                   <button type="button" className="chapter-primary-btn" style={{ gap: 8, opacity: !canSubmitStep2 ? 0.5 : 1, cursor: !canSubmitStep2 ? 'not-allowed' : 'pointer' }} disabled={!canSubmitStep2} onClick={async (e) => {
