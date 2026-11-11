@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useChaptersCollection, createChapter, updateChapter, deleteChapter, toggleChapterStatus, reorderChapters } from "../utils/chapterUtils";
 import { fetchSectionsByChapter, createSection, deleteSection, toggleSectionStatus, normalizeSection, reorderSections } from "../utils/sectionUtils";
-import { useTranslations, LANG_CODES } from "../utils/translateUtils";
+import { useTranslations, LANG_CODES, sanitizeEditorHtml } from "../utils/translateUtils";
 import { renderTranslated } from "../utils/renderTranslated";
 
 const chapterStepItems = [
@@ -531,6 +531,36 @@ export function ChapterManagementPage() {
         ? (isAddSectionMode || editingChapter ? chapterForm.sectionName.trim() !== "" && chapterForm.sectionCaption.trim() !== "" : chapterForm.sectionName.trim() !== "" && chapterForm.sectionCaption.trim() !== "")
         : true;
 
+  const syncActiveTextBlocks = () => {
+    const isEnglish = activeLanguageTab === 'English 🇬🇧';
+    let hasEnglishChanges = false;
+    const syncedBlocks = (chapterForm.editorBlocks || []).map((b) => {
+      if (b.type !== 'text') return b;
+      const domNode = document.getElementById(b.id);
+      if (!domNode) return b;
+      const liveHtml = sanitizeEditorHtml(domNode.innerHTML);
+      if (isEnglish) {
+        if (liveHtml !== b.content) {
+          hasEnglishChanges = true;
+        }
+        return { ...b, content: liveHtml };
+      } else {
+        setVal(`content_${b.id}`, activeLanguageTab, liveHtml);
+        return b;
+      }
+    });
+    if (isEnglish && hasEnglishChanges) {
+      setChapterForm((f) => ({
+        ...f,
+        editorBlocks: (f.editorBlocks || []).map((b) => {
+          const match = syncedBlocks.find((sb) => sb.id === b.id);
+          return match ? { ...b, content: match.content } : b;
+        }),
+      }));
+    }
+    return { syncedBlocks, hasEnglishChanges };
+  };
+
   const handleFileChange = (e, type) => {
     const file = e.target.files[0];
     if (file) {
@@ -539,10 +569,15 @@ export function ChapterManagementPage() {
         e.target.value = null;
         return;
       }
+      const { syncedBlocks } = syncActiveTextBlocks();
       const reader = new FileReader();
       reader.onload = (event) => {
         const base64Url = event.target.result;
         setChapterForm(f => {
+          const baseBlocks = (f.editorBlocks || []).map((b) => {
+            const match = syncedBlocks.find((sb) => sb.id === b.id);
+            return match ? { ...b, content: match.content } : b;
+          });
           const newMediaBlock = {
             id: 'media_' + Date.now(),
             type,
@@ -557,7 +592,7 @@ export function ChapterManagementPage() {
           const newTextBlock = { id: 'text_' + Date.now() + Math.random(), type: 'text', content: '<p><br></p>' };
           return {
             ...f,
-            editorBlocks: [...f.editorBlocks, newMediaBlock, newTextBlock]
+            editorBlocks: [...baseBlocks, newMediaBlock, newTextBlock]
           };
         });
       };
@@ -567,7 +602,12 @@ export function ChapterManagementPage() {
   };
 
   const handleInsertGuidedExercise = () => {
+    const { syncedBlocks } = syncActiveTextBlocks();
     setChapterForm(f => {
+      const baseBlocks = (f.editorBlocks || []).map((b) => {
+        const match = syncedBlocks.find((sb) => sb.id === b.id);
+        return match ? { ...b, content: match.content } : b;
+      });
       const newExerciseBlock = {
         id: 'media_' + Date.now(),
         type: 'exercise',
@@ -579,7 +619,7 @@ export function ChapterManagementPage() {
       const newTextBlock = { id: 'text_' + Date.now() + Math.random(), type: 'text', content: '<p><br></p>' };
       return {
         ...f,
-        editorBlocks: [...f.editorBlocks, newExerciseBlock, newTextBlock]
+        editorBlocks: [...baseBlocks, newExerciseBlock, newTextBlock]
       };
     });
   };
@@ -613,6 +653,18 @@ export function ChapterManagementPage() {
     }
 
     if (chapterStep < 3 && !isEditMode && !isAddSectionMode && !(editingChapter && chapterStep === 2)) {
+      if (chapterStep === 2) {
+        const { syncedBlocks } = syncActiveTextBlocks();
+        if (activeLanguageTab === 'English 🇬🇧') {
+          if (chapterForm.sectionName) handleTranslate(chapterForm.sectionName, 'sectionName');
+          if (chapterForm.sectionCaption) handleTranslate(chapterForm.sectionCaption, 'sectionCaption');
+          syncedBlocks.forEach((b) => {
+            if (b.type === 'text' && b.content) {
+              handleTranslate(b.content, `content_${b.id}`);
+            }
+          });
+        }
+      }
       setChapterStep((current) => current + 1);
       return;
     }
@@ -1237,8 +1289,9 @@ export function ChapterManagementPage() {
                 <div role="alert" style={{ padding: '12px', background: '#FFF5F5', color: '#9B2C2C', marginBottom: '16px' }}>
                   Some translations failed. Your existing text has been kept.
                   <button type="button" onClick={() => {
+                    const { syncedBlocks } = syncActiveTextBlocks();
                     const fields = { title: chapterForm.title, description: chapterForm.description, sectionName: chapterForm.sectionName, sectionCaption: chapterForm.sectionCaption };
-                    chapterForm.editorBlocks.forEach(b => { if (b.type === 'text') fields[`content_${b.id}`] = b.content; });
+                    syncedBlocks.forEach(b => { if (b.type === 'text') fields[`content_${b.id}`] = b.content; });
                     Object.keys(translationErrors).forEach(field => { if (translationErrors[field] && fields[field]) handleTranslate(fields[field], field); });
                   }}>Retry translation</button>
                 </div>
@@ -1249,6 +1302,7 @@ export function ChapterManagementPage() {
                     key={lang}
                     type="button"
                     onClick={() => {
+                      const { syncedBlocks } = syncActiveTextBlocks();
                       setActiveLanguageTab(lang);
                       if (lang !== 'English 🇬🇧') {
                         const targetLang = LANG_CODES[lang];
@@ -1256,11 +1310,13 @@ export function ChapterManagementPage() {
                         if (chapterForm.description && !translations.description?.[targetLang] && !isTranslating['description']) handleTranslate(chapterForm.description, 'description');
                         if (chapterForm.sectionName && !translations.sectionName?.[targetLang] && !isTranslating['sectionName']) handleTranslate(chapterForm.sectionName, 'sectionName');
                         if (chapterForm.sectionCaption && !translations.sectionCaption?.[targetLang] && !isTranslating['sectionCaption']) handleTranslate(chapterForm.sectionCaption, 'sectionCaption');
-                        if (chapterForm.editorBlocks) {
-                           chapterForm.editorBlocks.forEach(b => {
+                        if (syncedBlocks) {
+                           syncedBlocks.forEach(b => {
                              if (b.type === 'text') {
                                const field = `content_${b.id}`;
-                               if (b.content && !translations[field]?.[targetLang] && !isTranslating[field]) {
+                               const origBlock = chapterForm.editorBlocks.find(ob => ob.id === b.id);
+                               const contentChanged = origBlock && origBlock.content !== b.content;
+                               if (b.content && (contentChanged || !translations[field]?.[targetLang]) && !isTranslating[field]) {
                                  handleTranslate(b.content, field);
                                }
                              }
@@ -1482,8 +1538,20 @@ export function ChapterManagementPage() {
                               className="custom-rte-content"
                               contentEditable
                               suppressContentEditableWarning
+                              onInput={(e) => {
+                                const el = e.currentTarget;
+                                el.querySelectorAll('[style]').forEach((node) => {
+                                  node.style.color = '';
+                                  node.style.backgroundColor = '';
+                                  node.style.background = '';
+                                  node.style.caretColor = '';
+                                  if (!node.getAttribute('style')?.trim()) {
+                                    node.removeAttribute('style');
+                                  }
+                                });
+                              }}
                               onBlur={(e) => {
-                                const newHtml = e.target.innerHTML;
+                                const newHtml = sanitizeEditorHtml(e.target.innerHTML);
                                 if (isEnglish) {
                                   handleBlockChange(block.id, { content: newHtml });
                                   handleTranslate(newHtml, `content_${block.id}`);
