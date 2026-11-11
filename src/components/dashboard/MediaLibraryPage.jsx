@@ -543,7 +543,14 @@ function MediaLibraryPage() {
           
           <button type="button" className="master-add-btn" onClick={() => { 
             setEditingMediaId(null);
-            setMediaForm({ name: "", author: "", format: "Video", category: "Book", status: "Published", relatedChapters: [] });
+            setSelectedThumbnail(null);
+            setSelectedMediaFile(null);
+            setTranslations({});
+            setActiveLanguageTab("English 🇬🇧");
+            setIsRelatedChapterOpen(false);
+            if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
+            if (mediaInputRef.current) mediaInputRef.current.value = "";
+            setMediaForm({ name: "", author: "", format: "Video", category: "Book", status: "Published", relatedChapters: [], textContent: "", shortQuote: "", whyItMatters: "", corpusConnection: "", criticalNote: "", integrationQuestion: "" });
             setIsAddModalOpen(true); 
             setAddStep(1); 
           }}>
@@ -873,11 +880,11 @@ function MediaLibraryPage() {
         </div>
       )}
       {isAddModalOpen && (
-        <div className="media-drawer-overlay" onClick={() => { setIsAddModalOpen(false); setAddStep(1); }}>
+        <div className="media-drawer-overlay" onClick={() => { setIsAddModalOpen(false); setAddStep(1); setEditingMediaId(null); setSelectedThumbnail(null); setSelectedMediaFile(null); setIsRelatedChapterOpen(false); }}>
           <aside className="media-drawer" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="media-drawer-header">
               <h2>{editingMediaId ? "Edit Content" : "Add Content"}</h2>
-              <button type="button" className="chapter-drawer-close" aria-label="Close" onClick={() => { setIsAddModalOpen(false); setAddStep(1); }}>
+              <button type="button" className="chapter-drawer-close" aria-label="Close" onClick={() => { setIsAddModalOpen(false); setAddStep(1); setEditingMediaId(null); setSelectedThumbnail(null); setSelectedMediaFile(null); setIsRelatedChapterOpen(false); }}>
                 <CloseIcon />
               </button>
             </div>
@@ -1282,7 +1289,7 @@ function MediaLibraryPage() {
 
             {addStep === 1 ? (
               <div className="media-drawer-footer">
-                <button type="button" className="chapter-secondary-btn" onClick={() => { setIsAddModalOpen(false); setAddStep(1); }}>Cancel</button>
+                <button type="button" className="chapter-secondary-btn" onClick={() => { setIsAddModalOpen(false); setAddStep(1); setEditingMediaId(null); setSelectedThumbnail(null); setSelectedMediaFile(null); setIsRelatedChapterOpen(false); }}>Cancel</button>
                 <button type="button" className="chapter-primary-btn" style={{ gap: 8, opacity: !canContinueStep1 ? 0.5 : 1, cursor: !canContinueStep1 ? 'not-allowed' : 'pointer' }} disabled={!canContinueStep1} onClick={() => setAddStep(2)}>
                   Continue 
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
