@@ -167,7 +167,10 @@ export function useTranslations(initial = {}) {
     if (stripHtmlText(val) === "" && stripHtmlText(prevVal) === "") {
       return;
     }
-    if (val === prevVal) {
+    if (
+      val === prevVal ||
+      sanitizeEditorHtml(String(val || '')).trim() === sanitizeEditorHtml(String(prevVal || '')).trim()
+    ) {
       return;
     }
     manualEdits.current[`${field}:${lang}`] = true;

@@ -545,7 +545,9 @@ export function ChapterManagementPage() {
         }
         return { ...b, content: liveHtml };
       } else {
-        setVal(`content_${b.id}`, activeLanguageTab, liveHtml);
+        if (domNode.dataset.userEdited === 'true') {
+          setVal(`content_${b.id}`, activeLanguageTab, liveHtml);
+        }
         return b;
       }
     });
@@ -640,6 +642,9 @@ export function ChapterManagementPage() {
 
   const handleFormat = (command, value = null) => {
     document.execCommand(command, false, value);
+    if ( document.activeElement && document.activeElement.classList?.contains('custom-rte-content') ) {
+      document.activeElement.dataset.userEdited = 'true';
+    }
   };
 
   const handleContinue = async (submitStatus) => {
@@ -1540,6 +1545,7 @@ export function ChapterManagementPage() {
                               suppressContentEditableWarning
                               onInput={(e) => {
                                 const el = e.currentTarget;
+                                el.dataset.userEdited = 'true';
                                 el.querySelectorAll('[style]').forEach((node) => {
                                   node.style.color = '';
                                   node.style.backgroundColor = '';
@@ -1555,7 +1561,7 @@ export function ChapterManagementPage() {
                                 if (isEnglish) {
                                   handleBlockChange(block.id, { content: newHtml });
                                   handleTranslate(newHtml, `content_${block.id}`);
-                                } else {
+                                } else if (e.currentTarget.dataset.userEdited === 'true') {
                                   setVal(`content_${block.id}`, activeLanguageTab, newHtml);
                                 }
                               }}
