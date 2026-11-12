@@ -35,25 +35,27 @@ export async function autoTranslate(text, source = 'en') {
   );
 
   let lastError = null;
-  for (const endpoint of endpoints) {
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, source, targets: ['fr', 'id', 'ru', 'es'] })
-      });
-      const result = await response.json();
-      if (!response.ok || Object.keys(result.errors || {}).length) {
-        const error = new Error(result.message || `HTTP error ${response.status}`);
-        error.translations = result.translations || {};
-        throw error;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, source, targets: ['fr', 'id', 'ru', 'es'] })
+        });
+        const result = await response.json();
+        if (!response.ok || Object.keys(result.errors || {}).length) {
+          const error = new Error(result.message || `HTTP error ${response.status}`);
+          error.translations = result.translations || {};
+          throw error;
+        }
+        return result.translations || {};
+      } catch (error) {
+        lastError = error;
       }
-      return result.translations || {};
-    } catch (error) {
-      lastError = error;
-      if (error.translations && Object.keys(error.translations).length > 0) {
-        break;
-      }
+    }
+    if (attempt === 0) {
+      await new Promise((r) => setTimeout(r, 350));
     }
   }
   console.error("Auto-translate failed:", lastError);
@@ -193,6 +195,7 @@ export function useTranslations(initial = {}) {
       return;
     }
     manualEdits.current[`${field}:${lang}`] = true;
+    setTranslationErrors(prev => (prev[field] ? { ...prev, [field]: '' } : prev));
     updateTranslations(t => {
       const next = {
         ...t,

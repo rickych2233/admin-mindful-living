@@ -1301,8 +1301,19 @@ export function PracticeManagementPage() {
       </section>
 
       {isDrawerOpen && (
-        <div className="chapter-drawer-overlay" onClick={closePracticeDrawer}>
-          <aside className="chapter-drawer practice-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+        <div
+          className="chapter-drawer-overlay"
+          onMouseDown={(e) => {
+            e.currentTarget.dataset.mouseDownOnOverlay = e.target === e.currentTarget ? "true" : "false";
+          }}
+        >
+          <aside
+            className="chapter-drawer practice-drawer"
+            role="dialog"
+            aria-modal="true"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="chapter-drawer-header">
               <div>
                 <h2>{isAddingSession ? "Add Session" : (isEditMode && editingSessionIndex !== null) ? "Edit Session" : isEditMode ? "Edit Practice" : "Add Practice"}</h2>

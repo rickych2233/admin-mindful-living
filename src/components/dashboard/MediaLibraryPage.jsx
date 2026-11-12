@@ -892,8 +892,19 @@ function MediaLibraryPage() {
         </div>
       )}
       {isAddModalOpen && (
-        <div className="media-drawer-overlay" onClick={() => { setIsAddModalOpen(false); setAddStep(1); setEditingMediaId(null); setSelectedThumbnail(null); setSelectedMediaFile(null); setIsRelatedChapterOpen(false); }}>
-          <aside className="media-drawer" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="media-drawer-overlay"
+          onMouseDown={(e) => {
+            e.currentTarget.dataset.mouseDownOnOverlay = e.target === e.currentTarget ? "true" : "false";
+          }}
+        >
+          <aside
+            className="media-drawer"
+            role="dialog"
+            aria-modal="true"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="media-drawer-header">
               <h2>{editingMediaId ? "Edit Content" : "Add Content"}</h2>
               <button type="button" className="chapter-drawer-close" aria-label="Close" onClick={() => { setIsAddModalOpen(false); setAddStep(1); setEditingMediaId(null); setSelectedThumbnail(null); setSelectedMediaFile(null); setIsRelatedChapterOpen(false); }}>

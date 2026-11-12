@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useChaptersCollection, createChapter, updateChapter, deleteChapter, toggleChapterStatus, reorderChapters } from "../utils/chapterUtils";
 import { fetchSectionsByChapter, createSection, deleteSection, toggleSectionStatus, normalizeSection, reorderSections } from "../utils/sectionUtils";
 import { useTranslations, LANG_CODES, sanitizeEditorHtml, stripHtmlText } from "../utils/translateUtils";
@@ -185,6 +185,25 @@ export function ChapterManagementPage() {
   const [draggedSectionData, setDraggedSectionData] = useState(null);
   const [dragOverSectionData, setDragOverSectionData] = useState(null);
   const [deleteModal, setDeleteModal] = useState({ show: false, type: null, targetId: null, chapterId: null });
+  const lastCursorRef = useRef({ blockId: null, range: null });
+  const draggedEditorMediaIdRef = useRef(null);
+
+  const saveEditorCursor = useCallback((blockId) => {
+    try {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      const range = sel.getRangeAt(0);
+      const domNode = blockId ? document.getElementById(blockId) : range.commonAncestorContainer?.parentElement?.closest?.('.custom-rte-content');
+      if (domNode && domNode.contains(range.startContainer)) {
+        lastCursorRef.current = {
+          blockId: domNode.id,
+          range: range.cloneRange(),
+        };
+      }
+    } catch (e) {
+      // Ignore selection errors
+    }
+  }, []);
 
   const handleDragStart = (e, index) => {
     setDraggedChapterIndex(index);
@@ -592,6 +611,271 @@ export function ChapterManagementPage() {
     return { syncedBlocks, hasEnglishChanges };
   };
 
+  const trimEdgeEmptyParagraphs = (htmlStr) => {
+    if (!htmlStr || !stripHtmlText(htmlStr)) return "";
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlStr, "text/html");
+    const nodes = Array.from(doc.body.childNodes);
+    const isEmptyNode = (n) => !stripHtmlText(n.nodeType === 1 ? n.outerHTML : n.textContent);
+    while (nodes.length > 0 && isEmptyNode(nodes[0])) {
+      nodes.shift();
+    }
+    while (nodes.length > 0 && isEmptyNode(nodes[nodes.length - 1])) {
+      nodes.pop();
+    }
+    return nodes
+      .map((n) => {
+        if (n.nodeType === 1) return n.outerHTML;
+        if (n.nodeType === 3) {
+          const d = document.createElement("div");
+          d.textContent = n.textContent;
+          return `<p>${d.innerHTML}</p>`;
+        }
+        return "";
+      })
+      .join("");
+  };
+
+  const splitHtmlIntoParagraphs = (htmlStr) => {
+    if (!htmlStr || !stripHtmlText(htmlStr)) return [];
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlStr, "text/html");
+    const paras = [];
+    Array.from(doc.body.childNodes).forEach((n) => {
+      if (n.nodeType === 1) {
+        if (stripHtmlText(n.outerHTML)) paras.push(n.outerHTML);
+      } else if (n.nodeType === 3 && stripHtmlText(n.textContent)) {
+        const d = document.createElement("div");
+        d.textContent = n.textContent;
+        paras.push(`<p>${d.innerHTML}</p>`);
+      }
+    });
+    return paras;
+  };
+
+  const insertMediaBlockAtCursor = (newMediaBlock, syncedBlocks, explicitTarget = null) => {
+    const cursorInfo = explicitTarget || lastCursorRef.current || {};
+    const blocksToTranslate = [];
+
+    setChapterForm((f) => {
+      const baseBlocks = (f.editorBlocks || []).map((b) => {
+        const match = (syncedBlocks || []).find((sb) => sb.id === b.id);
+        return match ? { ...b, content: match.content } : b;
+      });
+
+      let targetIdx = -1;
+      if (cursorInfo.blockId) {
+        targetIdx = baseBlocks.findIndex((b) => b.type === "text" && b.id === cursorInfo.blockId);
+      }
+      if (targetIdx === -1) {
+        for (let i = baseBlocks.length - 1; i >= 0; i--) {
+          if (baseBlocks[i].type === "text") {
+            targetIdx = i;
+            break;
+          }
+        }
+      }
+
+      if (targetIdx === -1) {
+        const topText = {
+          id: "text_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+          type: "text",
+          content: "<p><br></p>",
+        };
+        const bottomText = {
+          id: "text_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8) + "_b",
+          type: "text",
+          content: "<p><br></p>",
+        };
+        return {
+          ...f,
+          editorBlocks: [...baseBlocks, topText, newMediaBlock, bottomText],
+        };
+      }
+
+      const targetBlock = baseBlocks[targetIdx];
+      const domNode = document.getElementById(targetBlock.id);
+      let topHtml = targetBlock.content || "<p><br></p>";
+      let bottomHtml = "<p><br></p>";
+
+      if (domNode && cursorInfo.range && domNode.contains(cursorInfo.range.startContainer)) {
+        try {
+          const beforeRange = document.createRange();
+          beforeRange.selectNodeContents(domNode);
+          beforeRange.setEnd(cursorInfo.range.startContainer, cursorInfo.range.startOffset);
+
+          const afterRange = document.createRange();
+          afterRange.selectNodeContents(domNode);
+          afterRange.setStart(cursorInfo.range.endContainer, cursorInfo.range.endOffset);
+
+          const beforeContainer = document.createElement("div");
+          beforeContainer.appendChild(beforeRange.cloneContents());
+          const afterContainer = document.createElement("div");
+          afterContainer.appendChild(afterRange.cloneContents());
+
+          const cleanedBefore = trimEdgeEmptyParagraphs(sanitizeEditorHtml(beforeContainer.innerHTML));
+          const cleanedAfter = trimEdgeEmptyParagraphs(sanitizeEditorHtml(afterContainer.innerHTML));
+
+          topHtml = cleanedBefore || "<p><br></p>";
+          bottomHtml = cleanedAfter || "<p><br></p>";
+        } catch (err) {
+          topHtml = targetBlock.content || "<p><br></p>";
+          bottomHtml = "<p><br></p>";
+        }
+      }
+
+      const updatedTopBlock = {
+        ...targetBlock,
+        content: topHtml,
+      };
+      const newBottomBlock = {
+        id: "text_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+        type: "text",
+        content: bottomHtml,
+      };
+
+      const nextBlocks = [...baseBlocks];
+      nextBlocks.splice(targetIdx, 1, updatedTopBlock, newMediaBlock, newBottomBlock);
+
+      nextBlocks.forEach((b) => {
+        if (b.type === "text") {
+          blocksToTranslate.push({ id: b.id, content: b.content });
+        }
+      });
+
+      return {
+        ...f,
+        editorBlocks: nextBlocks,
+      };
+    });
+
+    lastCursorRef.current = { blockId: null, range: null };
+
+    setTimeout(() => {
+      if (activeLanguageTab === "English 🇬🇧") {
+        blocksToTranslate.forEach((b) => {
+          handleTranslate(b.content, `content_${b.id}`);
+        });
+      }
+    }, 0);
+  };
+
+  const moveMediaBlock = (mediaId, direction) => {
+    const { syncedBlocks } = syncActiveTextBlocks();
+    const blocksToTranslate = [];
+
+    setChapterForm((f) => {
+      const nextBlocks = (f.editorBlocks || []).map((b) => {
+        const match = (syncedBlocks || []).find((sb) => sb.id === b.id);
+        return match ? { ...b, content: match.content } : { ...b };
+      });
+
+      const idx = nextBlocks.findIndex((b) => b.id === mediaId);
+      if (idx === -1) return f;
+
+      const prevBlock = idx > 0 && nextBlocks[idx - 1]?.type === "text" ? nextBlocks[idx - 1] : null;
+      const nextBlock = idx < nextBlocks.length - 1 && nextBlocks[idx + 1]?.type === "text" ? nextBlocks[idx + 1] : null;
+
+      if (direction === "up" && prevBlock && nextBlock) {
+        const prevParas = splitHtmlIntoParagraphs(prevBlock.content);
+        const nextParas = splitHtmlIntoParagraphs(nextBlock.content);
+        if (prevParas.length > 0) {
+          const movedPara = prevParas.pop();
+          nextParas.unshift(movedPara);
+          prevBlock.content = prevParas.length > 0 ? prevParas.join("") : "<p><br></p>";
+          nextBlock.content = nextParas.join("");
+          blocksToTranslate.push({ id: prevBlock.id, content: prevBlock.content });
+          blocksToTranslate.push({ id: nextBlock.id, content: nextBlock.content });
+        } else if (idx >= 2 && nextBlocks[idx - 2]?.type !== "text") {
+          const temp = nextBlocks[idx - 2];
+          nextBlocks[idx - 2] = nextBlocks[idx];
+          nextBlocks[idx] = temp;
+        }
+      } else if (direction === "down" && prevBlock && nextBlock) {
+        const prevParas = splitHtmlIntoParagraphs(prevBlock.content);
+        const nextParas = splitHtmlIntoParagraphs(nextBlock.content);
+        if (nextParas.length > 0) {
+          const movedPara = nextParas.shift();
+          prevParas.push(movedPara);
+          prevBlock.content = prevParas.join("");
+          nextBlock.content = nextParas.length > 0 ? nextParas.join("") : "<p><br></p>";
+          blocksToTranslate.push({ id: prevBlock.id, content: prevBlock.content });
+          blocksToTranslate.push({ id: nextBlock.id, content: nextBlock.content });
+        } else if (idx + 2 < nextBlocks.length && nextBlocks[idx + 2]?.type !== "text") {
+          const temp = nextBlocks[idx + 2];
+          nextBlocks[idx + 2] = nextBlocks[idx];
+          nextBlocks[idx] = temp;
+        }
+      }
+
+      return {
+        ...f,
+        editorBlocks: nextBlocks,
+      };
+    });
+
+    setTimeout(() => {
+      if (activeLanguageTab === "English 🇬🇧") {
+        blocksToTranslate.forEach((b) => {
+          handleTranslate(b.content, `content_${b.id}`);
+        });
+      }
+    }, 0);
+  };
+
+  const handleDropMediaOnTextBlock = (e, targetBlockId) => {
+    const mediaId = draggedEditorMediaIdRef.current;
+    if (!mediaId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    draggedEditorMediaIdRef.current = null;
+
+    let dropRange = null;
+    if (document.caretRangeFromPoint) {
+      dropRange = document.caretRangeFromPoint(e.clientX, e.clientY);
+    } else if (document.caretPositionFromPoint) {
+      const pos = document.caretPositionFromPoint(e.clientX, e.clientY);
+      if (pos) {
+        dropRange = document.createRange();
+        dropRange.setStart(pos.offsetNode, pos.offset);
+        dropRange.collapse(true);
+      }
+    }
+
+    const { syncedBlocks } = syncActiveTextBlocks();
+    const baseBlocks = (chapterForm.editorBlocks || []).map((b) => {
+      const match = (syncedBlocks || []).find((sb) => sb.id === b.id);
+      return match ? { ...b, content: match.content } : { ...b };
+    });
+
+    const mediaIdx = baseBlocks.findIndex((b) => b.id === mediaId);
+    if (mediaIdx === -1) return;
+    const mediaBlock = baseBlocks[mediaIdx];
+
+    // Remove mediaBlock from old position and merge adjacent text blocks if needed
+    const remaining = [...baseBlocks];
+    remaining.splice(mediaIdx, 1);
+    if (mediaIdx > 0 && mediaIdx - 1 < remaining.length && remaining[mediaIdx - 1]?.type === "text" && remaining[mediaIdx]?.type === "text") {
+      const prevB = remaining[mediaIdx - 1];
+      const nextB = remaining[mediaIdx];
+      const prevHas = Boolean(stripHtmlText(prevB.content));
+      const nextHas = Boolean(stripHtmlText(nextB.content));
+      if (!nextHas) {
+        remaining.splice(mediaIdx, 1);
+      } else if (!prevHas) {
+        remaining.splice(mediaIdx - 1, 1);
+      } else {
+        prevB.content = `${prevB.content}${nextB.content}`;
+        remaining.splice(mediaIdx, 1);
+      }
+    }
+
+    setChapterForm((f) => ({ ...f, editorBlocks: remaining }));
+    setTimeout(() => {
+      insertMediaBlockAtCursor(mediaBlock, remaining, { blockId: targetBlockId, range: dropRange });
+    }, 0);
+  };
+
   const handleFileChange = (e, type) => {
     const file = e.target.files[0];
     if (file) {
@@ -601,40 +885,19 @@ export function ChapterManagementPage() {
         return;
       }
       const { syncedBlocks } = syncActiveTextBlocks();
-      if (activeLanguageTab === 'English 🇬🇧') {
-        syncedBlocks.forEach((b) => {
-          if (b.type === 'text' && stripHtmlText(b.content)) {
-            handleTranslate(b.content, `content_${b.id}`);
-          }
-        });
-      }
       const appendMediaBlock = (dataUrl) => {
-        setChapterForm(f => {
-          const baseBlocks = (f.editorBlocks || []).map((b) => {
-            const match = syncedBlocks.find((sb) => sb.id === b.id);
-            return match ? { ...b, content: match.content } : b;
-          });
-          const newMediaBlock = {
-            id: 'media_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-            type,
-            name: file.name,
-            url: dataUrl,
-            file,
-            isRequired: true,
-            title: "",
-            duration: "2 Minutes",
-            instructions: ""
-          };
-          const newTextBlock = {
-            id: 'text_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-            type: 'text',
-            content: '<p><br></p>'
-          };
-          return {
-            ...f,
-            editorBlocks: [...baseBlocks, newMediaBlock, newTextBlock]
-          };
-        });
+        const newMediaBlock = {
+          id: 'media_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+          type,
+          name: file.name,
+          url: dataUrl,
+          file,
+          isRequired: true,
+          title: "",
+          duration: "2 Minutes",
+          instructions: ""
+        };
+        insertMediaBlockAtCursor(newMediaBlock, syncedBlocks);
       };
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -673,36 +936,15 @@ export function ChapterManagementPage() {
 
   const handleInsertGuidedExercise = () => {
     const { syncedBlocks } = syncActiveTextBlocks();
-    if (activeLanguageTab === 'English 🇬🇧') {
-      syncedBlocks.forEach((b) => {
-        if (b.type === 'text' && stripHtmlText(b.content)) {
-          handleTranslate(b.content, `content_${b.id}`);
-        }
-      });
-    }
-    setChapterForm(f => {
-      const baseBlocks = (f.editorBlocks || []).map((b) => {
-        const match = syncedBlocks.find((sb) => sb.id === b.id);
-        return match ? { ...b, content: match.content } : b;
-      });
-      const newExerciseBlock = {
-        id: 'media_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-        type: 'exercise',
-        isRequired: true,
-        title: "",
-        duration: "2 Minutes",
-        instructions: ""
-      };
-      const newTextBlock = {
-        id: 'text_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-        type: 'text',
-        content: '<p><br></p>'
-      };
-      return {
-        ...f,
-        editorBlocks: [...baseBlocks, newExerciseBlock, newTextBlock]
-      };
-    });
+    const newExerciseBlock = {
+      id: 'media_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      type: 'exercise',
+      isRequired: true,
+      title: "",
+      duration: "2 Minutes",
+      instructions: ""
+    };
+    insertMediaBlockAtCursor(newExerciseBlock, syncedBlocks);
   };
 
   const removeBlock = (id) => {
@@ -794,13 +1036,7 @@ export function ChapterManagementPage() {
       }
     });
     if (pendingTranslations.length > 0) {
-      await Promise.all(pendingTranslations);
-    }
-
-    if (Object.values(isTranslating).some(Boolean) || Object.values(translationErrors).some(Boolean)) {
-      setIsSubmitting(false);
-      setSubmitError('Please wait for translations to finish, or retry failed translations before saving.');
-      return;
+      await Promise.allSettled(pendingTranslations);
     }
 
     const serializeBlocks = (blocks) => {
@@ -1374,8 +1610,19 @@ export function ChapterManagementPage() {
       </section>
 
       {isDrawerOpen && (
-        <div className="chapter-drawer-overlay" onClick={closeChapterDrawer}>
-          <aside className="chapter-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+        <div
+          className="chapter-drawer-overlay"
+          onMouseDown={(e) => {
+            e.currentTarget.dataset.mouseDownOnOverlay = e.target === e.currentTarget ? "true" : "false";
+          }}
+        >
+          <aside
+            className="chapter-drawer"
+            role="dialog"
+            aria-modal="true"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="chapter-drawer-header">
               <div>
                 <h2>{isAddSectionMode ? "Add Section" : (editingChapter && chapterStep === 2) ? "Edit Section" : isEditMode ? "Edit Chapter" : "Add Chapter"}</h2>
@@ -1625,33 +1872,34 @@ export function ChapterManagementPage() {
                           <label style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4A5568', padding: '6px' }} title="Insert Link" onMouseDown={(e) => { e.preventDefault(); const url = prompt('Enter URL:'); if (url) handleFormat('createLink', url); }}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
                           </label>
-                          <label style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4A5568', padding: '6px' }} title="Insert Image">
+                          <label style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4A5568', padding: '6px' }} title="Insert Image (at cursor position)" onMouseDown={() => saveEditorCursor()}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
                             <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'image')} />
                           </label>
-                          <label style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4A5568', padding: '6px' }} title="Insert Video">
+                          <label style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4A5568', padding: '6px' }} title="Insert Video (at cursor position)" onMouseDown={() => saveEditorCursor()}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" /><line x1="7" y1="2" x2="7" y2="22" /><line x1="17" y1="2" x2="17" y2="22" /><line x1="2" y1="12" x2="22" y2="12" /><line x1="2" y1="7" x2="7" y2="7" /><line x1="2" y1="17" x2="7" y2="17" /><line x1="17" y1="17" x2="22" y2="17" /><line x1="17" y1="7" x2="22" y2="7" /></svg>
                             <input type="file" accept="video/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'video')} />
                           </label>
-                          <label style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4A5568', padding: '6px' }} title="Insert Audio/Song">
+                          <label style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4A5568', padding: '6px' }} title="Insert Audio/Song (at cursor position)" onMouseDown={() => saveEditorCursor()}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
                             <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'audio')} />
                           </label>
-                          <label style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4A5568', padding: '6px' }} title="Insert Document">
+                          <label style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4A5568', padding: '6px' }} title="Insert Document (at cursor position)" onMouseDown={() => saveEditorCursor()}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
                             <input type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'document')} />
                           </label>
-                          <button type="button" onClick={handleInsertGuidedExercise} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4A5568', padding: '6px' }} title="Insert Guided Exercise">
+                          <button type="button" onMouseDown={() => saveEditorCursor()} onClick={handleInsertGuidedExercise} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4A5568', padding: '6px' }} title="Insert Guided Exercise (at cursor position)">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
                           </button>
                         </div>
                       </div>
 
                       {/* Blocks Rendering */}
-                      {chapterForm.editorBlocks.map((block) => {
+                      {chapterForm.editorBlocks.map((block, blockIdx) => {
                         if (block.type === 'text') {
                           const isEnglish = activeLanguageTab === 'English 🇬🇧';
                           const textContent = isEnglish ? block.content : getVal(block.content, `content_${block.id}`, activeLanguageTab);
+                          const hasMultipleBlocks = chapterForm.editorBlocks.length > 1;
                           
                           return (
                             <div
@@ -1660,9 +1908,22 @@ export function ChapterManagementPage() {
                               className="custom-rte-content"
                               contentEditable
                               suppressContentEditableWarning
+                              data-placeholder={blockIdx === 0 ? "Write section text here..." : "Write text after media here..."}
+                              style={hasMultipleBlocks ? { minHeight: '64px', borderBottom: '1px dashed #E2E8F0' } : undefined}
+                              onFocus={() => saveEditorCursor(block.id)}
+                              onKeyUp={() => saveEditorCursor(block.id)}
+                              onMouseUp={() => saveEditorCursor(block.id)}
+                              onDragOver={(e) => {
+                                if (draggedEditorMediaIdRef.current) {
+                                  e.preventDefault();
+                                  e.dataTransfer.dropEffect = 'move';
+                                }
+                              }}
+                              onDrop={(e) => handleDropMediaOnTextBlock(e, block.id)}
                               onInput={(e) => {
                                 const el = e.currentTarget;
                                 el.dataset.userEdited = 'true';
+                                saveEditorCursor(block.id);
                                 el.querySelectorAll('[style]').forEach((node) => {
                                   node.style.color = '';
                                   node.style.backgroundColor = '';
@@ -1674,6 +1935,7 @@ export function ChapterManagementPage() {
                                 });
                               }}
                               onBlur={(e) => {
+                                saveEditorCursor(block.id);
                                 const newHtml = sanitizeEditorHtml(e.target.innerHTML);
                                 if (isEnglish) {
                                   handleBlockChange(block.id, { content: newHtml });
@@ -1689,7 +1951,20 @@ export function ChapterManagementPage() {
 
                         // Media Blocks
                         return (
-                          <div key={block.id} className="chapter-editor-block">
+                          <div
+                            key={block.id}
+                            className="chapter-editor-block"
+                            draggable={block.type !== 'exercise'}
+                            onDragStart={(e) => {
+                              draggedEditorMediaIdRef.current = block.id;
+                              e.dataTransfer.effectAllowed = 'move';
+                              e.dataTransfer.setData('text/plain', block.id);
+                            }}
+                            onDragEnd={() => {
+                              draggedEditorMediaIdRef.current = null;
+                            }}
+                            style={{ cursor: block.type !== 'exercise' ? 'grab' : 'default' }}
+                          >
                             {block.type === 'image' && (
                               <div className="chapter-editor-media chapter-editor-image">
                                 <img src={block.url} alt="Preview" />
@@ -1735,7 +2010,7 @@ export function ChapterManagementPage() {
                               </div>
                             )}
 
-                            {/* Toggle and Trash for Media Blocks */}
+                            {/* Toggle, Move Up/Down, and Trash for Media Blocks */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
                               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#718096', cursor: 'pointer' }}>
                                 <div style={{ width: '36px', height: '20px', background: block.isRequired ? '#5A4B81' : '#CBD5E0', borderRadius: '20px', position: 'relative', transition: 'background 0.2s', display: 'flex', alignItems: 'center', padding: '2px' }}>
@@ -1749,14 +2024,32 @@ export function ChapterManagementPage() {
                                 />
                                 Require Completion
                               </label>
-                              <button
-                                type="button"
-                                onClick={() => removeBlock(block.id)}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E53E3E' }}
-                                title="Remove Block"
-                              >
-                                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
-                              </button>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => moveMediaBlock(block.id, 'up')}
+                                  style={{ background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', color: '#4A5568', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  title="Move media up above previous paragraph"
+                                >
+                                  ↑ Up
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveMediaBlock(block.id, 'down')}
+                                  style={{ background: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', color: '#4A5568', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  title="Move media down below next paragraph"
+                                >
+                                  ↓ Down
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeBlock(block.id)}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E53E3E' }}
+                                  title="Remove Block"
+                                >
+                                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+                                </button>
+                              </div>
                             </div>
                           </div>
                         );
