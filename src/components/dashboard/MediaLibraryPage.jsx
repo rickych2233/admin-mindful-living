@@ -1339,7 +1339,7 @@ function MediaLibraryPage() {
                       btn.disabled = true;
                       btn.innerHTML = "Saving...";
                       try {
-                        await fetch(editingMediaId ? `/api/media/${editingMediaId}` : "/api/media", {
+                        const res = await fetch(editingMediaId ? `/api/media/${editingMediaId}` : "/api/media", {
                           method: editingMediaId ? "PUT" : "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
@@ -1355,6 +1355,7 @@ function MediaLibraryPage() {
                             contentFile: selectedMediaFile,
                           }),
                         });
+                        if (!res.ok) throw new Error("Failed to save draft");
                         if (typeof fetchMediaFiles === "function") {
                           await fetchMediaFiles();
                         }
@@ -1364,7 +1365,7 @@ function MediaLibraryPage() {
                         setSelectedThumbnail(null);
                         setSelectedMediaFile(null);
                         setIsRelatedChapterOpen(false);
-                        setMediaForm({ name: "", author: "", format: "Video", category: "Book", status: "Published", relatedChapters: [], textContent: "" });
+                        setMediaForm({ name: "", author: "", format: "Video", category: "Book", status: "Published", relatedChapters: [], textContent: "", shortQuote: "", whyItMatters: "", corpusConnection: "", criticalNote: "", integrationQuestion: "" });
                         showToast("Draft Saved", "Content has been saved as a draft.");
                       } catch (err) {
                         console.error(err);
@@ -1382,19 +1383,22 @@ function MediaLibraryPage() {
                     btn.disabled = true;
                     btn.innerHTML = "Saving...";
                     try {
-                      await fetch(editingMediaId ? `/api/media/${editingMediaId}` : "/api/media", {
+                      const res = await fetch(editingMediaId ? `/api/media/${editingMediaId}` : "/api/media", {
                         method: editingMediaId ? "PUT" : "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ ...mediaForm, shortQuote: merge(mediaForm.shortQuote, "shortQuote"), whyItMatters: merge(mediaForm.whyItMatters, "whyItMatters"), corpusConnection: merge(mediaForm.corpusConnection, "corpusConnection"), criticalNote: merge(mediaForm.criticalNote, "criticalNote"), integrationQuestion: merge(mediaForm.integrationQuestion, "integrationQuestion"), textContent: merge(mediaForm.textContent, "textContent"), thumbnail: typeof selectedThumbnail === 'string' ? selectedThumbnail : (selectedThumbnail?.preview || null), contentFile: selectedMediaFile }),
                       });
+                      if (!res.ok) throw new Error("Failed to save content");
                       if (typeof fetchMediaFiles === "function") {
                         await fetchMediaFiles();
                       }
                       setIsAddModalOpen(false);
                       setAddStep(1);
+                      setEditingMediaId(null);
                       setSelectedThumbnail(null);
                       setSelectedMediaFile(null);
-                      setMediaForm({ name: "", author: "", format: "Video", category: "Book", status: "Published", relatedChapters: [] });
+                      setIsRelatedChapterOpen(false);
+                      setMediaForm({ name: "", author: "", format: "Video", category: "Book", status: "Published", relatedChapters: [], textContent: "", shortQuote: "", whyItMatters: "", corpusConnection: "", criticalNote: "", integrationQuestion: "" });
                       showToast(editingMediaId ? "Content Updated" : "New Content Added", editingMediaId ? "You have successfully updated the content." : "You have successfully added new content in media library.");
                     } catch(err) { 
                       console.error(err); 
