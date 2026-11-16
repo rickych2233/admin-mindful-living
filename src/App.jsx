@@ -1,11 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import LoginCard from "./components/LoginCard";
 import DashboardPage from "./components/dashboard/DashboardPage";
-
-const ALLOWED_EMAIL = "adrianhalim@email.com";
-const ALLOWED_PASSWORD = "1234567";
-const AUTH_STORAGE_KEY = "mindful_living_auth";
+import { login, logout, tryRestoreSession } from "./auth";
 
 function ProtectedRoute({ isAuthenticated, children }) {
   if (!isAuthenticated) {
@@ -17,37 +14,35 @@ function ProtectedRoute({ isAuthenticated, children }) {
 
 function App() {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem(AUTH_STORAGE_KEY) === "true");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const handleLoginSubmit = ({ email, password }) => {
+  // Reload: silently restore the session from the httpOnly refresh cookie.
+  useEffect(() => {
+    tryRestoreSession().then(setIsAuthenticated);
+  }, []);
+
+  const handleLoginSubmit = async ({ email, password }) => {
     if (isSigningIn) return;
-
-    const normalizedEmail = email.trim().toLowerCase();
-
-    if (normalizedEmail === ALLOWED_EMAIL && password === ALLOWED_PASSWORD) {
-      setErrorMessage("");
-      setIsSigningIn(true);
-      window.setTimeout(() => {
-        localStorage.setItem(AUTH_STORAGE_KEY, "true");
-        setIsAuthenticated(true);
-        setIsSigningIn(false);
-        navigate("/dashboard", { replace: true });
-      }, 1200);
-      return;
+    setIsSigningIn(true);
+    setErrorMessage("");
+    try {
+      await login(email.trim(), password);
+      setIsAuthenticated(true);
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      setErrorMessage(err.message || "Email atau password salah.");
+    } finally {
+      setIsSigningIn(false);
     }
-
-    setIsSigningIn(false);
-    setErrorMessage("Email atau password salah.");
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+  const handleLogout = async () => {
+    await logout();
     setIsAuthenticated(false);
-    setIsSigningIn(false);
     setErrorMessage("");
-    navigate("/login", { replace: true });
+    navigate("/login");
   };
 
   return (
