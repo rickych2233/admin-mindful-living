@@ -24,8 +24,9 @@ export const sanitizeEditorHtml = (html) => {
   });
 };
 
-export async function autoTranslate(text, source = 'en') {
+export async function autoTranslate(text, source = 'en', targets = ['fr', 'id', 'ru', 'es']) {
   if (!text || !stripHtmlText(text)) return {};
+  const normalizedTargets = Array.isArray(targets) && targets.length ? targets : ['fr', 'id', 'ru', 'es'];
   const endpoints = Array.from(
     new Set(
       USE_LOCAL_API
@@ -41,7 +42,7 @@ export async function autoTranslate(text, source = 'en') {
         const response = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, source, targets: ['fr', 'id', 'ru', 'es'] })
+          body: JSON.stringify({ text, source, targets: normalizedTargets })
         });
         const result = await response.json();
         if (!response.ok || Object.keys(result.errors || {}).length) {
@@ -124,9 +125,10 @@ export function useTranslations(initial = {}) {
     }
 
     const existingFieldTrans = translationsRef.current[field] || {};
-    const hasAllTargets = TARGET_LANGS.every(
-      (lang) => Boolean(existingFieldTrans[lang] && stripHtmlText(existingFieldTrans[lang]))
+    const missingTargets = TARGET_LANGS.filter(
+      (lang) => !existingFieldTrans[lang] || !stripHtmlText(existingFieldTrans[lang])
     );
+    const hasAllTargets = missingTargets.length === 0;
 
     if (inFlightSource.current[field] === cleanText) {
       return;
@@ -134,6 +136,11 @@ export function useTranslations(initial = {}) {
     if (lastTranslatedSource.current[field] === cleanText && hasAllTargets && !translationErrors[field]) {
       return;
     }
+
+    const targetsToFetch =
+      lastTranslatedSource.current[field] === cleanText && !hasAllTargets
+        ? missingTargets
+        : TARGET_LANGS;
 
     if (lastTranslatedSource.current[field] && lastTranslatedSource.current[field] !== cleanText) {
       TARGET_LANGS.forEach((lang) => {
@@ -163,7 +170,7 @@ export function useTranslations(initial = {}) {
       });
     };
     try {
-      const translated = await autoTranslate(cleanText);
+      const translated = await autoTranslate(cleanText, 'en', targetsToFetch);
       apply(translated);
       if (requests.current[field] === request) {
         lastTranslatedSource.current[field] = cleanText;
@@ -171,6 +178,9 @@ export function useTranslations(initial = {}) {
     } catch (error) {
       apply(error.translations || {});
       if (requests.current[field] === request) {
+        if (Object.keys(error.translations || {}).length > 0) {
+          lastTranslatedSource.current[field] = cleanText;
+        }
         setTranslationErrors(prev => ({ ...prev, [field]: 'Translation failed for one or more languages. Please retry.' }));
       }
     } finally {
