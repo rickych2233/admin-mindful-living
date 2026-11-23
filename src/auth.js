@@ -33,7 +33,9 @@ export async function login(email, password) {
 /** Silent session restore on page reload via the refresh cookie. */
 export async function tryRestoreSession() {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+    // nativeFetch, not the patched window.fetch: a 401 here would re-enter
+    // authedFetch → tryRestoreSession forever (Maximum call stack size exceeded).
+    const res = await nativeFetch(`${API_BASE_URL}/api/auth/refresh`, {
       method: "POST",
       credentials: "include",
     });
@@ -60,7 +62,7 @@ export async function logout() {
 /** Fetch with the Bearer token; retries once after a token refresh. */
 export async function authedFetch(input, init = {}) {
   const doFetch = () =>
-    fetch(input, {
+    nativeFetch(input, {
       ...init,
       credentials: "include",
       headers: {
